@@ -106,6 +106,82 @@ void SetupMesh(GLData * targetGLData, float * mesh, unsigned int verticesCount)
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
+void UpdateMesh(GLData * targetGLData, float * mesh, unsigned int verticesCount)
+{
+	std::cout << "Attemptint to update Mesh\n";
+	//glGenBuffers(1, &(targetGLData->vertexBufferObject));
+	glBindBuffer(GL_ARRAY_BUFFER, targetGLData->vertexBufferObject);
+	glBufferData(GL_ARRAY_BUFFER, verticesCount * sizeof(float), mesh, GL_STATIC_DRAW);
+
+	//glGenVertexArrays(1, &(targetGLData->vertexArrayObject));
+	glBindVertexArray(targetGLData->vertexArrayObject);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, targetGLData->vertexArrayObject);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+}
+
+Vector2 delta;
+float scale;
+float margin = 0.01f;
+float * nodesMeshVerts = NULL;
+int renderVertsCount = 3;
+const double nodeDisplaySize = 0.05F;
+#pragma optimize("", off)
+void UpdateNodes()
+{
+	std::cout << "Attemptint to update nodes with " << nodes.size() << " new nodes\n";
+
+	if (nodes.size() < 2)
+		return;
+
+	if (nodesMeshVerts != NULL)
+		delete[] nodesMeshVerts;
+	renderVertsCount = nodes.size() * 9;
+	nodesMeshVerts = new float[nodes.size() * 9]; //three cords * three verts per node (to draw a tri)
+
+	delta = nodesNE - nodesSW;
+	delta.x += 2.0f * margin;
+	delta.y += 2.0f * margin;
+	scale = Max((delta.x - 2.0f * margin) / viewPortDimensions.width, (delta.y - 2.0f * margin) / viewPortDimensions.height);
+
+	/*std::cout << "sw: " << nodesSW.x << ", " << nodesSW.y << std::endl;
+	std::cout << "ne: " << nodesNE.x << ", " << nodesNE.y << std::endl;
+	std::cout << "delta: " << delta.x << ", " << delta.y << std::endl;
+	std::cout << "scale: " << scale << std::endl;*/
+
+	int counter = 0;
+	for (auto it = nodes.begin(); it != nodes.end(); ++it)
+	{
+		/*std::cout << "==================\n";
+		std::cout << it->x << ", " << it->y << std::endl;*/
+
+		Vector2 relativePos(margin + ((it->x - nodesSW.x - 0.5 * delta.x) / delta.x),
+							margin + ((it->y - nodesSW.y - 0.5 * delta.x) / delta.y));
+		
+		//std::cout << relativePos.x << ", " << relativePos.y << std::endl;
+
+		nodesMeshVerts[counter]		= relativePos.x;
+		nodesMeshVerts[counter + 1]	= relativePos.y + nodeDisplaySize;
+		nodesMeshVerts[counter + 2] = 0.0f;
+
+		nodesMeshVerts[counter + 3] = relativePos.x + 0.5f * nodeDisplaySize;
+		nodesMeshVerts[counter + 4] = relativePos.y - 0.866f * nodeDisplaySize;
+		nodesMeshVerts[counter + 5] = 0.0f;
+
+		nodesMeshVerts[counter + 6] = relativePos.x - 0.5f * nodeDisplaySize;
+		nodesMeshVerts[counter + 7] = relativePos.y - 0.866f * nodeDisplaySize;
+		nodesMeshVerts[counter + 8] = 0.0f;
+
+		/*for (int i = counter; i < counter + 9; i += 3)
+			std::cout << nodesMeshVerts[i]  << ", " << nodesMeshVerts[i + 1] << " , " << nodesMeshVerts[i + 2] << std::endl;*/
+
+		counter += 9;
+	}
+
+	UpdateMesh(&viewportGLData, nodesMeshVerts, nodes.size() * 9);
+}
+#pragma optimize("", on)
+
 void SetupShaders(GLData * targetGLData, char * vertexShaderSource, char * fragmentShaderSource)
 {
 	targetGLData->vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -207,7 +283,8 @@ void DeleteAllOffscreenBuffers()
 }
 
 //TODO move window/viewport rendering/painting function to their own header/source files.
-char gridNodes[260] = "Path to grid nodes file.";
+//char meshNodes[260] = "Path to grid nodes file.";
+char meshNodes[260] = "Test_Mesh_Nodes.csv";
 char demFilePath[260] = "Path to grid nodes file.";
 
 void DrawLeftPane()
@@ -237,7 +314,7 @@ void DrawLeftPane()
 
 	//Geometry data
 	ImGui::Text("Mesh Nodes");
-	ImGui::InputText("Mesh Nodes", gridNodes, IM_ARRAYSIZE(gridNodes));
+	ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
 
 	if (ImGui::Button("Browse for geometry directory"))
 	{
@@ -266,7 +343,9 @@ void DrawLeftPane()
 	ImGui::NewLine();
 	if (ImGui::Button("Run Simulation!", ImVec2(100, 50)))
 	{
-
+		std::string nodePath(meshNodes);
+		TestSimulate(nodePath);
+		UpdateNodes();
 	}
 
 	ImGui::End();
@@ -289,6 +368,11 @@ void DrawLogPane()
 void RenderViewport() //Renders viewport content to an offscreen buffer.
 {
 	//Draw to offscreen buffer.
+	/*nodesMeshVerts = new float[18]{ 0.0f,1.0f,0.0f,	1.0f, 0.0f, 0.0f,	0.0f, 0.0f,0.0f,
+									0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f };
+	UpdateMesh(&viewportGLData, nodesMeshVerts, 18);
+	renderVertsCount = 16;*/
+
 	glBindFramebuffer(GL_FRAMEBUFFER, viewportBuffer.fbo);
 	int minDimension = viewportWidth > viewportHeight ? viewportHeight : viewportWidth;
 	glViewport(0, 0, minDimension, minDimension);
@@ -298,7 +382,7 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 
 	glUseProgram(viewportGLData.program);
 	glBindVertexArray(viewportGLData.vertexArrayObject);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glDrawArrays(GL_TRIANGLES, 0, renderVertsCount);
 
 	//restore screen buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

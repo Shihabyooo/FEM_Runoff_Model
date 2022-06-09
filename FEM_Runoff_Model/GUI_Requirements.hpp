@@ -5,9 +5,12 @@
 #include <glew.h>
 #include <glfw3.h>
 #include <list>
-#include "Error_Codes.hpp"
-
 #include <iostream> //todo remove iostream and couts after implementing a decent logging functionality
+
+//#include "Globals.hpp"
+#include "ModelInterface.hpp"
+
+
 
 struct GLData //holds shaders, 
 {
