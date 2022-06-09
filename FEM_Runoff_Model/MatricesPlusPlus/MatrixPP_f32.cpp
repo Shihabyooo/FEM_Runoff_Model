@@ -61,7 +61,11 @@ Matrix_f32 Matrix_f32::operator*(const Matrix_f32 & mat2)
 
 Matrix_f32 Matrix_f32::operator*(const float & scalar)
 {
+#ifdef _VECTORIZED_CODE
     return MultiplayMatrixWithScalarVectorized(*this, scalar);
+#else
+	return MultiplayMatrixWithScalar(*this, scalar);
+#endif
 }
 
 Matrix_f32 Matrix_f32::operator+(const Matrix_f32 & mat2)
@@ -267,7 +271,7 @@ Matrix_f32 ** Matrix_f32::DecomposeLUP(const Matrix_f32 &mat) //TODO finish impl
 	return decomposition;
 }
 
-Matrix_f32 Matrix_f32::AddMAtrices(const Matrix_f32 & mat1, const Matrix_f32 & mat2)
+Matrix_f32 Matrix_f32::AddMatrices(const Matrix_f32 & mat1, const Matrix_f32 & mat2)
 {
     if (!AreOfSameSize(mat1, mat2))
 	{
@@ -352,6 +356,7 @@ Matrix_f32 Matrix_f32::MultiplayMatrixWithScalar(const Matrix_f32 & mat1, const 
 	return result;
 }
 
+#ifdef _VECTORIZED_CODE
 Matrix_f32 Matrix_f32::AddMatricesVectorized(const Matrix_f32 & mat1, const Matrix_f32 & mat2)
 {
     if (!AreOfSameSize(mat1, mat2))
@@ -397,6 +402,7 @@ Matrix_f32 Matrix_f32::AddMatricesVectorized(const Matrix_f32 & mat1, const Matr
 
 	return result;
 }
+
 
 Matrix_f32 Matrix_f32::SubtractMatricesVectorized(const Matrix_f32 & mat1, const Matrix_f32 & mat2)
 {
@@ -619,6 +625,7 @@ Matrix_f32 Matrix_f32::MultiplayMatrixWithScalarVectorized(const Matrix_f32 & ma
 	delete[] b;
 	return result;
 }
+#endif
 
 Matrix_f32 Matrix_f32::InvertMatrix(const Matrix_f32 & sourceMat, MatrixInversionMethod method)
 {
@@ -703,6 +710,11 @@ void Matrix_f32::CopyFromArray2D(Array2D<T> sourceArr)
 
 void Matrix_f32::AllocateMemory(_INDEX _rows, _INDEX _columns)
 {
+#ifndef _VECTORIZED_CODE
+#define _VECTOR_SIZE_F32 1
+#endif // !_VECTORIZED_CODE
+
+
 	try
 	{
 		size_t rawSize = _rows * _columns;
@@ -710,6 +722,10 @@ void Matrix_f32::AllocateMemory(_INDEX _rows, _INDEX _columns)
 		size_t paddedSize = rawSize;
 		if (rawSize%_VECTOR_SIZE_F32> 0)
 			paddedSize = rawSize + _VECTOR_SIZE_F32 - (rawSize%_VECTOR_SIZE_F32);
+
+#ifndef _VECTORIZED_CODE
+#undef _VECTOR_SIZE_F32
+#endif // !_VECTORIZED_CODE
 
 		//std::cout << "rawsize: " << rawSize << " - allocating: " << paddedSize << " - padded by " << _VECTOR_SIZE_F32 << std::endl; //test
 		content = new float*[_rows];
@@ -852,7 +868,6 @@ Matrix_f32 Matrix_f32::BlockwiseInversion(const Matrix_f32 & sourceMat) //recuri
 	
 	return result;
 }
-
 
 Matrix_f32 Matrix_f32::Invert1x1Matrix(const Matrix_f32 & sourceMat)
 {

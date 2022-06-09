@@ -16,6 +16,12 @@
     <Filter Include="Source Files\dearIMGUI">
       <UniqueIdentifier>{e589cab9-34ad-4661-b747-a88f0293fed5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Triangulation">
+      <UniqueIdentifier>{b64537ab-9650-438b-be28-1ca4c41f798e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MatricesPP">
+      <UniqueIdentifier>{1584a140-f7f2-4231-9914-cba01da4d841}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -45,6 +51,24 @@
     <ClCompile Include="dearIMGUI\imgui.cpp">
       <Filter>Source Files\dearIMGUI</Filter>
     </ClCompile>
+    <ClCompile Include="DelauneyTriangulation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Triangle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MatricesPlusPlus\ArrayPP.cpp">
+      <Filter>Source Files\MatricesPP</Filter>
+    </ClCompile>
+    <ClCompile Include="MatricesPlusPlus\VectorMaths.cpp">
+      <Filter>Source Files\MatricesPP</Filter>
+    </ClCompile>
+    <ClCompile Include="MatricesPlusPlus\MatrixPP_f32.cpp">
+      <Filter>Source Files\MatricesPP</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.hpp">
@@ -53,10 +77,19 @@
     <ClInclude Include="GUI_Handler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Error_Codes.hpp">
+    <ClInclude Include="GUI_Requirements.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GUI_Requirements.hpp">
+    <ClInclude Include="Triangle.hpp">
+      <Filter>Header Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="DelauneyTriangulation.hpp">
+      <Filter>Header Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="Globals.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelInterface.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

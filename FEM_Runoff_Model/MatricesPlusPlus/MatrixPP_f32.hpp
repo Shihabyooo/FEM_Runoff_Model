@@ -45,17 +45,19 @@ public:
     static Matrix_f32 ** DecomposeLU(const Matrix_f32 &mat);  //For squared matrices only. Decomposes the matrix into upper and lower triangular matrices, returns as an array of two [pointers to] Array2Ds, the first being the lower decomposition, and the second the upper. Returns NULL if not decomposable. Deleting memory is responcibility of caller.
 	static Matrix_f32 ** DecomposeLUP(const Matrix_f32 &mat); //For squared matrices only. Decomposes the matrix into upper and lower triangular matrices with permuation, returns as an array of three [pointers to] Array2Ds, the first being the lower decomposition, and the second the upper, the third is the permuation matrix. Returns NULL if not decomposable. Deleting memory is responcibility of caller.
 
-    static Matrix_f32 AddMAtrices(const Matrix_f32 &mat1, const Matrix_f32 &mat2);
+    static Matrix_f32 AddMatrices(const Matrix_f32 &mat1, const Matrix_f32 &mat2);
     static Matrix_f32 SubtractMatrices(const Matrix_f32 &mat1, const Matrix_f32 &mat2);
     static Matrix_f32 MultiplyMatrices(const Matrix_f32 & mat1, const Matrix_f32 & mat2);
 	static Matrix_f32 MultiplayMatrixWithScalar(const Matrix_f32 &mat1, const float scalar);    
 
+#ifdef _VECTORIZED_CODE
 	static Matrix_f32 AddMatricesVectorized(const Matrix_f32 &mat1, const Matrix_f32 &mat2);
     static Matrix_f32 SubtractMatricesVectorized(const Matrix_f32 &mat1, const Matrix_f32 &mat2);
     static Matrix_f32 MultiplyMatricesVectorized(const Matrix_f32 & mat1, const Matrix_f32 & mat2);
     static Matrix_f32 MultiplyMatricesVectorized_N(const Matrix_f32 & mat1, const Matrix_f32 & mat2); //naive implementation that doesn't rely on FMA.
     static Matrix_f32 MultiplayMatrixWithScalarVectorized(const Matrix_f32 &mat1, const float scalar); //Incomplete.
-    
+#endif // _VECTORIZED_CODE
+
     static Matrix_f32 InvertMatrix(const Matrix_f32 & sourceMat, MatrixInversionMethod method = MatrixInversionMethod::Gauss_Jordan);	//switch-statement based on method to use appropriate implementation. Now only Gauss_Jordan, more in future.
     
     static double CalculateDeterminant(const Matrix_f32 & mat);

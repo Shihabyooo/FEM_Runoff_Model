@@ -8,11 +8,11 @@
 #include <immintrin.h>
 
 //Flags to set instruction set to be used in vectorized arithmatics. Only max set (SSE, AVX256 or AVX512) would be used.
-#define _USE_SSE //Allows use of 128bit SIMD intrinsics
-#define _USE_AVX256 //ALlows use of 256bit SIMD intrinsics
+//#define _USE_SSE //Allows use of 128bit SIMD intrinsics
+//#define _USE_AVX256 //ALlows use of 256bit SIMD intrinsics
 //#define _USE_AVX512 //Allows use of 512bit SIMD intrinsics //AVX-512 is not common in mainstream processors
 
-#define _USE_FMA256 //Allows use of 256bit fused mulitply-add intrinsics.
+//#define _USE_FMA256 //Allows use of 256bit fused mulitply-add intrinsics.
 
 //Set size of vectors used in SIMD functions based on
 //TODO replace this _BEST_PERF impl above

@@ -1,4 +1,0 @@
-#pragma once
-#define SUCCESS 0
-#define FAILED_MAIN_WINDOW_INITIALIZE 1
-#define FAILED_VIEWPORT_CREATE 2

@@ -76,7 +76,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -90,7 +90,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -106,7 +106,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -124,7 +124,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -142,14 +142,23 @@
     <ClCompile Include="dearIMGUI\imgui_draw.cpp" />
     <ClCompile Include="dearIMGUI\imgui_tables.cpp" />
     <ClCompile Include="dearIMGUI\imgui_widgets.cpp" />
+    <ClCompile Include="DelauneyTriangulation.cpp" />
     <ClCompile Include="GUI_Handler.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MatricesPlusPlus\ArrayPP.cpp" />
+    <ClCompile Include="MatricesPlusPlus\MatrixPP_f32.cpp" />
+    <ClCompile Include="MatricesPlusPlus\VectorMaths.cpp" />
+    <ClCompile Include="ModelInterface.cpp" />
+    <ClCompile Include="Triangle.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Error_Codes.hpp" />
+    <ClInclude Include="DelauneyTriangulation.hpp" />
+    <ClInclude Include="Globals.hpp" />
     <ClInclude Include="GUI_Handler.hpp" />
     <ClInclude Include="GUI_Requirements.hpp" />
     <ClInclude Include="Main.hpp" />
+    <ClInclude Include="ModelInterface.hpp" />
+    <ClInclude Include="Triangle.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
