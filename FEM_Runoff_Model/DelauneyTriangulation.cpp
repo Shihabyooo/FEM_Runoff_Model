@@ -57,7 +57,7 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2> const & nodes
 	{
 		for (auto oldTri = trianglesList->begin(); oldTri != trianglesList->end(); ++oldTri)
 		{
-			if (oldTri->second.IsNeighbour(*newTri, pivotVertexID, sharedVertsIDs))
+			if (oldTri->second.IsNeighbour(*newTri, pivotVertexID, &sharedVertsIDs))
 			{
 				if (oldTri->second.IsInsideCircumcircle(pivotVertexID, nodesList))
 				{
@@ -65,6 +65,8 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2> const & nodes
 
 					newTri->UpdateGeometry(pivotVertexID, distantVertID, newTri->vertIDs[1], nodesList);
 					oldTri->second.UpdateGeometry(pivotVertexID, distantVertID, newTri->vertIDs[2], nodesList);
+					
+					delete[] sharedVertsIDs;
 				}
 				break;
 			}

@@ -96,7 +96,7 @@ bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts
 	return (*outMeshEdgeContribCount >= 2);
 }
 
-bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int * outSharedVertsIDs)
+bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int ** outSharedVertsIDs)
 {
 	std::vector<int> edgeVerts;
 
@@ -108,12 +108,12 @@ bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int * o
 
 	if (triangle.ContainsEdge(edgeVerts[0], edgeVerts[1]))
 	{
-		outSharedVertsIDs = new int[2] {edgeVerts[0], edgeVerts[1]};
+		*outSharedVertsIDs = new int[2] {edgeVerts[0], edgeVerts[1]};
 		return true;
 	}
 	else
 	{
-		outSharedVertsIDs = NULL;
+		*outSharedVertsIDs = NULL;
 		return false;
 	}
 }
