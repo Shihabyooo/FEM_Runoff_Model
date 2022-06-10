@@ -150,6 +150,7 @@
     <ClCompile Include="MatricesPlusPlus\VectorMaths.cpp" />
     <ClCompile Include="ModelInterface.cpp" />
     <ClCompile Include="Triangle.cpp" />
+    <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DelauneyTriangulation.hpp" />
@@ -159,6 +160,10 @@
     <ClInclude Include="Main.hpp" />
     <ClInclude Include="ModelInterface.hpp" />
     <ClInclude Include="Triangle.hpp" />
+    <ClInclude Include="Viewport.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

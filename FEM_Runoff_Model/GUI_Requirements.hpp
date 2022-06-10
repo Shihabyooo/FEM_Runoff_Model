@@ -10,8 +10,6 @@
 //#include "Globals.hpp"
 #include "ModelInterface.hpp"
 
-
-
 struct GLData //holds shaders, 
 {
 public:
@@ -58,7 +56,7 @@ void RecomputeWindowElementsDimensions();// int newMainWinWidth, int newMainWinH
 //For testing only:
 namespace TestTriangle
 {
-	float vertices[] = {
+	static float vertices[] = {
 	0.0f,  0.5f,  0.0f,
 	0.5f, -0.5f,  0.0f,
 	-0.5f, -0.5f,  0.0f
@@ -78,3 +76,19 @@ namespace TestTriangle
 		"  frag_colour = vec4(0.5, 0.0, 0.5, 1.0);"
 		"}";
 }
+
+static const int minMainWinWidth = 800, minMainWinHeight = 600;
+static const int minViewportWidth = 800, minViewportHeight = 600;
+
+extern int mainWinWidth, mainWinHeight;
+extern int viewportWidth, viewportHeight;
+
+extern GLFWwindow * mainWindow;
+extern GLData viewportGLData;
+
+extern ImVec4 mainBGColour;
+extern ImVec4 viewportBGColour;
+
+extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewPortDimensions;
+
+extern int renderVertsCount;
