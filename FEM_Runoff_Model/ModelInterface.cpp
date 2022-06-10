@@ -9,9 +9,9 @@ Vector2 nodesSW, nodesNE;
 
 void TestBoundingBox()
 {
-	std::cout << "\n computing bounding box in model interface\n";
+	/*std::cout << "\n computing bounding box in model interface\n";
 	nodesSW = nodes[0];
-	nodesNE = nodes[0];
+	nodesNE = nodes[0];*/
 
 	for (auto it = nodes.begin(); it < nodes.end(); it++)
 	{
@@ -21,10 +21,10 @@ void TestBoundingBox()
 		nodesNE.y = Max(it->y, nodesNE.y);
 	}
 
-	std::cout << "SW corner: ";
+	/*std::cout << "SW corner: ";
 	Print(nodesSW);
 	std::cout << "NE corner: ";
-	Print(nodesNE);
+	Print(nodesNE);*/
 }
 
 void TestSimulate(std::string & nodesPath)
@@ -74,8 +74,8 @@ void TestSimulate(std::string & nodesPath)
 	TestBoundingBox();
 	Triangulate(nodes, &triangles, &boundaryNodes);
 
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		std::cout << "tri: " << it->second.id << " - verts:" << it->second.vertIDs[0] << ", " << it->second.vertIDs[1] << ", " << it->second.vertIDs[2] << std::endl;
+	/*for (auto it = triangles.begin(); it != triangles.end(); ++it)
+		std::cout << "tri: " << it->second.id << " - verts:" << it->second.vertIDs[0] << ", " << it->second.vertIDs[1] << ", " << it->second.vertIDs[2] << std::endl;*/
 
 	//std::cout << "Count: " << nodes.size() << std::endl;
 }

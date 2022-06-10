@@ -6,21 +6,6 @@
 #define FAILED_MAIN_WINDOW_INITIALIZE 1
 #define FAILED_VIEWPORT_CREATE 2
 
-//struct Vector3
-//{
-//public:
-//	Vector3(float _x, float _y, float _z)
-//	{
-//		x = _x;
-//		y = _y;
-//		z = _z;
-//	}
-//
-//	float x;
-//	float y;
-//	float z;
-//};
-
 struct Vector2
 {
 public:
@@ -55,22 +40,39 @@ public:
 	float y;
 };
 
-static float Min(float  const & a, float  const & b)
+
+//Helper functions
+static float Min(float const & a, float const & b)
 {
-	//std::cout << "comparing least of " << a << " and " << b << " result: " << (a > b ? b : a) << std::endl;
 	return (a > b ? b : a);
 }
 
-static float Max(float  const & a, float  const & b)
+static int Min(int const & a, int const & b)
 {
-	//std::cout << "comparing greater of " << a << " and " << b << " result: " << (a > b ? a : b) << std::endl;
+	return (a > b ? b : a);
+}
+
+static float Max(float const & a, float const & b)
+{
 	return (a > b ? a : b);
 }
 
-static float Clamp(float const & a, float  const & b, float  const & c)
+static int Max(int const & a, int const & b)
+{
+	return (a > b ? a : b);
+}
+
+static float Clamp(float const & a, float const & b, float const & c)
 {
 	float min = Min(b, c);
 	float max = Max(b, c);
+	return (a > max ? max : (a < min ? min : a));
+}
+
+static int Clamp(int const & a, int const & b, int const & c)
+{
+	int min = Min(b, c);
+	int max = Max(b, c);
 	return (a > max ? max : (a < min ? min : a));
 }
 

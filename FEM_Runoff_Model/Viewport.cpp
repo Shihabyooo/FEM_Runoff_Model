@@ -267,8 +267,6 @@ void UpdateNodes()
 		nodesMeshVerts[counter + 1] = relativePos.y;
 		nodesMeshVerts[counter + 2] = 0.0f;
 		counter += 3;
-
-		Print(relativePos);
 	}
 }
 

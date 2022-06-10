@@ -28,6 +28,9 @@
     <Filter Include="Source Files\GUI">
       <UniqueIdentifier>{fdbbd0fe-6152-460f-91d4-b25fda6483bf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Triangulation">
+      <UniqueIdentifier>{623d3125-fe8c-4f5e-9b16-dda5f07c4079}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -54,12 +57,6 @@
     <ClCompile Include="dearIMGUI\imgui.cpp">
       <Filter>Source Files\dearIMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="DelauneyTriangulation.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Triangle.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MatricesPlusPlus\ArrayPP.cpp">
       <Filter>Source Files\MatricesPP</Filter>
     </ClCompile>
@@ -77,6 +74,12 @@
     </ClCompile>
     <ClCompile Include="Viewport.cpp">
       <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Triangle.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="DelauneyTriangulation.cpp">
+      <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

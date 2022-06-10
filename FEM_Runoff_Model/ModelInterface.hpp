@@ -8,7 +8,6 @@
 #include "Globals.hpp"
 #include "DelauneyTriangulation.hpp"
 
-
 extern std::unordered_map<int, Triangle> triangles;
 extern std::vector<Vector2> nodes;
 extern std::vector<int> boundaryNodes;

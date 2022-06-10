@@ -21,11 +21,15 @@ public:
 	int GetThirdVertexID(int vertID1, int vertID2) const; //Warning! Assumes both vertices are indeed nodes of this triangle. Will return first vert doesn't match supplied vertices. Returns -4 if error
 	bool IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts, int * outMeshEdgeContribCount);
 	
-	bool IsNeighbour(Triangle const &triangle, int outsideVertex, int ** outSharedVertsIDs); //sharedVertsIDs = int[2]
+	bool IsNeighbour(Triangle const &triangle, int outsideVertex, int * outSharedVertsIDs); //sharedVertsIDs = int[2]
 	bool IsInsideCircumcircle(int vertexID, std::vector<Vector2> const & nodesList);
-	void UpdateGeometry(int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2> const & _nodesList);
+	
+	void UpdateGeometry(int const * vertixIDs, std::vector<Vector2> const & _nodesList);
+	void UpdateGeometry(int const & vertexID1, int const & vertexID2, int const & vertexID3, std::vector<Vector2> const & _nodesList);
 
 	Vector2 Node(int internalVertexID, std::vector<Vector2> const & nodesList) const;
+
+	void DebugPrintDetails();
 
 public:
 	int vertIDs[3];
