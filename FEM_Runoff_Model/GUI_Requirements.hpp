@@ -10,14 +10,20 @@
 //#include "Globals.hpp"
 #include "ModelInterface.hpp"
 
-struct GLData //holds shaders, 
+struct Shader
 {
 public:
 	GLuint program;
-	GLuint vertexBufferObject;
-	GLuint vertexArrayObject;
 	GLuint vertexShader;
 	GLuint fragmentShader;
+};
+
+struct MeshData //holds shaders, 
+{
+public:
+	GLuint vertexBufferObject;
+	GLuint vertexArrayObject;
+	GLuint vertexArrayElementObject;
 };
 
 struct OffScreenBuffer
@@ -52,6 +58,40 @@ public:
 
 void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY);
 void RecomputeWindowElementsDimensions();// int newMainWinWidth, int newMainWinHeight);
+void GLErrorCheck();
+
+static const int minMainWinWidth = 800, minMainWinHeight = 600;
+static const int minViewportWidth = 800, minViewportHeight = 600;
+
+extern int mainWinWidth, mainWinHeight;
+extern int viewportWidth, viewportHeight;
+
+extern GLFWwindow * mainWindow;
+//extern GLData viewportGLData;
+
+extern ImVec4 mainBGColour;
+extern ImVec4 viewportBGColour;
+
+extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewPortDimensions;
+
+namespace CircleShader
+{
+	static const char* vertex_shader_text =
+		"#version 330\n"
+		"layout(location = 0) in vec4 pos;\
+		void main(void)\
+		{\
+			gl_PointSize = 10.0;\
+			gl_Position = pos;\
+		}";
+
+	static const char* fragment_shader_text =
+		"#version 330\n"
+		"void main(void)\
+		{\
+			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\
+		}";
+}
 
 //For testing only:
 namespace TestTriangle
@@ -63,32 +103,16 @@ namespace TestTriangle
 	};
 
 	static const char* vertex_shader_text =
-		"#version 400\n"
+		"#version 330\n"
 		"in vec3 vp;"
 		"void main() {"
 		"  gl_Position = vec4(vp, 1.0);"
 		"}";
 
 	static const char* fragment_shader_text =
-		"#version 400\n"
+		"#version 330\n"
 		"out vec4 frag_colour;"
 		"void main() {"
 		"  frag_colour = vec4(0.5, 0.0, 0.5, 1.0);"
 		"}";
 }
-
-static const int minMainWinWidth = 800, minMainWinHeight = 600;
-static const int minViewportWidth = 800, minViewportHeight = 600;
-
-extern int mainWinWidth, mainWinHeight;
-extern int viewportWidth, viewportHeight;
-
-extern GLFWwindow * mainWindow;
-extern GLData viewportGLData;
-
-extern ImVec4 mainBGColour;
-extern ImVec4 viewportBGColour;
-
-extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewPortDimensions;
-
-extern int renderVertsCount;

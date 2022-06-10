@@ -10,7 +10,7 @@ int mainWinWidth = 1280, mainWinHeight = 720;
 int viewportWidth = 800, viewportHeight = 600;
 
 GLFWwindow * mainWindow;
-GLData viewportGLData;
+//GLData viewportGLData;
 
 ImVec4 mainBGColour = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 ImVec4 viewportBGColour = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);
@@ -62,9 +62,9 @@ bool InitializeMainWindow() //implies InitializeDearIMGUI()
 	}
 
 	//attempt to use GL 3.0
-	const char* glslVersion = "#version 130"; //needed by imgui ogl impl
+	const char* glslVersion = "#version 330"; //needed by imgui ogl impl
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_SAMPLES, 4); //use 4 samples for AA
 
 	mainWindow = glfwCreateWindow(mainWinWidth, mainWinHeight, PROGRAM_NAME, NULL, NULL);
@@ -93,69 +93,6 @@ void TerminateMainWindow()
 	glfwTerminate();
 }
 
-Vector2 delta;
-float scale;
-float margin = 0.01f;
-float * nodesMeshVerts = NULL;
-int renderVertsCount = 3;
-const double nodeDisplaySize = 0.05F;
-
-//#pragma optimize("", off)
-void UpdateNodes()
-{
-	std::cout << "Attemptint to update nodes with " << nodes.size() << " new nodes\n";
-
-	if (nodes.size() < 2)
-		return;
-
-	if (nodesMeshVerts != NULL)
-		delete[] nodesMeshVerts;
-	renderVertsCount = nodes.size() * 9;
-	nodesMeshVerts = new float[nodes.size() * 9]; //three cords * three verts per node (to draw a tri)
-
-	delta = nodesNE - nodesSW;
-	delta.x += 2.0f * margin;
-	delta.y += 2.0f * margin;
-	scale = Max((delta.x - 2.0f * margin) / viewPortDimensions.width, (delta.y - 2.0f * margin) / viewPortDimensions.height);
-
-	/*std::cout << "sw: " << nodesSW.x << ", " << nodesSW.y << std::endl;
-	std::cout << "ne: " << nodesNE.x << ", " << nodesNE.y << std::endl;
-	std::cout << "delta: " << delta.x << ", " << delta.y << std::endl;
-	std::cout << "scale: " << scale << std::endl;*/
-
-	int counter = 0;
-	for (auto it = nodes.begin(); it != nodes.end(); ++it)
-	{
-		/*std::cout << "==================\n";
-		std::cout << it->x << ", " << it->y << std::endl;*/
-
-		Vector2 relativePos(margin + ((it->x - nodesSW.x - 0.5 * delta.x) / delta.x),
-							margin + ((it->y - nodesSW.y - 0.5 * delta.x) / delta.y));
-		
-		//std::cout << relativePos.x << ", " << relativePos.y << std::endl;
-
-		nodesMeshVerts[counter]		= relativePos.x;
-		nodesMeshVerts[counter + 1]	= relativePos.y + nodeDisplaySize;
-		nodesMeshVerts[counter + 2] = 0.0f;
-
-		nodesMeshVerts[counter + 3] = relativePos.x + 0.5f * nodeDisplaySize;
-		nodesMeshVerts[counter + 4] = relativePos.y - 0.866f * nodeDisplaySize;
-		nodesMeshVerts[counter + 5] = 0.0f;
-
-		nodesMeshVerts[counter + 6] = relativePos.x - 0.5f * nodeDisplaySize;
-		nodesMeshVerts[counter + 7] = relativePos.y - 0.866f * nodeDisplaySize;
-		nodesMeshVerts[counter + 8] = 0.0f;
-
-		/*for (int i = counter; i < counter + 9; i += 3)
-			std::cout << nodesMeshVerts[i]  << ", " << nodesMeshVerts[i + 1] << " , " << nodesMeshVerts[i + 2] << std::endl;*/
-
-		counter += 9;
-	}
-
-	UpdateMesh(&viewportGLData, nodesMeshVerts, nodes.size() * 9);
-}
-//#pragma optimize("", on)
-
 void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHeight)
 {
 	//Set fixed width for left pane.
@@ -173,7 +110,8 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 	viewPortDimensions = WindowDimensions(leftPaneDimensions.width, 0, viewportWidth, viewportHeight);
 
 	//update buffer for viewport to use new dimensions.
-	UpdateOffScreenBuffer(&viewportBuffer, viewportWidth, viewportHeight);
+	//UpdateOffScreenBuffer(&viewportBuffer, viewportWidth, viewportHeight);
+	UpdateViewport();
 }
 
 //TODO move window/viewport rendering/painting function to their own header/source files.
@@ -208,8 +146,9 @@ void DrawLeftPane()
 
 	//Geometry data
 	ImGui::Text("Mesh Nodes");
+	ImGui::PushItemWidth(-1);
 	ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
-
+	ImGui::PopItemWidth();
 	if (ImGui::Button("Browse for geometry directory"))
 	{
 		//TODO spawn file browser here
@@ -239,7 +178,7 @@ void DrawLeftPane()
 	{
 		std::string nodePath(meshNodes);
 		TestSimulate(nodePath);
-		UpdateNodes();
+		UpdateViewport();
 	}
 
 	ImGui::End();
@@ -259,12 +198,21 @@ void DrawLogPane()
 	ImGui::End();
 }
 
+void GLErrorCheck()
+{
+	while (GLenum error = glGetError())
+	{
+		std::cout << "Caught GL ERROR: " << error << std::endl;
+	}
+}
+
 int MainUILoop()
 {
 	bool showDemo = true;
 	while (!glfwWindowShouldClose(mainWindow))
 	{
 		glfwPollEvents();
+		GLErrorCheck();
 
 		glViewport(0, 0, mainWinWidth, mainWinHeight); //update viewport to current window size
 
@@ -290,7 +238,9 @@ int MainUILoop()
 		glfwSwapBuffers(mainWindow);
 	}
 	
-	DeleteAllOffscreenBuffers();
+	glDeleteFramebuffers(0, &(viewportBuffer.fbo));
+	glDeleteFramebuffers(0, &(viewportBuffer.rbo));
+
 	TerminateMainWindow();
 
 	return SUCCESS;
@@ -304,10 +254,7 @@ int StartUI()
 		return FAILED_MAIN_WINDOW_INITIALIZE;
 	}
 
-	SetupMesh(&viewportGLData, TestTriangle::vertices, sizeof(TestTriangle::vertices));
-	SetupShaders(&viewportGLData, const_cast<char *>(TestTriangle::vertex_shader_text), const_cast<char *>(TestTriangle::fragment_shader_text));
-
-	if (!SetupOffScreenBuffer(&viewportBuffer, viewportWidth, viewportHeight))
+	if (!InitViewport())
 	{
 		TerminateMainWindow();
 		return FAILED_VIEWPORT_CREATE;

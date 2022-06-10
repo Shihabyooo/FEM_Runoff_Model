@@ -1,16 +1,55 @@
 #pragma once
 #include "GUI_Requirements.hpp"
 
-extern OffScreenBuffer viewportBuffer;
-extern std::list<OffScreenBuffer> offScreenBuffersList;
+struct Layer
+{
+public:
+	Layer()
+	{
 
-void SetupMesh(GLData * targetGLData, float * mesh, unsigned int verticesCount);
-void UpdateMesh(GLData * targetGLData, float * mesh, unsigned int verticesCount);
-void SetupShaders(GLData * targetGLData, char * vertexShaderSource, char * fragmentShaderSource);
+	};
+
+	Layer(std::string & _name, MeshData _data, int _order)
+	{
+		name = _name;
+		meshData = _data;
+		order = _order;
+	};
+
+	Layer(const char * _name, MeshData _data, int _order)
+	{
+		name = std::string(_name);
+		meshData = _data;
+		order = _order;
+	};
+
+	std::string name = "Layer";
+	MeshData meshData;
+	int order;
+};
+
+extern OffScreenBuffer viewportBuffer;
+
+extern std::unordered_map <int, Layer> layers;
+extern Shader triangleShader, pointShader, lineShader;
+
+void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
+void UpdateMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
+bool SetupShaders(Shader * targetGLData, char const * vertexShaderSource, char const * fragmentShaderSource);
 bool SetupOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY); //resets active buffer to main buffer when done.
 void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY); //resets active buffer to main buffer when done.
 
 void RenderViewport(); //Renders viewport content to an offscreen buffer.
 void DrawViewport(); //IMGUI painting commands for viewport window
 
-void DeleteAllOffscreenBuffers();
+bool InitViewport();
+
+void UpdateViewport();
+void UpdateNodes();
+void UpdateTriangles();
+
+void UpdateCoordinateConversionParameters();
+Vector2	NormalizeCoordinates(Vector2 & point); //converts from world space to viewport space
+
+void TestSetupSuperTriangleRender();
+void TestUpdateSuperTriangle();
