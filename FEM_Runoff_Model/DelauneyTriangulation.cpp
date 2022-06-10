@@ -13,11 +13,11 @@ std::unique_ptr<Vector2[]> ComputeBoundingBox(std::vector<Vector2> &nodesList) /
 
 	for (auto it = nodesList.begin(); it < nodesList.end(); it++)
 	{
-		boundingBox[0].x = it->x < boundingBox[0].x ? it->x : boundingBox[0].x;
-		boundingBox[1].x = it->x > boundingBox[1].x ? it->x : boundingBox[1].x;
+		boundingBox[0].x = Min(boundingBox[0].x, it->x);
+		boundingBox[0].y = Min(boundingBox[0].y, it->y);
 
-		boundingBox[0].y = it->y < boundingBox[0].y ? it->y : boundingBox[0].y;
-		boundingBox[1].y = it->y > boundingBox[1].y ? it->y : boundingBox[1].y;
+		boundingBox[1].x = Max(boundingBox[1].x, it->x);
+		boundingBox[1].y = Max(boundingBox[1].y, it->y);
 	}
 
 	return boundingBox;
@@ -29,7 +29,7 @@ void GenerateSuperTriangle(std::vector<Vector2> &nodesList, std::unordered_map<i
 
 	Vector2 dimensions = boundingBox[1] - boundingBox[0];
 	float boundHalfWidth = (dimensions.x / 2.0f) + SUPER_TRIANGLE_PADDING;
-	float boundHeight = dimensions.y + 2.0f + SUPER_TRIANGLE_PADDING;
+	float boundHeight = dimensions.y + 2.0f * SUPER_TRIANGLE_PADDING;
 
 	Vector2 superVert1Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING + boundHalfWidth,
 							boundingBox[1].y + SUPER_TRIANGLE_PADDING + boundHeight);
@@ -47,6 +47,11 @@ void GenerateSuperTriangle(std::vector<Vector2> &nodesList, std::unordered_map<i
 	extVerts[2] = nodesList.size() - 1;
 
 	outTrianglesList->insert({0, Triangle(0, extVerts[0],extVerts[1], extVerts[2], nodesList)});
+	
+	std::cout << "\nGenerated supertri\n";
+	Print(superVert1Pos);
+	Print(superVert2Pos);
+	Print(superVert3Pos);
 }
 
 void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2> const & nodesList, std::vector<Triangle> & newTriangles, std::unordered_map<int, Triangle> * trianglesList)
@@ -77,11 +82,15 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2> const & nodes
 void DelauneyTriangulation(int vertexID, std::vector<Vector2> const & nodesList, std::unordered_map<int, Triangle> * trianglesList)
 {
 	//std::cout << "Not implemented yet! " << std::endl; //TODO implement
+	std::cout << "------------------------------------------------\n";
+	std::cout << "Delauney triangulation for point: " << vertexID << std::endl;
 
 	for (auto it = trianglesList->begin(); it != trianglesList->end(); ++it)
 	{
 		if (it->second.ContainsPoint(nodesList[vertexID], nodesList))
 		{
+			std::cout << "Found containing triangle of id: " << it->second.id << std::endl;
+
 			std::vector<Triangle> newTriangles;
 			int baseID = lastID++;
 			
@@ -100,6 +109,7 @@ void DelauneyTriangulation(int vertexID, std::vector<Vector2> const & nodesList,
 				trianglesList->insert({ baseID, *it2});
 				baseID++;
 			}
+			lastID = baseID;
 			return;
 		}
 	}
@@ -107,20 +117,23 @@ void DelauneyTriangulation(int vertexID, std::vector<Vector2> const & nodesList,
 
 std::vector<int> * RemoveExteriorTriangles(std::unordered_map<int, Triangle> * trianglesList) //returns a list of exterior nodes within the mesh
 {
+	std::cout << "Cleaning exterior triangles. Initial count: " << trianglesList->size() << std::endl;
+	std::cout << "exterior verts ids: " << extVerts[0] << ", " << extVerts[1] << ", " << extVerts[2] << std::endl;
+
 	std::vector<int> * outerNodes = new std::vector<int>();
 	std::unordered_set<int> tempOuterNodes;
 
 	//loop over triangles, for triangles that test positive for external, add internal nodes (i.e. at mesh edge) to tempOuterNodes, then delete triangle.
-	for (auto it = trianglesList->end(); it != trianglesList->begin(); --it)
+	for (auto it = trianglesList->begin(); it != trianglesList->end(); ++it)
 	{
-		int otherVertices[2];
+		int otherVertices[3];
 		int meshEdgeVertContrib;
 		if (it->second.IsExternalTriangle(extVerts, otherVertices, &meshEdgeVertContrib))
 		{
 			for (int i = 0; i < meshEdgeVertContrib; i++)
 				tempOuterNodes.insert(otherVertices[i]);
 			
-			trianglesList->erase(it->first);
+			trianglesList->erase(it--);
 		}
 	}
 
@@ -128,6 +141,7 @@ std::vector<int> * RemoveExteriorTriangles(std::unordered_map<int, Triangle> * t
 	for (auto it = tempOuterNodes.begin(); it != tempOuterNodes.end(); ++it)
 		outerNodes->push_back(*it);
 
+	std::cout << "Count after cleaning: " << trianglesList->size() << std::endl;
 	return outerNodes;
 
 }
@@ -159,8 +173,11 @@ bool Triangulate(std::vector<Vector2> nodesList, std::unordered_map<int, Triangl
 	for (int i = 0; i < nodeCount; i++)
 	{
 		DelauneyTriangulation(i, nodesList, outTrianglesList);
+
+		std::cout << "Triangles so far: " << outTrianglesList->size() << std::endl;
 	}
 
+	std::cout << "Finished triangulation!\n\n";
 	outBoundaryNodes = RemoveExteriorTriangles(outTrianglesList);
 	return true;
 }

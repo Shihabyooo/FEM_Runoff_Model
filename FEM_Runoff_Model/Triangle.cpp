@@ -13,6 +13,7 @@ Triangle::~Triangle()
 
 void Triangle::Subdivide(int centroidID, int baseTriangleID, std::vector<Vector2> const & nodesList, std::vector<Triangle>& outNewTriangles)
 {
+	std::cout << "subdividing tri " << vertIDs[0] << "," << vertIDs[1] << "," << vertIDs[2] << " to " << centroidID << "," << vertIDs[0] << "," << vertIDs[1] << " & " << centroidID << "," << vertIDs[0] << "," << vertIDs[2] << " & " << centroidID << "," << vertIDs[1] << "," << vertIDs[2] << std::endl;
 	//Subdivision stage
 
 	outNewTriangles.push_back(Triangle(baseTriangleID, centroidID, vertIDs[0], vertIDs[1], nodesList));
@@ -27,11 +28,16 @@ bool Triangle::ContainsPoint(Vector2 const & point, std::vector<Vector2> const &
 {
 	//https://mathworld.wolfram.com/TriangleInterior.html
 
+	std::cout << "Testing ContainsPoint(" << point.x << "," << point.y <<")";
+	std::cout << " for triangle of nodes: " << vertIDs[0] << ", " << vertIDs[1] << ", " << vertIDs[2] << "\n";
+
 	Vector2 v1 = Node(1, nodesList) - Node(0, nodesList);
 	Vector2 v2 = Node(2, nodesList) - Node(0, nodesList);
 
 	double a = (Determinant(point, v2) - Determinant(Node(0, nodesList), v2)) / Determinant(v1, v2);
 	double b = -1.0F * (Determinant(point, v1) - Determinant(Node(0, nodesList), v1)) / Determinant(v1, v2);
+
+	std::cout << "Result: " << ((a > 0.0F && b > 0.0F && (a + b) < 1.0F) ? "True" : "False") << std::endl;
 
 	if (a > 0.0F && b > 0.0F && (a + b) < 1.0F)
 		return true;
@@ -54,6 +60,7 @@ bool Triangle::ContainsEdge(int vertID1, int vertID2) const
 
 bool Triangle::ContainsVertex(int vertexID) const
 {
+	std::cout << "id " << id << " - comparing " << vertexID << " to : " << vertIDs[0] << "," << vertIDs[1] << "," << vertIDs[2] << std::endl;
 	return (vertIDs[0] == vertexID) || (vertIDs[1] == vertexID) || (vertIDs[2] == vertexID);
 }
 
@@ -72,28 +79,25 @@ bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts
 {
 	*outMeshEdgeContribCount = 0;
 	
+	bool isInternal = true;
+
 	for (int i = 0; i < 3; i++)
+		isInternal = isInternal && !ContainsVertex(externalVertices[i]);
+	
+
+	if (!isInternal)
 	{
-		bool isExternalVert = false;
-		for (int j = 0; j < 3; j++)
+		for (int i = 0; i < 3; i++)
 		{
-			if (externalVertices[j] == vertIDs[i])
+			if (vertIDs[i] != externalVertices[0] && vertIDs[i] != externalVertices[1] && vertIDs[i] != externalVertices[2])
 			{
-				isExternalVert = true;
-				break;
+				outMeshEdgeVerts[*outMeshEdgeContribCount] = vertIDs[i];
+				(*outMeshEdgeContribCount)++;
 			}
 		}
-		if (!isExternalVert)
-		{
-			if (*outMeshEdgeContribCount >= 2)
-				return false;
-
-			outMeshEdgeVerts[*outMeshEdgeContribCount] = vertIDs[i];
-			*outMeshEdgeContribCount++;
-		}
 	}
-
-	return (*outMeshEdgeContribCount >= 2);
+	
+	return !isInternal;
 }
 
 bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int ** outSharedVertsIDs)
