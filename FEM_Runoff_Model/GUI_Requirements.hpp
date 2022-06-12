@@ -5,7 +5,11 @@
 #include <glew.h>
 #include <glfw3.h>
 #include <list>
+#include <vector>
+#include <string>>
+#include <wchar.h>
 #include <iostream> //todo remove iostream and couts after implementing a decent logging functionality
+
 
 //#include "Globals.hpp"
 #include "ModelInterface.hpp"

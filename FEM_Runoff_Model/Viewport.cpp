@@ -59,12 +59,15 @@ bool SetupShaders(Shader * targetGLData, char const * vertexShaderSource, char c
 	glGetShaderiv(targetGLData->vertexShader, GL_COMPILE_STATUS, &result);
 	if (result == GL_FALSE)
 	{
-		std::cout << "failed to compile vertex shader" << std::endl;
+		//std::cout << "failed to compile vertex shader" << std::endl;
+		LogMan::Log("failed to compile vertex shader", LOG_ERROR);
+
 		int length;
 		glGetShaderiv(targetGLData->vertexShader, GL_INFO_LOG_LENGTH, &length);
 		char * message = new char[length];
 		glGetShaderInfoLog(targetGLData->vertexShader, length, &length, message);
-		std::cout << message << std::endl;
+		//std::cout << message << std::endl;
+		LogMan::Log(message, LOG_ERROR);
 		delete[] message;
 		status = false;
 	}
@@ -76,12 +79,14 @@ bool SetupShaders(Shader * targetGLData, char const * vertexShaderSource, char c
 	glGetShaderiv(targetGLData->fragmentShader, GL_COMPILE_STATUS, &result);
 	if (result == GL_FALSE)
 	{
-		std::cout << "failed to compile fragment shader" << std::endl;
+		//std::cout << "failed to compile fragment shader" << std::endl;
+		LogMan::Log("failed to compile fragment shader", LOG_ERROR);
 		int length;
 		glGetShaderiv(targetGLData->vertexShader, GL_INFO_LOG_LENGTH, &length);
 		char * message = new char[length];
 		glGetShaderInfoLog(targetGLData->vertexShader, length, &length, message);
-		std::cout << message << std::endl;
+		//std::cout << message << std::endl;
+		LogMan::Log(message, LOG_ERROR);
 		delete[] message;
 		status = false;
 	}
@@ -126,7 +131,8 @@ bool SetupOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY) //rese
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
-		std::cout << "Error creating custom framebuffer" << std::endl;
+		//std::cout << "Error creating custom framebuffer" << std::endl;
+		LogMan::Log("Failed to creat offscreen framebuffer", LOG_ERROR);
 		return false;
 	}
 
@@ -204,7 +210,8 @@ void DrawViewport() //IMGUI painting commands for viewport window
 
 bool InitViewport()
 {
-	std::cout << "Initializaing viewport\n";
+	//std::cout << "Initializaing viewport\n";
+	LogMan::Log("Initializaing viewport");
 	if (!SetupOffScreenBuffer(&viewportBuffer, minViewportWidth, viewportHeight))
 		return FAILED_VIEWPORT_CREATE;
 
@@ -212,25 +219,26 @@ bool InitViewport()
 	//layers.insert({ 2, Layer("Triangles", MeshData(), 2) });
 	//layers.insert({ 5, Layer("Test", MeshData(), 5) });
 	
-	GLErrorCheck();
-	std::cout << "Initializaing layers\n";
+	//GLErrorCheck();
+	//std::cout << "Initializaing layers\n";
 	for (auto it = layers.begin(); it != layers.end(); ++it)
 	{
 		//renderVertsCount = 3;
 		//SetupMesh(&viewportGLData, TestTriangle::vertices, sizeof(TestTriangle::vertices), NULL, 0); //Startup with test triangle
 		SetupMesh(&(it->second.meshData), NULL, 0, NULL, 0); //startup empty
 	}
-	GLErrorCheck();
-	std::cout << "Initializaing shaders\n";
+	//GLErrorCheck();
+	//std::cout << "Initializaing shaders\n";
 	if ( !SetupShaders(&pointShader, CircleShader::vertex_shader_text, CircleShader::fragment_shader_text) ||
 		!SetupShaders(&triangleShader, TestTriangle::vertex_shader_text, TestTriangle::fragment_shader_text) )
 	{
 		//return false;
-		std::cout << "Error compiling shaders!" << std::endl;
+		//std::cout << "Error compiling shaders!" << std::endl;
+		LogMan::Log("Error compiling shaders!", LOG_ERROR);
 	}
 	
 	GLErrorCheck();
-	std::cout << "Finished initializaing viewpoty\n";
+	//std::cout << "Finished initializaing viewport\n";
 
 
 	TestSetupSuperTriangleRender();
@@ -272,7 +280,7 @@ void UpdateNodes()
 
 void UpdateTriangles()
 {
-	std::cout << "Attempting to update triangles with " << triangles.size() << " new tris\n";
+	//std::cout << "Attempting to update triangles with " << triangles.size() << " new tris\n";
 	if (triangles.size() < 1)
 		return;
 

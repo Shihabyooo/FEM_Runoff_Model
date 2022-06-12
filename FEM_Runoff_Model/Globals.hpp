@@ -6,6 +6,12 @@
 #define FAILED_MAIN_WINDOW_INITIALIZE 1
 #define FAILED_VIEWPORT_CREATE 2
 
+//Log Types definitions
+#define LOG_SUCCESS	LogEntryType::success
+#define LOG_ERROR	LogEntryType::error
+#define LOG_NORM	LogEntryType::normal
+#define LOG_WARN	LogEntryType::warning
+
 struct Vector2
 {
 public:
@@ -40,6 +46,24 @@ public:
 	float y;
 };
 
+enum class LogEntryType
+{
+	normal, warning, error, success
+};
+
+struct LogEntry
+{
+public:
+	LogEntry(std::string const & _content, LogEntryType _type)
+	{
+		content = _content;
+		type = _type;
+	};
+
+	//TODO add timestamp
+	std::string content;
+	LogEntryType type;
+};
 
 //Helper functions
 static float Min(float const & a, float const & b)

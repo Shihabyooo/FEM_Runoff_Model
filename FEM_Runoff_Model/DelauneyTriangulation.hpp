@@ -6,6 +6,7 @@
 
 #include "Globals.hpp"
 #include "Triangle.hpp"
+#include "LogManager.hpp"
 
 //TODO bounding box computation should be offloaded to a more global class, since it's needed for rendering.
 

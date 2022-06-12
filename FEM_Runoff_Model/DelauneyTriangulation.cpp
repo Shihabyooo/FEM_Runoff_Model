@@ -176,11 +176,13 @@ bool Triangulate(std::vector<Vector2> nodesList, std::unordered_map<int, Triangl
 
 	if (nodesList.size() < MIN_NODES_TO_TRIANGULATE)
 	{
-		std::cout << "ERROR! Cannot triangulate less than " << MIN_NODES_TO_TRIANGULATE << " nodes." << std::endl;
+		//std::cout << "ERROR! Cannot triangulate less than " << MIN_NODES_TO_TRIANGULATE << " nodes." << std::endl;
+		LogMan::Log(("Cannot triangulate less than than: " + std::to_string(MIN_NODES_TO_TRIANGULATE) + " nodes"), LOG_ERROR);
 		return false;
 	}
 
-	std::cout << "\n\nStarting triangulation!\n\n";
+	//std::cout << "\n\nStarting triangulation!\n\n";
+	LogMan::Log("Starting triangulation!");
 	lastID = 0;
 
 	GenerateSuperTriangle(nodesList, outTrianglesList);
@@ -192,12 +194,14 @@ bool Triangulate(std::vector<Vector2> nodesList, std::unordered_map<int, Triangl
 		DelauneyTriangulation(i, nodesList, outTrianglesList);
 
 		//std::cout << "Triangles so far: " << outTrianglesList->size() << std::endl;
-		std::cout << "Triangles so far: \n";
+		//std::cout << "Triangles so far: \n";
 		for (auto it = outTrianglesList->begin(); it != outTrianglesList->end(); ++it)
 			it->second.DebugPrintDetails();
 	}
 
 	outBoundaryNodes = RemoveExteriorTriangles(outTrianglesList);
-	std::cout << "\n\nFinished triangulation!\n\n";
+	
+	//std::cout << "\n\nFinished triangulation!\n\n";
+	LogMan::Log("Finished triangulation!", LOG_SUCCESS);
 	return true;
 }

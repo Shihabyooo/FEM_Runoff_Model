@@ -2,15 +2,12 @@
 #include "GUI_Handler.hpp"
 #include "GUI_Requirements.hpp"
 #include "Viewport.hpp"
-
-//const int minMainWinWidth = 800, minMainWinHeight = 600;
-//const int minViewportWidth = 800, minViewportHeight = 600;
+#include "LogManager.hpp"
 
 int mainWinWidth = 1280, mainWinHeight = 720;
 int viewportWidth = 800, viewportHeight = 600;
 
 GLFWwindow * mainWindow;
-//GLData viewportGLData;
 
 ImVec4 mainBGColour = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 ImVec4 viewportBGColour = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);
@@ -101,7 +98,7 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 	//log pane width = mainwindow width - fixed left pane width.
 	//viewport takes remainin area.
 	int fixedLeftPaneWidth = 250;
-	int fixedLogPaneHeight = 100;
+	int fixedLogPaneHeight = 200;
 
 	leftPaneDimensions = WindowDimensions(0, 0, fixedLeftPaneWidth, mainWinHeight);
 	logPaneDimensions = WindowDimensions(leftPaneDimensions.width, mainWinHeight - fixedLogPaneHeight, mainWinWidth - fixedLeftPaneWidth, fixedLogPaneHeight);
@@ -184,26 +181,10 @@ void DrawLeftPane()
 	ImGui::End();
 }
 
-void DrawLogPane()
-{
-	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-	ImGui::SetNextWindowPos(ImVec2(logPaneDimensions.positionX, logPaneDimensions.positionY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(logPaneDimensions.width, logPaneDimensions.height), ImGuiCond_Always);
-	
-	ImGui::Begin("Log", NULL, windowFlags);
-
-	ImGui::PushItemWidth(ImGui::GetFontSize() * -12); //Use fixed width for labels (by passing a negative value), the rest goes to widgets. We choose a width proportional to our font s
-
-	ImGui::TextWrapped("Log goes here");
-	ImGui::End();
-}
-
 void GLErrorCheck()
 {
 	while (GLenum error = glGetError())
-	{
-		std::cout << "Caught GL ERROR: " << error << std::endl;
-	}
+		LogMan::Log(("Caught OpenGL Error: " + std::to_string(error)), LOG_ERROR);
 }
 
 int MainUILoop()
@@ -248,21 +229,25 @@ int MainUILoop()
 
 int StartUI()
 {
+	LogMan::Log("GUI Startup");
 	if (!InitializeMainWindow())
 	{
-		std::cout << "Failed to initialize main window" << std::endl;
+		//std::cout << "Failed to initialize main window" << std::endl;
+		LogMan::Log("Failed to initialize main window!", LOG_ERROR);
 		return FAILED_MAIN_WINDOW_INITIALIZE;
 	}
 
 	if (!InitViewport())
 	{
 		TerminateMainWindow();
+		LogMan::Log("Failed to initialize viewport!", LOG_ERROR);
 		return FAILED_VIEWPORT_CREATE;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); //restore default framebuffer
 
 	RecomputeWindowElementsDimensions();// mainWinWidth, mainWinHeight);
-
+	
+	LogMan::Log("GUI startup success!", LOG_SUCCESS);
 	return MainUILoop();
 }
