@@ -163,6 +163,11 @@ void DrawLeftPane()
 	{
 
 	}
+
+	if (ImGui::Button("Load DEM.", ImVec2(100, 50)))
+	{
+		TestLoadDEM(demFilePath);
+	}
 	////DrawFileBrowser(); //The call is already made above...
 	//DrawFileList(demFilePath, &demNames, &selectedDEM, DataType::dem, true, DEM_LIST_ID);
 	//ImGui::NewLine();
@@ -173,8 +178,7 @@ void DrawLeftPane()
 	ImGui::NewLine();
 	if (ImGui::Button("Run Simulation!", ImVec2(100, 50)))
 	{
-		std::string nodePath(meshNodes);
-		TestSimulate(nodePath);
+		TestSimulate(meshNodes);
 		UpdateViewport();
 	}
 

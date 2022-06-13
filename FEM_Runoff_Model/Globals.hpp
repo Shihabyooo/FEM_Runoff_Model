@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #define PROGRAM_NAME "FEM_Runoff_Model"
 
 //error codes
@@ -100,7 +101,7 @@ static int Clamp(int const & a, int const & b, int const & c)
 	return (a > max ? max : (a < min ? min : a));
 }
 
-static void Print(Vector2 & vec)
+static inline void Print(Vector2 & vec)
 {
 	std::cout << vec.x << ", " << vec.y << "\n";
 }

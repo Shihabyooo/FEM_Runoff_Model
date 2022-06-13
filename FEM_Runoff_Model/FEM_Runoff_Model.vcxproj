@@ -76,7 +76,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -90,7 +90,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -106,7 +106,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -124,7 +124,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -143,6 +143,9 @@
     <ClCompile Include="dearIMGUI\imgui_tables.cpp" />
     <ClCompile Include="dearIMGUI\imgui_widgets.cpp" />
     <ClCompile Include="DelauneyTriangulation.cpp" />
+    <ClCompile Include="GeoTIFF-Parser\Decompressor.cpp" />
+    <ClCompile Include="GeoTIFF-Parser\GeoTIFF_Parser.cpp" />
+    <ClCompile Include="GeoTIFF-Parser\GeoTIFF_Parser_Globals.cpp" />
     <ClCompile Include="GUI_Handler.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -155,6 +158,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DelauneyTriangulation.hpp" />
+    <ClInclude Include="GeoTIFF-Parser\Decompressor.h" />
+    <ClInclude Include="GeoTIFF-Parser\GeoTIFF_Parser.h" />
+    <ClInclude Include="GeoTIFF-Parser\GeoTIFF_Parser_Globals.h" />
     <ClInclude Include="Globals.hpp" />
     <ClInclude Include="GUI_Handler.hpp" />
     <ClInclude Include="GUI_Requirements.hpp" />

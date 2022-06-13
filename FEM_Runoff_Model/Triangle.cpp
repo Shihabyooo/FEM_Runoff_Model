@@ -1,4 +1,5 @@
 #include "Triangle.hpp"
+#include <MatricesPP.hpp>
 
 Triangle::Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2> const & nodesList)
 {

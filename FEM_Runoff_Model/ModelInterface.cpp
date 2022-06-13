@@ -27,7 +27,19 @@ void TestBoundingBox()
 	Print(nodesNE);*/
 }
 
-void TestSimulate(std::string & nodesPath)
+bool TestLoadDEM(std::string const & path)
+{
+	LogMan::Log("Attempting to load raster file " + path);
+	if (!LoadGeoTIFF(path))
+	{
+		LogMan::Log("Failed to load raster file \"" + path + "\"", LOG_ERROR);
+		return false;
+	}
+
+	LogMan::Log("Succeeded loading raster file!", LOG_SUCCESS);
+}
+
+void TestSimulate(std::string const & nodesPath)
 {
 	std::cout << "\n test simulation start\n";
 	nodes.clear();

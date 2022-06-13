@@ -31,6 +31,12 @@
     <Filter Include="Source Files\Triangulation">
       <UniqueIdentifier>{623d3125-fe8c-4f5e-9b16-dda5f07c4079}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\GeoTIFF-Parser">
+      <UniqueIdentifier>{cc4f322e-a937-4d5c-b109-f6a8ccbce375}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\GeoTIFF-Parser">
+      <UniqueIdentifier>{ae18960b-7751-4da6-b6eb-7391031b210c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -84,6 +90,15 @@
     <ClCompile Include="LogManager.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="GeoTIFF-Parser\Decompressor.cpp">
+      <Filter>Source Files\GeoTIFF-Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="GeoTIFF-Parser\GeoTIFF_Parser.cpp">
+      <Filter>Source Files\GeoTIFF-Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="GeoTIFF-Parser\GeoTIFF_Parser_Globals.cpp">
+      <Filter>Source Files\GeoTIFF-Parser</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.hpp">
@@ -112,6 +127,15 @@
     </ClInclude>
     <ClInclude Include="LogManager.hpp">
       <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GeoTIFF-Parser\GeoTIFF_Parser.h">
+      <Filter>Header Files\GeoTIFF-Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="GeoTIFF-Parser\GeoTIFF_Parser_Globals.h">
+      <Filter>Header Files\GeoTIFF-Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="GeoTIFF-Parser\Decompressor.h">
+      <Filter>Header Files\GeoTIFF-Parser</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
