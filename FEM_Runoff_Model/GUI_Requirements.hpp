@@ -14,6 +14,8 @@
 //#include "Globals.hpp"
 #include "ModelInterface.hpp"
 
+#define MIN_VIEWPORT_DELTA 1.0f
+
 struct Shader
 {
 public:
@@ -54,6 +56,17 @@ public:
 		height = _height;
 	};
 
+	void SetDimensions(Vector2Int const & dimension)
+	{
+		width = dimension.x;
+		height = dimension.y;
+	}
+
+	Vector2 Dimension()
+	{
+		return Vector2(width, height);
+	}
+
 	int positionX;
 	int positionY;
 	int width;
@@ -64,11 +77,11 @@ void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY);
 void RecomputeWindowElementsDimensions();// int newMainWinWidth, int newMainWinHeight);
 void GLErrorCheck();
 
-static const int minMainWinWidth = 800, minMainWinHeight = 600;
-static const int minViewportWidth = 800, minViewportHeight = 600;
+static const int minMainWinWidth = 800, minMainWinHeight = 600; //todo convert to Vector2Int
+static const int minViewportWidth = 800, minViewportHeight = 600; //todo convert to Vector2Int
 
-extern int mainWinWidth, mainWinHeight;
-extern int viewportWidth, viewportHeight;
+extern int mainWinWidth, mainWinHeight; //todo convert to Vector2Int
+//extern int viewportWidth, viewportHeight;
 
 extern GLFWwindow * mainWindow;
 //extern GLData viewportGLData;
@@ -77,6 +90,7 @@ extern ImVec4 mainBGColour;
 extern ImVec4 viewportBGColour;
 
 extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewPortDimensions;
+extern Vector2 lastViewportSize;
 
 namespace CircleShader
 {

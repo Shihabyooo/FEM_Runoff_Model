@@ -18,8 +18,8 @@ struct Vector2
 public:
 	Vector2()
 	{
-		x = 0;
-		y = 0;
+		x = 0.0f;
+		y = 0.0f;
 	};
 
 	Vector2(float _x, float _y)
@@ -45,6 +45,40 @@ public:
 
 	float x;
 	float y;
+};
+
+struct Vector2Int
+{
+public:
+	Vector2Int()
+	{
+		x = 0;
+		y = 0;
+	};
+
+	Vector2Int(int _x, int _y)
+	{
+		x = _x;
+		y = _y;
+	};
+
+	Vector2Int operator+(Vector2 const & vec2)
+	{
+		return (Vector2Int(x + vec2.x, y + vec2.y));
+	}
+
+	Vector2Int operator-(Vector2 const & vec2)
+	{
+		return (Vector2Int(x - vec2.x, y - vec2.y));
+	};
+
+	Vector2Int operator*(int const & scalar)
+	{
+		return (Vector2Int(x * scalar, y * scalar));
+	};
+
+	int x;
+	int y;
 };
 
 enum class LogEntryType

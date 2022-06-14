@@ -45,11 +45,17 @@ void DrawViewport(); //IMGUI painting commands for viewport window
 bool InitViewport();
 
 void UpdateViewport();
+void UpdateContent();
+
 void UpdateNodes();
 void UpdateTriangles();
 
+void UpdateViewBounds();
+void SetViewBounds(Vector2 swCorner, Vector2 nwCorner);
 void UpdateCoordinateConversionParameters();
 Vector2	NormalizeCoordinates(Vector2 & point); //converts from world space to viewport space
+void PanView(Vector2 posDelta);
+
 
 void TestSetupSuperTriangleRender();
 void TestUpdateSuperTriangle();

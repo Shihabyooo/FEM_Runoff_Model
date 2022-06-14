@@ -5,7 +5,7 @@
 #include "LogManager.hpp"
 
 int mainWinWidth = 1280, mainWinHeight = 720;
-int viewportWidth = 800, viewportHeight = 600;
+//int viewportWidth = 800, viewportHeight = 600;
 
 GLFWwindow * mainWindow;
 
@@ -102,12 +102,11 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 
 	leftPaneDimensions = WindowDimensions(0, 0, fixedLeftPaneWidth, mainWinHeight);
 	logPaneDimensions = WindowDimensions(leftPaneDimensions.width, mainWinHeight - fixedLogPaneHeight, mainWinWidth - fixedLeftPaneWidth, fixedLogPaneHeight);
-	viewportWidth = mainWinWidth - fixedLeftPaneWidth;
-	viewportHeight = mainWinHeight - fixedLogPaneHeight;
-	viewPortDimensions = WindowDimensions(leftPaneDimensions.width, 0, viewportWidth, viewportHeight);
+	lastViewportSize.x = viewPortDimensions.width;
+	lastViewportSize.y = viewPortDimensions.height;
+	viewPortDimensions = WindowDimensions(leftPaneDimensions.width, 0, mainWinWidth - fixedLeftPaneWidth, mainWinHeight - fixedLogPaneHeight);
 
-	//update buffer for viewport to use new dimensions.
-	//UpdateOffScreenBuffer(&viewportBuffer, viewportWidth, viewportHeight);
+	//update viewport renderer to use new dimensions.
 	UpdateViewport();
 }
 
@@ -116,6 +115,8 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 char meshNodes[260] = "Test_Mesh_Nodes_Grid.csv";
 char demFilePath[260] = "Path to grid nodes file.";
 
+float testPanOffset = 10.0f; //test
+float testPanOffsetSteps = 0.1f; //test
 void DrawLeftPane()
 {
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
@@ -157,7 +158,9 @@ void DrawLeftPane()
 
 	//DEM
 	ImGui::Text("DEM");
+	ImGui::PushItemWidth(-1);
 	ImGui::InputText("DEM File Path", demFilePath, IM_ARRAYSIZE(demFilePath));
+	ImGui::PopItemWidth();
 
 	if (ImGui::Button("Browse for DEM directory"))
 	{
@@ -179,8 +182,25 @@ void DrawLeftPane()
 	if (ImGui::Button("Run Simulation!", ImVec2(100, 50)))
 	{
 		TestSimulate(meshNodes);
+		SetViewBounds(nodesSW, nodesNE);
 		UpdateViewport();
 	}
+
+	//test
+	ImGui::NewLine();
+	ImGui::NewLine();
+	
+	ImGui::InputScalar("input float", ImGuiDataType_Float, &testPanOffset, &testPanOffsetSteps);
+	ImGui::Text("Test Panning Controls");
+	if (ImGui::Button("->", ImVec2(50, 50)))
+		PanView(Vector2(testPanOffset, 0.0f));
+	if (ImGui::Button("<-", ImVec2(50, 50)))
+		PanView(Vector2(-1.0f * testPanOffset, 0.0f));
+	if (ImGui::Button("^^", ImVec2(50, 50)))
+		PanView(Vector2(0.0, testPanOffset));
+	if (ImGui::Button("vv", ImVec2(50, 50)))
+		PanView(Vector2(0.0f, -1.0f * testPanOffset));
+
 
 	ImGui::End();
 }
@@ -209,13 +229,15 @@ int MainUILoop()
 		glClearColor(mainBGColour.x * mainBGColour.w, mainBGColour.y * mainBGColour.w, mainBGColour.z * mainBGColour.w, mainBGColour.w);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		ImGui::ShowDemoWindow(&showDemo);
+		//ImGui::ShowDemoWindow(&showDemo);
 
 		DrawLeftPane();
 		DrawLogPane();
 
 		RenderViewport();
 		DrawViewport();
+
+		ImGui::ShowDemoWindow(&showDemo);
 
 		ImGui::Render();
 
@@ -250,7 +272,7 @@ int StartUI()
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); //restore default framebuffer
 
-	RecomputeWindowElementsDimensions();// mainWinWidth, mainWinHeight);
+	RecomputeWindowElementsDimensions();
 	
 	LogMan::Log("GUI startup success!", LOG_SUCCESS);
 	return MainUILoop();

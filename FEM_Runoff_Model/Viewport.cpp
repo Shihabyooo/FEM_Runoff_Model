@@ -4,6 +4,7 @@ OffScreenBuffer viewportBuffer;
 
 Vector2 delta;
 float scale = 0.5f;
+float aspectRatio = 1.0f;
 float margin = 0.05f;
 float * nodesMeshVerts = NULL;
 unsigned int * trianglesIndices = NULL;
@@ -14,6 +15,9 @@ std::unordered_map <int, Layer>  layers;
 Shader triangleShader, pointShader, lineShader;
 Shader testSuperTriShader;
 float superTriMeshVerts[9];
+
+Vector2 lastViewportSize;
+Vector2 viewBounds[2];
 
 void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount)
 {
@@ -161,8 +165,10 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 
 	glBindFramebuffer(GL_FRAMEBUFFER, viewportBuffer.fbo);
 	
-	static int minDimension = Min(minViewportWidth, viewportHeight);
-	glViewport(0, 0, minDimension, minDimension);
+	//static int minDimension = Min(viewPortDimensions.width, viewPortDimensions.height);
+	//glViewport(0, 0, minDimension, minDimension);
+
+	glViewport(0, 0, viewPortDimensions.width, viewPortDimensions.height);
 
 	glClearColor(viewportBGColour.x, viewportBGColour.y, viewportBGColour.z, viewportBGColour.w);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -201,6 +207,8 @@ void DrawViewport() //IMGUI painting commands for viewport window
 	ImGui::Begin("Viewport", NULL, windowFlags);
 
 	ImVec2 pos = ImGui::GetCursorScreenPos();
+	float minDimension = Min(viewPortDimensions.width, viewPortDimensions.height);
+
 	ImGui::GetWindowDrawList()->AddImage((void*)viewportBuffer.texture, //texture to render (from an offscreen buffer)
 		ImVec2(viewPortDimensions.positionX, viewPortDimensions.positionY), //NW Corner
 		ImVec2(viewPortDimensions.positionX + viewPortDimensions.width, viewPortDimensions.positionY + viewPortDimensions.height), //SE corner
@@ -211,8 +219,11 @@ void DrawViewport() //IMGUI painting commands for viewport window
 bool InitViewport()
 {
 	//std::cout << "Initializaing viewport\n";
+	viewPortDimensions.width = minViewportWidth;
+	viewPortDimensions.height = minViewportHeight;
+
 	LogMan::Log("Initializaing viewport");
-	if (!SetupOffScreenBuffer(&viewportBuffer, minViewportWidth, viewportHeight))
+	if (!SetupOffScreenBuffer(&viewportBuffer, viewPortDimensions.width, viewPortDimensions.height))
 		return FAILED_VIEWPORT_CREATE;
 
 	layers.insert({ 1, Layer("MainMesh", MeshData(), 1) });
@@ -247,11 +258,18 @@ bool InitViewport()
 
 void UpdateViewport()
 {
-	UpdateOffScreenBuffer(&viewportBuffer, viewportWidth, viewportHeight);
+	//viewPortDimensions.SetDimensions(newDimensions);
+	UpdateOffScreenBuffer(&viewportBuffer, viewPortDimensions.width, viewPortDimensions.height);
+	UpdateViewBounds();
 	UpdateCoordinateConversionParameters();
+	UpdateContent();
+}
+
+void UpdateContent()
+{
 	UpdateNodes();
 	UpdateTriangles();
-	
+
 	UpdateMesh(&(layers[1].meshData), nodesMeshVerts, renderVertsCount, trianglesIndices, renderTrisIndicesCount);
 	TestUpdateSuperTriangle();
 }
@@ -276,6 +294,7 @@ void UpdateNodes()
 		nodesMeshVerts[counter + 2] = 0.0f;
 		counter += 3;
 	}
+	//std::cout << "Updated nodes: " << nodesMeshVerts[0] << ", " << nodesMeshVerts[1] << ", " << nodesMeshVerts[3] << "\n";
 }
 
 void UpdateTriangles()
@@ -299,22 +318,48 @@ void UpdateTriangles()
 	}
 }
 
+void UpdateViewBounds()
+{
+	Vector2 changeInView = viewPortDimensions.Dimension() - lastViewportSize;
+
+	//swCorner doesn't change
+	viewBounds[1].x += changeInView.x * scale;
+	viewBounds[1].y += changeInView.y * scale * aspectRatio;
+	
+	//UpdateCoordinateConversionParameters();
+	//std::cout << "updated bounds: " << viewBounds[0].x << ", " << viewBounds[0].y << " === " << viewBounds[1].x << ", " << viewBounds[1].y << "\n";
+}
+
+void SetViewBounds(Vector2 swCorner, Vector2 nwCorner)
+{
+	std::cout << "new bounds: " << swCorner.x << ", " << swCorner.y << " === " << nwCorner.x << ", " << nwCorner.y << "\n";
+	viewBounds[0] = swCorner;
+	viewBounds[1] = Vector2(Max(nwCorner.x, swCorner.x + MIN_VIEWPORT_DELTA), Max(nwCorner.y, swCorner.y + MIN_VIEWPORT_DELTA));
+
+	UpdateCoordinateConversionParameters();
+}
+
 void UpdateCoordinateConversionParameters()
 {
-	if (nodes.size() < 2)
-		return;
-	delta = nodesNE - nodesSW;
+	delta = viewBounds[1] - viewBounds[0];
+	aspectRatio = delta.x / delta.y;
+	scale = delta.x / viewPortDimensions.width;
 }
 
 Vector2 NormalizeCoordinates(Vector2 & point)
 {
-	Vector2 normPos((2.0f - 2.0f * margin) * (point.x - nodesSW.x) / (delta.x) - 1.0f + margin,
-					(2.0f - 2.0f * margin) * (point.y - nodesSW.y) / (delta.y) - 1.0f + margin);
+	Vector2 normPos((2.0f - 2.0f * margin) * (point.x - viewBounds[0].x) / (delta.x) - 1.0f + margin,
+					(2.0f - 2.0f * margin) * (point.y - viewBounds[0].y) / (delta.y) - 1.0f + margin);
 	
-	normPos = normPos * scale;
+	normPos = normPos;// *scale;
 	return normPos;
 }
 
+void PanView(Vector2 posDelta)
+{
+	SetViewBounds(viewBounds[0] + posDelta, viewBounds[1] + posDelta);
+	UpdateContent();
+}
 
 static const char* vertex_shader_text =
 		"#version 330\n"
