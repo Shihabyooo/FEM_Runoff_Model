@@ -159,9 +159,39 @@ void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+float scaleChangeTisk = 0.05f; //TODO make this value dynamically set based on current bounds.
+void HandleMousePan()
+{
+	ImGuiIO& io = ImGui::GetIO();
+	ImVec2 * posAtClick = io.MouseClickedPos;
+	if (ImGui::IsMouseDragging(2) && viewPortDimensions.Contains(posAtClick[2]))
+	{
+		ImVec2 mouseDelta = io.MouseDelta;
+		PanView(Vector2(-1.0f * mouseDelta.x, mouseDelta.y) * scale);
+	}
+}
+
+void HandleMouseZoom()
+{
+	ImGuiIO& io = ImGui::GetIO();
+	ImVec2 posAtScroll = io.MousePos;
+	float scroll = io.MouseWheel;
+	if (scroll != 0.0f && viewPortDimensions.Contains(posAtScroll))
+	{
+		std::cout << "scroll: " << scroll << std::endl;
+
+		//posAtScroll is the target point
+		//recompute viewBounds that maintain this point at its place
+		//recompute projection parameters.
+	}
+}
+
+
 //Renders the viewport content to the offscreen buffer.
 void RenderViewport() //Renders viewport content to an offscreen buffer.
 {
+	HandleMousePan();
+	HandleMouseZoom();
 	////Test mesh (quad covering whole viewport).
 	/*nodesMeshVerts = new float[18]{ 0.0f,1.0f,0.0f,	1.0f, 0.0f, 0.0f,	0.0f, 0.0f,0.0f,
 									0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f };

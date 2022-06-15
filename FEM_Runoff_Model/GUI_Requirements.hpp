@@ -67,6 +67,14 @@ public:
 		return Vector2(width, height);
 	}
 
+	bool Contains(ImVec2 position)
+	{
+		return	position.x > positionX &&
+				position.y > positionY &&
+				position.x < positionX + width &&
+				position.y < positionY + height;
+	}
+
 	int positionX;
 	int positionY;
 	int width;

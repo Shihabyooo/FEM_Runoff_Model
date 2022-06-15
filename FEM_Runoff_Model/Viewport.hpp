@@ -1,6 +1,8 @@
 #pragma once
 #include "GUI_Requirements.hpp"
 
+//TODO replace unnecessarily exposed declarations here with forward declarations in source file.
+
 struct Layer
 {
 public:
