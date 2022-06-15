@@ -1,8 +1,6 @@
 #pragma once
 #include <vector>
 
-//#include <iostream>
-
 #include "Globals.hpp"
 
 class Triangle
@@ -40,7 +38,4 @@ private:
 
 	double Determinant(Vector2 const &a, Vector2 const &b);
 	double ComputeArea(Vector2 node1, Vector2 node2, Vector2 node3);
-
-//private:
-//	static std::vector<Vector2> * nodesList ;
 };

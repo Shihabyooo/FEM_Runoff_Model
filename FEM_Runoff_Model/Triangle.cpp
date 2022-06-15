@@ -13,31 +13,20 @@ Triangle::~Triangle()
 
 void Triangle::Subdivide(int centroidID, int baseTriangleID, std::vector<Vector2> const & nodesList, std::vector<Triangle>& outNewTriangles)
 {
-	//std::cout << "subdividing tri " << vertIDs[0] << "," << vertIDs[1] << "," << vertIDs[2] << " to " << centroidID << "," << vertIDs[0] << "," << vertIDs[1] << " & " << centroidID << "," << vertIDs[0] << "," << vertIDs[2] << " & " << centroidID << "," << vertIDs[1] << "," << vertIDs[2] << std::endl;
-	//Subdivision stage
-
 	outNewTriangles.push_back(Triangle(baseTriangleID	 , centroidID, vertIDs[0], vertIDs[1], nodesList));
 	outNewTriangles.push_back(Triangle(baseTriangleID + 1, centroidID, vertIDs[0], vertIDs[2], nodesList));
 	outNewTriangles.push_back(Triangle(baseTriangleID + 2, centroidID, vertIDs[1], vertIDs[2], nodesList));
-
-	//Optimization stage. If the current centroid is within the cirumscribed circle (circumcircle) of the neighbouring triangle of each of our new 
-	//triangles, flip the joint edge between them so it connects the non connected vertices (the centroid and the third vert of neighbour) instead.
 }
 
 bool Triangle::ContainsPoint(Vector2 const & point, std::vector<Vector2> const & nodesList)
 {
 	//https://mathworld.wolfram.com/TriangleInterior.html
 
-	//std::cout << "Testing ContainsPoint(" << point.x << "," << point.y <<")";
-	//std::cout << " for triangle of nodes: " << vertIDs[0] << ", " << vertIDs[1] << ", " << vertIDs[2] << "\n";
-
 	Vector2 v1 = Node(1, nodesList) - Node(0, nodesList);
 	Vector2 v2 = Node(2, nodesList) - Node(0, nodesList);
 
 	double a = (Determinant(point, v2) - Determinant(Node(0, nodesList), v2)) / Determinant(v1, v2);
 	double b = -1.0F * (Determinant(point, v1) - Determinant(Node(0, nodesList), v1)) / Determinant(v1, v2);
-
-	//std::cout << "Result: " << ((a > 0.0F && b > 0.0F && (a + b) < 1.0F) ? "True" : "False") << std::endl;
 
 	if (a > 0.0F && b > 0.0F && (a + b) < 1.0F)
 		return true;
@@ -60,7 +49,6 @@ bool Triangle::ContainsEdge(int vertID1, int vertID2) const
 
 bool Triangle::ContainsVertex(int vertexID) const
 {
-	//std::cout << "id " << id << " - comparing " << vertexID << " to : " << vertIDs[0] << "," << vertIDs[1] << "," << vertIDs[2] << std::endl;
 	return ((vertIDs[0] == vertexID) || (vertIDs[1] == vertexID) || (vertIDs[2] == vertexID));
 }
 
@@ -144,26 +132,6 @@ bool Triangle::IsInsideCircumcircle(int vertexID, std::vector<Vector2> const & n
 	matrix[2][0] = c.x - pos.x;
 	matrix[2][1] = c.y - pos.y;
 	matrix[2][2] = pow(c.x - pos.x, 2.0f) + pow(c.y - pos.y, 2.0f);
-
-	/*matrix[0][0] = Node(0, nodesList).x;
-	matrix[0][1] = Node(0, nodesList).y;
-	matrix[0][2] = Node(0, nodesList).x * Node(0, nodesList).x + Node(0, nodesList).y * Node(0, nodesList).y;
-	matrix[0][3] = 1.0f;
-
-	matrix[1][0] = Node(1, nodesList).x;
-	matrix[1][1] = Node(1, nodesList).y;
-	matrix[1][2] = Node(1, nodesList).x * Node(1, nodesList).x + Node(1, nodesList).y * Node(1, nodesList).y;
-	matrix[1][3] = 1.0f;
-
-	matrix[2][0] = Node(2, nodesList).x;
-	matrix[2][1] = Node(2, nodesList).y;
-	matrix[2][2] = Node(2, nodesList).x * Node(2, nodesList).x + Node(2, nodesList).y * Node(2, nodesList).y;
-	matrix[2][3] = 1.0f;
-
-	matrix[3][0] = pos.x;
-	matrix[3][1] = pos.y;
-	matrix[3][2] = pos.x * pos.x + pos.y * pos.y;
-	matrix[3][3] = 1.0f;*/
 
 	return (matrix.Determinant() > 0.0f);
 }

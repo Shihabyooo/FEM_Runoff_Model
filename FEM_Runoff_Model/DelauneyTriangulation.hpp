@@ -8,11 +8,7 @@
 #include "Triangle.hpp"
 #include "LogManager.hpp"
 
-//TODO bounding box computation should be offloaded to a more global class, since it's needed for rendering.
-
-
 #define MIN_NODES_TO_TRIANGULATE 3
 #define SUPER_TRIANGLE_PADDING 1.0f
 
-//bool Triangulate(std::vector<Vector3> const &nodesList);
 bool Triangulate(std::vector<Vector2> nodesList, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes); //Taking a copy of the nodes so I can modify it with the super tri points.

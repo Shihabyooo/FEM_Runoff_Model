@@ -5,7 +5,6 @@
 #include "LogManager.hpp"
 
 int mainWinWidth = 1280, mainWinHeight = 720;
-//int viewportWidth = 800, viewportHeight = 600;
 
 GLFWwindow * mainWindow;
 
@@ -58,7 +57,7 @@ bool InitializeMainWindow() //implies InitializeDearIMGUI()
 		return false;
 	}
 
-	//attempt to use GL 3.0
+	//attempt to use GL 3.3
 	const char* glslVersion = "#version 330"; //needed by imgui ogl impl
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -78,9 +77,7 @@ bool InitializeMainWindow() //implies InitializeDearIMGUI()
 	glfwSetWindowSizeLimits(mainWindow, minMainWinWidth, minMainWinHeight, GLFW_DONT_CARE, GLFW_DONT_CARE); //set min screen dims
 	//glewExperimental = GL_TRUE;
 	glewInit();
-
 	InitializeDearIMGUI(glslVersion);
-
 	return true;
 }
 
@@ -102,6 +99,8 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 
 	leftPaneDimensions = WindowDimensions(0, 0, fixedLeftPaneWidth, mainWinHeight);
 	logPaneDimensions = WindowDimensions(leftPaneDimensions.width, mainWinHeight - fixedLogPaneHeight, mainWinWidth - fixedLeftPaneWidth, fixedLogPaneHeight);
+	
+	//lastViewportSize must be set before we update viewportDimensions.
 	lastViewportSize.x = viewPortDimensions.width;
 	lastViewportSize.y = viewPortDimensions.height;
 	viewPortDimensions = WindowDimensions(leftPaneDimensions.width, 0, mainWinWidth - fixedLeftPaneWidth, mainWinHeight - fixedLogPaneHeight);
@@ -115,8 +114,8 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 char meshNodes[260] = "Test_Mesh_Nodes_Grid.csv";
 char demFilePath[260] = "Path to grid nodes file.";
 
-float testPanOffset = 10.0f; //test
-float testPanOffsetSteps = 0.1f; //test
+float testPanOffset = 2.0f; //test
+float testPanOffsetSteps = 0.5f; //test
 void DrawLeftPane()
 {
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
@@ -171,13 +170,8 @@ void DrawLeftPane()
 	{
 		TestLoadDEM(demFilePath);
 	}
-	////DrawFileBrowser(); //The call is already made above...
-	//DrawFileList(demFilePath, &demNames, &selectedDEM, DataType::dem, true, DEM_LIST_ID);
-	//ImGui::NewLine();
 		
 	//Other input
-
-	ImGui::NewLine();
 	ImGui::NewLine();
 	if (ImGui::Button("Run Simulation!", ImVec2(100, 50)))
 	{
@@ -201,7 +195,6 @@ void DrawLeftPane()
 	if (ImGui::Button("vv", ImVec2(50, 50)))
 		PanView(Vector2(0.0f, -1.0f * testPanOffset));
 
-
 	ImGui::End();
 }
 
@@ -218,18 +211,16 @@ int MainUILoop()
 	{
 		glfwPollEvents();
 		GLErrorCheck();
-
-		glViewport(0, 0, mainWinWidth, mainWinHeight); //update viewport to current window size
+		
+		//update viewport to current main window size
+		glViewport(0, 0, mainWinWidth, mainWinHeight); 
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-
 		glClearColor(mainBGColour.x * mainBGColour.w, mainBGColour.y * mainBGColour.w, mainBGColour.z * mainBGColour.w, mainBGColour.w);
 		glClear(GL_COLOR_BUFFER_BIT);
-
-		//ImGui::ShowDemoWindow(&showDemo);
 
 		DrawLeftPane();
 		DrawLogPane();
@@ -237,10 +228,9 @@ int MainUILoop()
 		RenderViewport();
 		DrawViewport();
 
-		ImGui::ShowDemoWindow(&showDemo);
+		//ImGui::ShowDemoWindow(&showDemo);
 
 		ImGui::Render();
-
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		glfwSwapBuffers(mainWindow);
 	}
@@ -258,7 +248,6 @@ int StartUI()
 	LogMan::Log("GUI Startup");
 	if (!InitializeMainWindow())
 	{
-		//std::cout << "Failed to initialize main window" << std::endl;
 		LogMan::Log("Failed to initialize main window!", LOG_ERROR);
 		return FAILED_MAIN_WINDOW_INITIALIZE;
 	}

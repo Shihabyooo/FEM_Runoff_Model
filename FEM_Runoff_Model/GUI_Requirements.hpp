@@ -10,11 +10,11 @@
 #include <wchar.h>
 #include <iostream> //todo remove iostream and couts after implementing a decent logging functionality
 
-
-//#include "Globals.hpp"
 #include "ModelInterface.hpp"
 
 #define MIN_VIEWPORT_DELTA 1.0f
+
+#define CLEAR_ARRAY(x) if (x != NULL) { delete[] x; } x = NULL;
 
 struct Shader
 {
@@ -81,10 +81,8 @@ static const int minMainWinWidth = 800, minMainWinHeight = 600; //todo convert t
 static const int minViewportWidth = 800, minViewportHeight = 600; //todo convert to Vector2Int
 
 extern int mainWinWidth, mainWinHeight; //todo convert to Vector2Int
-//extern int viewportWidth, viewportHeight;
 
 extern GLFWwindow * mainWindow;
-//extern GLData viewportGLData;
 
 extern ImVec4 mainBGColour;
 extern ImVec4 viewportBGColour;
@@ -92,7 +90,7 @@ extern ImVec4 viewportBGColour;
 extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewPortDimensions;
 extern Vector2 lastViewportSize;
 
-namespace CircleShader
+namespace CircleShader //TODO fix this
 {
 	static const char* vertex_shader_text =
 		"#version 330\n"
