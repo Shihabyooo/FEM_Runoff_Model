@@ -33,7 +33,7 @@ extern OffScreenBuffer viewportBuffer;
 extern std::unordered_map <int, Layer> layers;
 extern Shader triangleShader, pointShader, lineShader;
 
-void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
+void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount); //test test
 void UpdateMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
 bool SetupShaders(Shader * targetGLData, char const * vertexShaderSource, char const * fragmentShaderSource);
 bool SetupOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY); //resets active buffer to main buffer when done.
@@ -52,7 +52,7 @@ void UpdateTriangles();
 
 void UpdateViewBounds();
 void SetViewBounds(Vector2 swCorner, Vector2 nwCorner);
-void UpdateCoordinateConversionParameters();
+void UpdateCoordinateProjectionParameters();
 Vector2	NormalizeCoordinates(Vector2 & point); //converts from world space to viewport space
 void PanView(Vector2 posDelta);
 
