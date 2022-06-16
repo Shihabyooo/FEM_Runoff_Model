@@ -11,7 +11,8 @@ GLFWwindow * mainWindow;
 ImVec4 mainBGColour = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 ImVec4 viewportBGColour = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);
 
-WindowDimensions leftPaneDimensions, logPaneDimensions, viewPortDimensions;
+WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimensions;
+WindowDimensions toolbarDimensions, statusBarDimensions;
 
 void OnGLFWError(int error, const char* description) //Callback
 {
@@ -44,6 +45,9 @@ void InitializeDearIMGUI(const char * glslVersion) //code copied directly from o
 	ImGui_ImplOpenGL3_Init(glslVersion);
 
 	ImVec4 mainBGColour = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+	//disable saving of window pos (don't need it).
+	io.IniFilename = NULL;
 }
 
 bool InitializeMainWindow() //implies InitializeDearIMGUI()
@@ -96,14 +100,17 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 	//viewport takes remainin area.
 	int fixedLeftPaneWidth = 250;
 	int fixedLogPaneHeight = 200;
+	int fixedToolBarHeight = 50;
+	int fixedStatusBarHeight = 30;
 
-	leftPaneDimensions = WindowDimensions(0, 0, fixedLeftPaneWidth, mainWinHeight);
-	logPaneDimensions = WindowDimensions(leftPaneDimensions.width, mainWinHeight - fixedLogPaneHeight, mainWinWidth - fixedLeftPaneWidth, fixedLogPaneHeight);
-	
+	statusBarDimensions = WindowDimensions(0, mainWinHeight - fixedStatusBarHeight, mainWinWidth, fixedStatusBarHeight);
+	leftPaneDimensions = WindowDimensions(0, 0, fixedLeftPaneWidth, mainWinHeight - fixedStatusBarHeight);
+	logPaneDimensions = WindowDimensions(leftPaneDimensions.width, mainWinHeight - fixedLogPaneHeight - fixedStatusBarHeight, mainWinWidth - fixedLeftPaneWidth, fixedLogPaneHeight);
+	toolbarDimensions = WindowDimensions(fixedLeftPaneWidth, 0, mainWinWidth - fixedLeftPaneWidth, fixedToolBarHeight);
 	//lastViewportSize must be set before we update viewportDimensions.
-	lastViewportSize.x = viewPortDimensions.width;
-	lastViewportSize.y = viewPortDimensions.height;
-	viewPortDimensions = WindowDimensions(leftPaneDimensions.width, 0, mainWinWidth - fixedLeftPaneWidth, mainWinHeight - fixedLogPaneHeight);
+	lastViewportSize.x = viewportDimensions.width;
+	lastViewportSize.y = viewportDimensions.height;
+	viewportDimensions = WindowDimensions(leftPaneDimensions.width, fixedToolBarHeight, mainWinWidth - fixedLeftPaneWidth, mainWinHeight - fixedLogPaneHeight - fixedStatusBarHeight - fixedToolBarHeight);
 
 	//update viewport renderer to use new dimensions.
 	UpdateViewport();
@@ -198,6 +205,41 @@ void DrawLeftPane()
 	ImGui::End();
 }
 
+void DrawToolbar()
+{
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
+	ImGui::SetNextWindowPos(ImVec2(toolbarDimensions.positionX, toolbarDimensions.positionY), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(toolbarDimensions.width, toolbarDimensions.height), ImGuiCond_Always);
+
+	ImGui::Begin("Toolbar", NULL, windowFlags);
+	
+
+	ImGui::End();
+}
+
+void DrawStatusBar()
+{
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
+	ImGui::SetNextWindowPos(ImVec2(statusBarDimensions.positionX, statusBarDimensions.positionY), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(statusBarDimensions.width, statusBarDimensions.height), ImGuiCond_Always);
+
+	ImGui::Begin("Statusbar", NULL, windowFlags);
+	
+	if (isHoveringViewport)
+		ImGui::Text("Hover Pos: |%g, %g|", currenViewportHoverPos.x, currenViewportHoverPos.y);
+	else
+		ImGui::Text("Hover Pos: |--, --|");
+	ImGui::SameLine(300);
+	ImGui::Text("View Rect: |%g, %g : %g, %g|", viewBounds[0].x, viewBounds[0].y, viewBounds[1].x, viewBounds[1].y);
+	ImGui::SameLine();
+	ImGui::Text("Scale: %g.4", scale);
+	ImGui::SameLine();
+	ImGui::Text("Screen Aspect: %g.3", screenAspectRatio);
+	ImGui::SameLine();
+	ImGui::Text("World Aspect: %g.3", worldAspectRatio);
+	ImGui::End();
+}
+
 void GLErrorCheck()
 {
 	while (GLenum error = glGetError())
@@ -224,11 +266,13 @@ int MainUILoop()
 
 		DrawLeftPane();
 		DrawLogPane();
+		DrawToolbar();
+		DrawStatusBar();
 
 		RenderViewport();
 		DrawViewport();
 
-		//ImGui::ShowDemoWindow(&showDemo);
+		ImGui::ShowDemoWindow(&showDemo);
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -245,7 +289,15 @@ int MainUILoop()
 
 int StartUI()
 {
+	return StartUI(minMainWinWidth, minMainWinHeight);
+}
+
+int StartUI(unsigned int const startResX, unsigned int const startResY)
+{
 	LogMan::Log("GUI Startup");
+	mainWinWidth = startResX;
+	mainWinHeight = startResY;
+
 	if (!InitializeMainWindow())
 	{
 		LogMan::Log("Failed to initialize main window!", LOG_ERROR);
@@ -266,3 +318,4 @@ int StartUI()
 	LogMan::Log("GUI startup success!", LOG_SUCCESS);
 	return MainUILoop();
 }
+

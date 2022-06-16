@@ -75,6 +75,11 @@ public:
 				position.y < positionY + height;
 	}
 
+	Vector2 LocalPosFromGlobal(ImVec2 & const globalPos) //to convert positions sampled from dear imgui to ones relative to this subwindow
+	{
+		return Vector2(globalPos.x - positionX, globalPos.y - positionY);
+	}
+
 	int positionX;
 	int positionY;
 	int width;
@@ -85,17 +90,17 @@ void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY);
 void RecomputeWindowElementsDimensions();// int newMainWinWidth, int newMainWinHeight);
 void GLErrorCheck();
 
-static const int minMainWinWidth = 800, minMainWinHeight = 600; //todo convert to Vector2Int
-static const int minViewportWidth = 800, minViewportHeight = 600; //todo convert to Vector2Int
-
-extern int mainWinWidth, mainWinHeight; //todo convert to Vector2Int
+static const int minMainWinWidth = 1024, minMainWinHeight = 768; //todo convert to Vector2Int
+//static const int minViewportWidth = 800, minViewportHeight = 600; //todo convert to Vector2Int
+//extern int mainWinWidth, mainWinHeight; //todo convert to Vector2Int
 
 extern GLFWwindow * mainWindow;
 
 extern ImVec4 mainBGColour;
 extern ImVec4 viewportBGColour;
 
-extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewPortDimensions;
+extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimensions;
+extern WindowDimensions toolbarDimensions, statusBarDimensions;
 extern Vector2 lastViewportSize;
 
 namespace CircleShader //TODO fix this
