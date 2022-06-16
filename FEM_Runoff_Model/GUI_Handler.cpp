@@ -60,14 +60,13 @@ bool InitializeMainWindow() //implies InitializeDearIMGUI()
 		std::cout << "Failed to initialize GLFW!" << std::endl;
 		return false;
 	}
-
 	//attempt to use GL 3.3
 	const char* glslVersion = "#version 330"; //needed by imgui ogl impl
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_SAMPLES, 4); //use 4 samples for AA
-
 	mainWindow = glfwCreateWindow(mainWinWidth, mainWinHeight, PROGRAM_NAME, NULL, NULL);
+
 	if (mainWindow == NULL)
 	{
 		std::cout << "Failed to create main window!" << std::endl;
@@ -77,11 +76,11 @@ bool InitializeMainWindow() //implies InitializeDearIMGUI()
 
 	glfwMakeContextCurrent(mainWindow);
 	glfwSwapInterval(1);
-	glfwSetWindowSizeCallback(mainWindow, OnMainWindowSizeChange);
 	glfwSetWindowSizeLimits(mainWindow, minMainWinWidth, minMainWinHeight, GLFW_DONT_CARE, GLFW_DONT_CARE); //set min screen dims
-	//glewExperimental = GL_TRUE;
 	glewInit();
 	InitializeDearIMGUI(glslVersion);
+	glfwSetWindowSizeCallback(mainWindow, OnMainWindowSizeChange);
+	
 	return true;
 }
 
@@ -121,8 +120,6 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 char meshNodes[260] = "Test_Mesh_Nodes_Grid.csv";
 char demFilePath[260] = "Path to grid nodes file.";
 
-float testPanOffset = 2.0f; //test
-float testPanOffsetSteps = 0.5f; //test
 void DrawLeftPane()
 {
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
@@ -187,21 +184,6 @@ void DrawLeftPane()
 		UpdateViewport();
 	}
 
-	//test
-	ImGui::NewLine();
-	ImGui::NewLine();
-	
-	ImGui::InputScalar("input float", ImGuiDataType_Float, &testPanOffset, &testPanOffsetSteps);
-	ImGui::Text("Test Panning Controls");
-	if (ImGui::Button("->", ImVec2(50, 50)))
-		PanView(Vector2(testPanOffset, 0.0f));
-	if (ImGui::Button("<-", ImVec2(50, 50)))
-		PanView(Vector2(-1.0f * testPanOffset, 0.0f));
-	if (ImGui::Button("^^", ImVec2(50, 50)))
-		PanView(Vector2(0.0, testPanOffset));
-	if (ImGui::Button("vv", ImVec2(50, 50)))
-		PanView(Vector2(0.0f, -1.0f * testPanOffset));
-
 	ImGui::End();
 }
 
@@ -232,11 +214,11 @@ void DrawStatusBar()
 	ImGui::SameLine(300);
 	ImGui::Text("View Rect: |%g, %g : %g, %g|", viewBounds[0].x, viewBounds[0].y, viewBounds[1].x, viewBounds[1].y);
 	ImGui::SameLine();
-	ImGui::Text("Scale: %g.4", scale);
+	ImGui::Text("Scale: %.4g", scale);
 	ImGui::SameLine();
-	ImGui::Text("Screen Aspect: %g.3", screenAspectRatio);
+	ImGui::Text("Screen Aspect: %.4g", screenAspectRatio);
 	ImGui::SameLine();
-	ImGui::Text("World Aspect: %g.3", worldAspectRatio);
+	ImGui::Text("World Aspect: %.4g", worldAspectRatio);
 	ImGui::End();
 }
 
@@ -268,8 +250,6 @@ int MainUILoop()
 		DrawLogPane();
 		DrawToolbar();
 		DrawStatusBar();
-
-		RenderViewport();
 		DrawViewport();
 
 		ImGui::ShowDemoWindow(&showDemo);
@@ -311,9 +291,12 @@ int StartUI(unsigned int const startResX, unsigned int const startResY)
 		return FAILED_VIEWPORT_CREATE;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0); //restore default framebuffer
-
+	//update main window dimensions then compute GUI elements positions/dimensions.
+	//We have to do this here because RecomputeWindowElementsDimensions() calls UpdateViewport(), which assumes viewport is initialized.
+	glfwGetWindowSize(mainWindow, &mainWinWidth, &mainWinHeight);
 	RecomputeWindowElementsDimensions();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); //restore default framebuffer
 	
 	LogMan::Log("GUI startup success!", LOG_SUCCESS);
 	return MainUILoop();

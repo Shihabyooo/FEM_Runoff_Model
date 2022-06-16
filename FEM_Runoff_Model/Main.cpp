@@ -4,5 +4,5 @@
 int main(int argc, char ** argv)
 {
 	LogMan::Log("Startup.");
-	return StartUI();
+	return StartUI(1280, 720);
 }
