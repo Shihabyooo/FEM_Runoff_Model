@@ -35,6 +35,14 @@ extern OffScreenBuffer viewportBuffer;
 extern std::unordered_map <int, Layer> layers;
 extern Shader triangleShader, pointShader, lineShader;
 
+extern Vector2 currenViewportHoverPos; //in worldspace coordinates
+extern Vector2 currenViewportHoverPosPixels; //in local pixel screenspace of viewport
+extern bool isHoveringViewport;
+extern double scale;
+extern double screenAspectRatio;
+extern double worldAspectRatio;
+extern Vector2 viewBounds[2];
+
 void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount); //test test
 void UpdateMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
 bool SetupShaders(Shader * targetGLData, char const * vertexShaderSource, char const * fragmentShaderSource);

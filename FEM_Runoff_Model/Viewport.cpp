@@ -4,7 +4,9 @@ OffScreenBuffer viewportBuffer;
 
 Vector2 delta;
 double scale = 0.5f;
-double aspectRatio = 1.0f;
+double screenAspectRatio = 1.0f;
+double worldAspectRatio = 1.0f;
+float scaleChangeTicks = 0.01f; //TODO make this value dynamically set based on current bounds.
 //float margin = 0.05f;
 float * nodesMeshVerts = NULL;
 unsigned int * trianglesIndices = NULL;
@@ -18,6 +20,9 @@ float superTriMeshVerts[9];
 
 Vector2 lastViewportSize;
 Vector2 viewBounds[2];
+Vector2 currenViewportHoverPos;
+Vector2 currenViewportHoverPosPixels; //in local pixel screenspace of viewport
+bool isHoveringViewport = false;
 
 //Create vertex buffer (VBO), vertex array object (VAO) and vertex array element object, store id in targetGLData struct. \
 if verticesCount is greater than or equal to 3, UpdateMesh() is called.
@@ -159,12 +164,11 @@ void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-float scaleChangeTisk = 0.05f; //TODO make this value dynamically set based on current bounds.
 void HandleMousePan()
 {
 	ImGuiIO& io = ImGui::GetIO();
 	ImVec2 * posAtClick = io.MouseClickedPos;
-	if (ImGui::IsMouseDragging(2) && viewPortDimensions.Contains(posAtClick[2]))
+	if (ImGui::IsMouseDragging(2) && viewportDimensions.Contains(posAtClick[2]))
 	{
 		ImVec2 mouseDelta = io.MouseDelta;
 		PanView(Vector2(-1.0f * mouseDelta.x, mouseDelta.y) * scale);
@@ -174,22 +178,45 @@ void HandleMousePan()
 void HandleMouseZoom()
 {
 	ImGuiIO& io = ImGui::GetIO();
-	ImVec2 posAtScroll = io.MousePos;
-	float scroll = io.MouseWheel;
-	if (scroll != 0.0f && viewPortDimensions.Contains(posAtScroll))
+	float scroll = io.MouseWheel * -1.0f;
+	if (isHoveringViewport && scroll != 0.0f)
 	{
-		std::cout << "scroll: " << scroll << std::endl;
+		scale += scroll * scaleChangeTicks;
+		
+		viewBounds[0].x = currenViewportHoverPos.x - currenViewportHoverPosPixels.x * scale;
+		viewBounds[0].y = currenViewportHoverPos.y - (viewportDimensions.height - currenViewportHoverPosPixels.y) * scale * screenAspectRatio / worldAspectRatio;
 
-		//posAtScroll is the target point
-		//recompute viewBounds that maintain this point at its place
-		//recompute projection parameters.
+		viewBounds[1].x = currenViewportHoverPos.x + (viewportDimensions.width - currenViewportHoverPosPixels.x) * scale;
+		viewBounds[1].y = currenViewportHoverPos.y + currenViewportHoverPosPixels.y * scale * screenAspectRatio / worldAspectRatio;
+		
+		UpdateCoordinateProjectionParameters();
+		UpdateContent();
 	}
 }
 
+//MUST BE CALLED BEFORE HandleMouseZoom() \
+Only updates when position when mouse is over viewport, otherwise isHoveringViewport set to false.
+void UpdateMouseHoverPosition() //TODO fix
+{
+	ImGuiIO& io = ImGui::GetIO();
+	ImVec2 mousePos = io.MousePos;
+	if (isHoveringViewport = viewportDimensions.Contains(mousePos))
+	{
+		currenViewportHoverPosPixels = viewportDimensions.LocalPosFromGlobal(mousePos);
+		Vector2 worldspaceDelta(currenViewportHoverPosPixels.x * scale,
+								(viewportDimensions.height - currenViewportHoverPosPixels.y) * scale * screenAspectRatio / worldAspectRatio);
+
+		currenViewportHoverPos = Vector2(	viewBounds[0].x + worldspaceDelta.x,
+											viewBounds[0].y + worldspaceDelta.y);
+	}
+	else
+		isHoveringViewport = false;
+}
 
 //Renders the viewport content to the offscreen buffer.
 void RenderViewport() //Renders viewport content to an offscreen buffer.
 {
+	UpdateMouseHoverPosition();
 	HandleMousePan();
 	HandleMouseZoom();
 	////Test mesh (quad covering whole viewport).
@@ -202,7 +229,7 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 
 	glBindFramebuffer(GL_FRAMEBUFFER, viewportBuffer.fbo);
 
-	glViewport(0, 0, viewPortDimensions.width, viewPortDimensions.height);
+	glViewport(0, 0, viewportDimensions.width, viewportDimensions.height);
 
 	glClearColor(viewportBGColour.x, viewportBGColour.y, viewportBGColour.z, viewportBGColour.w);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -237,8 +264,8 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 void DrawViewport() //IMGUI painting commands for viewport window
 {
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-	ImGui::SetNextWindowPos(ImVec2(viewPortDimensions.positionX, viewPortDimensions.positionY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(viewPortDimensions.width, viewPortDimensions.height), ImGuiCond_Always);
+	ImGui::SetNextWindowPos(ImVec2(viewportDimensions.positionX, viewportDimensions.positionY), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(viewportDimensions.width, viewportDimensions.height), ImGuiCond_Always);
 
 	ImGui::Begin("Viewport", NULL, windowFlags);
 
@@ -246,8 +273,8 @@ void DrawViewport() //IMGUI painting commands for viewport window
 
 	ImGui::GetWindowDrawList()->AddImage(
 		(void*)viewportBuffer.texture, //texture to render (from an offscreen buffer)
-		ImVec2(viewPortDimensions.positionX, viewPortDimensions.positionY), //NW Corner
-		ImVec2(viewPortDimensions.positionX + viewPortDimensions.width, viewPortDimensions.positionY + viewPortDimensions.height), //SE corner
+		ImVec2(viewportDimensions.positionX, viewportDimensions.positionY), //NW Corner
+		ImVec2(viewportDimensions.positionX + viewportDimensions.width, viewportDimensions.positionY + viewportDimensions.height), //SE corner
 		ImVec2(0, 1), ImVec2(1, 0)); //UVs
 
 	ImGui::End();
@@ -255,12 +282,12 @@ void DrawViewport() //IMGUI painting commands for viewport window
 
 bool InitViewport()
 {
-	viewPortDimensions.width = minViewportWidth;
-	viewPortDimensions.height = minViewportHeight;
+	viewportDimensions.width = 1;
+	viewportDimensions.height = 1;
 
 	LogMan::Log("Initializaing viewport");
 	
-	if (!SetupOffScreenBuffer(&viewportBuffer, viewPortDimensions.width, viewPortDimensions.height))
+	if (!SetupOffScreenBuffer(&viewportBuffer, viewportDimensions.width, viewportDimensions.height))
 		return FAILED_VIEWPORT_CREATE;
 
 	layers.insert({ 1, Layer("MainMesh", MeshData(), 1) });
@@ -290,9 +317,9 @@ bool InitViewport()
 //To be called when the dimensions of the viewport change (e.g. when windows are resized).
 void UpdateViewport()
 {
-	UpdateOffScreenBuffer(&viewportBuffer, viewPortDimensions.width, viewPortDimensions.height);
+	UpdateOffScreenBuffer(&viewportBuffer, viewportDimensions.width, viewportDimensions.height);
 	UpdateViewBounds();
-	UpdateCoordinateProjectionParameters();
+	//UpdateCoordinateProjectionParameters();
 	UpdateContent();
 }
 
@@ -353,15 +380,18 @@ void UpdateTriangles()
 
 
 //To be called whenever viewport is resized. Recomputes the NE corner based on the delta of the new position (assumed to be updated in \
-viewPortDimensions) and the previous viewport (Assumed stored in lastViewportSize). SW corner does not change. Recomputes aspectRatio.
+viewportDimensions) and the previous viewport (Assumed stored in lastViewportSize). SW corner does not change. Recomputes screenAspectRatio. \
+Imples UpdateCoordinateProjectionParameters()
 void UpdateViewBounds()
 {
 	//scale doesn't change when simply resizing viewport. (i.e. resizing would expose more area to paint on, but won't change size of elements.
-	aspectRatio = static_cast<double>(viewPortDimensions.width) / static_cast<double>(viewPortDimensions.height);
+	screenAspectRatio = static_cast<double>(viewportDimensions.width) / static_cast<double>(viewportDimensions.height);
 	
-	Vector2 changeInView = viewPortDimensions.Dimension() - lastViewportSize;	
+	Vector2 changeInView = viewportDimensions.Dimension() - lastViewportSize;	
 	viewBounds[1].x += changeInView.x * scale;
-	viewBounds[1].y += changeInView.y * scale / aspectRatio;
+	viewBounds[1].y += changeInView.y * scale / screenAspectRatio;
+
+	UpdateCoordinateProjectionParameters();
 }
 
 //Forces the viewportbounds to specific coordinates. SW bound is set as provided, NW corner is clamped to be at least \
@@ -374,19 +404,21 @@ void SetViewBounds(Vector2 swCorner, Vector2 nwCorner)
 
 	//adjust NW bound to maintain the current aspect ratio.
 	delta = viewBounds[1] - viewBounds[0]; //unadjusted delta
-	delta = Vector2(Max(delta.x, delta.y * aspectRatio),
-					Max(delta.y, delta.x / aspectRatio));
+	delta = Vector2(Max(delta.x, delta.y * screenAspectRatio),
+					Max(delta.y, delta.x / screenAspectRatio));
 
 	viewBounds[1] = viewBounds[0] + delta;
 
-	scale = delta.x / static_cast<double>(viewPortDimensions.width);
+	scale = delta.x / static_cast<double>(viewportDimensions.width);
+	worldAspectRatio = static_cast<double>(delta.x) / static_cast<double>(delta.y);
 }
 
 void UpdateCoordinateProjectionParameters()
 {
 	delta = viewBounds[1] - viewBounds[0];
-	aspectRatio = static_cast<double>(viewPortDimensions.width) / static_cast<double>(viewPortDimensions.height);
-	scale = delta.x / static_cast<double>(viewPortDimensions.width);
+	worldAspectRatio = static_cast<double>(delta.x) / static_cast<double>(delta.y);
+	screenAspectRatio = static_cast<double>(viewportDimensions.width) / static_cast<double>(viewportDimensions.height);
+	scale = delta.x / static_cast<double>(viewportDimensions.width);
 }
 
 //returns normalized coordinates (-1.0f to 1.0f) for a supplied point depending on the current projection parameters 
@@ -396,8 +428,8 @@ Vector2 NormalizeCoordinates(Vector2 & point)
 					(2.0f - 2.0f * margin) * (point.y - viewBounds[06].y) / (delta.y) - 1.0f + margin);*/
 	/*Vector2 normPos(2.0f * (point.x - viewBounds[0].x) / (delta.x) - 1.0f,
 					2.0f * (point.y - viewBounds[0].y) / (delta.y) - 1.0f);*/
-	Vector2 normPos(2.0f * ((point.x - viewBounds[0].x) / scale) / viewPortDimensions.width  - 1.0f,
-					2.0f * ((point.y - viewBounds[0].y) / scale) / viewPortDimensions.height - 1.0f);
+	Vector2 normPos(2.0f * ((point.x - viewBounds[0].x) / scale) / viewportDimensions.width  - 1.0f,
+					2.0f * ((point.y - viewBounds[0].y) / scale) / viewportDimensions.height - 1.0f);
 	
 	normPos = normPos;
 	return normPos;
