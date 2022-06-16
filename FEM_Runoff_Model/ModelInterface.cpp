@@ -1,4 +1,5 @@
 #include "ModelInterface.hpp"
+#include "FileIO.hpp"
 
 //std::unordered_map<int, Triangle> triangles;
 //std::vector<Vector2> nodes;
@@ -27,18 +28,6 @@ void TestBoundingBox()
 				+ std::to_string(nodesNE.x) + ", " + std::to_string(nodesNE.y));
 }
 
-bool TestLoadDEM(std::string const & path)
-{
-	LogMan::Log("Attempting to load raster file " + path);
-	if (!LoadGeoTIFF(path))
-	{
-		LogMan::Log("Failed to load raster file \"" + path + "\"", LOG_ERROR);
-		return false;
-	}
-
-	LogMan::Log("Succeeded loading raster file!", LOG_SUCCESS);
-}
-
 void TestSimulate(std::string const & nodesPath)
 {
 	std::cout << "\n test simulation start\n";
@@ -46,48 +35,8 @@ void TestSimulate(std::string const & nodesPath)
 	triangles.clear();
 	boundaryNodes.clear();
 
-	std::ifstream file;
-	file.open(nodesPath);
-	if (!file.is_open())
-	{
-		std::cout << "Failed to open " << nodesPath.c_str() << std::endl;
-		return;
-	}
-
-	char cBuffer = ' ';
-	std::string sBuffer = "";
-	float cachedFloat = 0;
-
-	while (!file.eof())
-	{	
-		file.read(&cBuffer, sizeof(cBuffer));
-		
-		if (cBuffer == ',')
-		{
-			cachedFloat = atof(sBuffer.c_str());
-			sBuffer = "";
-		}
-		else if (cBuffer == '\n' || file.eof())
-		{
-			nodes.push_back(Vector2(cachedFloat, atof(sBuffer.c_str())));
-			sBuffer = "";
-		}
-		else
-		{
-			sBuffer += cBuffer;
-		}
-	}
-
-	//std::cout << "\n======================================\nLoaded nodes\n";
-	//for (auto it = nodes.begin(); it != nodes.end(); ++it)
-	//	std::cout << it->x << ", " << it->y << std::endl;
+	LoadCoordinatePairsCSV(nodesPath, nodes);
 	
-
 	TestBoundingBox();
 	Triangulate(nodes, &triangles, &boundaryNodes);
-
-	/*for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		std::cout << "tri: " << it->second.id << " - verts:" << it->second.vertIDs[0] << ", " << it->second.vertIDs[1] << ", " << it->second.vertIDs[2] << std::endl;*/
-
-	//std::cout << "Count: " << nodes.size() << std::endl;
 }

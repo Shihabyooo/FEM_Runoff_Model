@@ -3,9 +3,10 @@
 //#include <vector>
 //#include <filesystem>
 //#include <iostream>
-#include <chrono>
 
-#include "GUI_Requirements.hpp"
+#include "Globals.hpp"
+
+//#include "GUI_Requirements.hpp"
 
 void DrawLogPane();
 namespace LogMan

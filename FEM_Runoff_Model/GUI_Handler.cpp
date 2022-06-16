@@ -172,7 +172,8 @@ void DrawLeftPane()
 
 	if (ImGui::Button("Load DEM.", ImVec2(100, 50)))
 	{
-		TestLoadDEM(demFilePath);
+		//TestLoadDEM(demFilePath);
+		LogMan::Log("DEM loading implementation not finished yet.", LOG_WARN);
 	}
 		
 	//Other input

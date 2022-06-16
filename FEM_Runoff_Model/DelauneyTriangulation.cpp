@@ -1,4 +1,6 @@
+#include <string>
 #include "DelauneyTriangulation.hpp"
+
 
 int extVerts[3];//cached external vertices.
 int lastID = 0;

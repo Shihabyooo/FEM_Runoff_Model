@@ -1,4 +1,8 @@
+#include <chrono>
+#include <ctime>
+
 #include "LogManager.hpp"
+#include "GUI_Requirements.hpp"
 
 std::vector<LogEntry> logHistory;
 
