@@ -15,7 +15,7 @@ int renderTrisIndicesCount = 0;
 
 std::unordered_map <int, Layer>  layers;
 Shader triangleShader, pointShader, lineShader;
-Shader testSuperTriShader;
+//Shader testSuperTriShader;
 float superTriMeshVerts[9];
 
 Vector2 lastViewportSize;
@@ -148,8 +148,14 @@ bool SetupOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY)
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); //restore default framebuffer
-
+	
 	return true;
+}
+
+void SetActiveShaderDiffuse(Colour const & colour)
+{
+	GLuint diffuseColLoc = glGetUniformLocation(triangleShader.program, "diffuseCol");
+	glUniform4fv(diffuseColLoc, 1, colour.Array());
 }
 
 //Changes the dimensions of the texture assigned to the fbo to sizeX * sizeY. Resets active buffer to main buffer when done.
@@ -216,16 +222,7 @@ void UpdateMouseHoverPosition() //TODO fix
 //Renders the viewport content to the offscreen buffer.
 void RenderViewport() //Renders viewport content to an offscreen buffer.
 {
-	UpdateMouseHoverPosition();
-	HandleMousePan();
-	HandleMouseZoom();
-	////Test mesh (quad covering whole viewport).
-	/*nodesMeshVerts = new float[18]{ 0.0f,1.0f,0.0f,	1.0f, 0.0f, 0.0f,	0.0f, 0.0f,0.0f,
-									0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f };
-	UpdateMesh(&viewportGLData, nodesMeshVerts, 18);
-	renderVertsCount = 16;*/
-
-	//Objects in the back are drawn first.
+	//Objects in the back are rendered first.
 
 	glBindFramebuffer(GL_FRAMEBUFFER, viewportBuffer.fbo);
 
@@ -237,10 +234,15 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 	//test draw supertriangle
 	if (nodes.size() > 2) 
 	{
-		glUseProgram(testSuperTriShader.program);
+		glUseProgram(triangleShader.program);
+		SetActiveShaderDiffuse(COLOUR_GREEN);
 		glBindVertexArray(layers[10].meshData.vertexArrayObject);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, layers[10].meshData.vertexArrayElementObject);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Wireframe only
+		SetActiveShaderDiffuse(COLOUR_BLACK);
+		glDrawArrays(GL_TRIANGLES, 0, 3); //stupid solution to draw line on top of tri.
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //return to normal filled render mode.
 	}
 
 	//The nodes and triangles share the same vertices, we use the same vertex object for both, but we glDrawArrays the point, and for
@@ -250,19 +252,32 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 	
 	//draw triangles
 	glUseProgram(triangleShader.program);
+	SetActiveShaderDiffuse(COLOUR_RED);
 	glDrawElements(GL_TRIANGLES, renderTrisIndicesCount, GL_UNSIGNED_INT, 0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Wireframe only
+	SetActiveShaderDiffuse(COLOUR_BLACK);
+	glDrawElements(GL_TRIANGLES, renderTrisIndicesCount, GL_UNSIGNED_INT, 0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //return to normal filled render mode.
 	
 	//draw nodes
 	glUseProgram(pointShader.program);
+	SetActiveShaderDiffuse(COLOUR_BLACK);
 	glDrawArrays(GL_POINTS, 0, renderVertsCount);
 
 	//restore default frame buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-//IMGUI drawing commands, passes the texture of the offscreen buffer to IMGUI to be painted in the viewport window.
-void DrawViewport() //IMGUI painting commands for viewport window
+//Renders viewport then draws to screen IMGUI drawing commands, passes the texture of the offscreen buffer to IMGUI to \
+be painted in the viewport window.
+void DrawViewport()
 {
+	UpdateMouseHoverPosition();
+	HandleMousePan();
+	HandleMouseZoom();
+
+	RenderViewport();
+
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 	ImGui::SetNextWindowPos(ImVec2(viewportDimensions.positionX, viewportDimensions.positionY), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(viewportDimensions.width, viewportDimensions.height), ImGuiCond_Always);
@@ -293,12 +308,12 @@ bool InitViewport()
 	layers.insert({ 1, Layer("MainMesh", MeshData(), 1) });
 	//layers.insert({ 2, Layer("Triangles", MeshData(), 2) });
 	//layers.insert({ 5, Layer("Test", MeshData(), 5) });
-	
+
 	for (auto it = layers.begin(); it != layers.end(); ++it)
 		SetupMesh(&(it->second.meshData), NULL, 0, NULL, 0); //startup empty
 
-	if ( !SetupShaders(&pointShader, CircleShader::vertex_shader_text, CircleShader::fragment_shader_text) ||
-		!SetupShaders(&triangleShader, TestTriangle::vertex_shader_text, TestTriangle::fragment_shader_text) )
+	if ( !SetupShaders(&pointShader, PointShader::vertex_shader_text, PointShader::fragment_shader_text) ||
+		!SetupShaders(&triangleShader, PolygonShader::vertex_shader_text, PolygonShader::fragment_shader_text) )
 	{
 		LogMan::Log("Error compiling shaders!", LOG_ERROR);
 		//shader compilation failure is not [very] critical. Most GPUs offer fallback shaders in this case anyway,
@@ -306,7 +321,7 @@ bool InitViewport()
 		//the entire program just for this. Although more graceful handling of the issue should be implemented.
 		//return false;
 	}
-	
+
 	//Check and push any errors that may have resulted thus far to the log.
 	GLErrorCheck();
 
@@ -443,23 +458,23 @@ void PanView(Vector2 posDelta)
 }
 
 //Stuff for debug display of the supertriangle.
-static const char* vertex_shader_text =
-		"#version 330\n"
-		"layout(location = 0) in vec4 pos;\
-		void main(void)\
-		{\
-			gl_Position = pos;\
-		}";
-
-static const char* fragment_shader_text =
-"void main(void)\
-		{\
-			gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);\
-		}";
+//static const char* vertex_shader_text =
+//		"#version 330\n"
+//		"layout(location = 0) in vec4 pos;\
+//		void main(void)\
+//		{\
+//			gl_Position = pos;\
+//		}";
+//
+//static const char* fragment_shader_text =
+//"void main(void)\
+//		{\
+//			gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);\
+//		}";
 
 void TestSetupSuperTriangleRender()
 {
-	SetupShaders(&testSuperTriShader, vertex_shader_text, fragment_shader_text);
+	//SetupShaders(&testSuperTriShader, vertex_shader_text, fragment_shader_text);
 	layers.insert({ 10, Layer("SuperTriangle", MeshData(), 10) });
 
 	TestUpdateSuperTriangle();

@@ -13,6 +13,22 @@
 #define LOG_NORM	LogEntryType::normal
 #define LOG_WARN	LogEntryType::warning
 
+//Colours
+#pragma region Colour templates
+#define COLOUR_BLUE Colour(0.0f, 0.0f, 1.0f)
+#define COLOUR_RED Colour(1.0f, 0.0f, 0.0f)
+#define COLOUR_GREEN Colour(0.0f, 1.0f, 0.0f)
+#define COLOUR_BLACK Colour()
+#define COLOUR_WHITE Colour(1.0f)
+#define COLOUR_GRAY Colour(0.5f)
+#define COLOUR_MAGENTA Colour(1.0f, 0.0f, 1.0f)
+#define COLOUR_CYAN Colour(0.0f, 1.0f, 1.0f)
+#define COLOUR_YELLOW Colour(1.0f, 1.0f, 0.0f)
+#define COLOUR_ORANGE Colour(1.0f, 0.5f, 0.0f)
+#define COLOUR_LIME Colour(0.5f, 1.0f, 0.0f)
+#define COLOUR_PURPLE Colour(0.5f, 0.0f, 1.0f)
+#pragma endregion
+
 struct Vector2
 {
 public:
@@ -105,6 +121,46 @@ public:
 	//TODO add timestamp
 	std::string content;
 	LogEntryType type;
+};
+
+struct Colour
+{
+public:
+	Colour()
+	{
+		r = g = b = 0.0f;
+		a = 1.0f;
+	}
+
+	Colour(float grayShade)
+	{
+		r = g = b = grayShade;
+		a = 1.0f;
+	}
+
+	Colour(float _r, float _g, float _b)
+	{
+		r = _r;
+		g = _g;
+		b = _b;
+		a = 1.0f;
+	}
+
+	Colour(float _r, float _g, float _b, float _a)
+	{
+		r = _r;
+		g = _g;
+		b = _b;
+		a = _a;
+	}
+
+	float const * Array() const
+	{
+		float array[4]{ r, g, b, a };
+		return array;
+	}
+
+	float r, g, b, a;
 };
 
 //Helper functions

@@ -103,7 +103,7 @@ extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimension
 extern WindowDimensions toolbarDimensions, statusBarDimensions;
 extern Vector2 lastViewportSize;
 
-namespace CircleShader //TODO fix this
+namespace PointShader //TODO fix this
 {
 	static const char* vertex_shader_text =
 		"#version 330\n"
@@ -116,10 +116,34 @@ namespace CircleShader //TODO fix this
 
 	static const char* fragment_shader_text =
 		"#version 330\n"
+		"uniform vec4 diffuseCol;"
 		"void main(void)\
 		{\
-			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\
+			gl_FragColor = diffuseCol;\
+			vec2 circularCoordinate = 2.0 * gl_PointCoord - 1.0;\
+			if(dot(circularCoordinate, circularCoordinate) > 1.0)\
+			{\
+				discard;\
+			}\
 		}";
+}
+
+namespace PolygonShader
+{
+	static const char* vertex_shader_text =
+		"#version 330\n"
+		"in vec3 vp;"
+		"void main() {"
+		"  gl_Position = vec4(vp, 1.0);"
+		"}";
+
+	static const char* fragment_shader_text =
+		"#version 330\n"
+		"uniform vec4 diffuseCol;"
+		"out vec4 frag_colour;"
+		"void main() {"
+		"  frag_colour = diffuseCol;"
+		"}";
 }
 
 //For testing only:

@@ -49,7 +49,7 @@ bool SetupShaders(Shader * targetGLData, char const * vertexShaderSource, char c
 bool SetupOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY); //resets active buffer to main buffer when done.
 void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY); //resets active buffer to main buffer when done.
 
-void RenderViewport(); //Renders viewport content to an offscreen buffer.
+//void RenderViewport(); //Renders viewport content to an offscreen buffer.
 void DrawViewport(); //IMGUI painting commands for viewport window
 
 bool InitViewport();
