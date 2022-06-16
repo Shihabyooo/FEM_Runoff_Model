@@ -117,8 +117,8 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 
 //TODO move window/viewport rendering/painting function to their own header/source files.
 //char meshNodes[260] = "Path to grid nodes file.";
-char meshNodes[260] = "Test_Mesh_Nodes_Grid.csv";
-char demFilePath[260] = "Path to grid nodes file.";
+char meshNodes[260] = "Test_Nodes_R1.csv";
+char demFilePath[260] = "Test_Raster.tif";
 
 void DrawLeftPane()
 {
