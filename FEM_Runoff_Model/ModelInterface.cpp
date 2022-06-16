@@ -9,22 +9,22 @@ Vector2 nodesSW, nodesNE;
 
 void TestBoundingBox()
 {
-	/*std::cout << "\n computing bounding box in model interface\n";
+	//std::cout << "\n computing bounding box in model interface\n";
 	nodesSW = nodes[0];
-	nodesNE = nodes[0];*/
+	nodesNE = nodes[0];
 
 	for (auto it = nodes.begin(); it < nodes.end(); it++)
 	{
+		Print(*it);
 		nodesSW.x = Min(it->x, nodesSW.x);
 		nodesSW.y = Min(it->y, nodesSW.y);
 		nodesNE.x = Max(it->x, nodesNE.x);
 		nodesNE.y = Max(it->y, nodesNE.y);
 	}
 
-	/*std::cout << "SW corner: ";
-	Print(nodesSW);
-	std::cout << "NE corner: ";
-	Print(nodesNE);*/
+	LogMan::Log("Loaded nodes with bounds: "
+				+ std::to_string(nodesSW.x) + ", " + std::to_string(nodesSW.y) + " and "
+				+ std::to_string(nodesNE.x) + ", " + std::to_string(nodesNE.y));
 }
 
 bool TestLoadDEM(std::string const & path)

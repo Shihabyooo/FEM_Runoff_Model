@@ -43,6 +43,13 @@ public:
 		return (Vector2(x * scalar, y * scalar));
 	};
 
+	Vector2 & operator= (Vector2 const & vec2)
+	{
+		x = vec2.x;
+		y = vec2.y;
+		return *this;
+	}
+
 	float x;
 	float y;
 };
@@ -135,7 +142,7 @@ static int Clamp(int const & a, int const & b, int const & c)
 	return (a > max ? max : (a < min ? min : a));
 }
 
-static inline void Print(Vector2 & vec)
+static inline void Print(Vector2 const & vec)
 {
 	std::cout << vec.x << ", " << vec.y << "\n";
 }
