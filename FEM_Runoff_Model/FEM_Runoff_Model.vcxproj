@@ -151,6 +151,7 @@
     <ClCompile Include="GeoTIFF-Parser\Decompressor.cpp" />
     <ClCompile Include="GeoTIFF-Parser\GeoTIFF_Parser.cpp" />
     <ClCompile Include="GeoTIFF-Parser\GeoTIFF_Parser_Globals.cpp" />
+    <ClCompile Include="Globals.cpp" />
     <ClCompile Include="GUI_Handler.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="Main.cpp" />
