@@ -45,6 +45,17 @@ enum class CRS
 	undefined
 };
 
+enum class Solver
+{
+	Simple, //Compute invert of paramters matrix and multiply with the RHS vector
+	GaussJordan, //Gauss-Jordan Elimination and backwards substitution
+	Jacobi,
+	SOR, //Successive Overrelaxation (Or Gauss-Seidel when waight = 1)
+	PCG, //Preconditioned Congjugate Gradient
+	BiCG, //Biconjugate Gradient
+	GMRES //Generalized Minimum Residual
+};
+
 struct Vector2;
 struct Vector2Int;
 struct Vector2D;

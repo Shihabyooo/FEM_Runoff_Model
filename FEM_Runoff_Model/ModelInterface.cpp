@@ -1,5 +1,6 @@
 #include "ModelInterface.hpp"
 #include "FileIO.hpp"
+#include "Solvers.hpp"
 
 //std::unordered_map<int, Triangle> triangles;
 //std::vector<Vector2> nodes;

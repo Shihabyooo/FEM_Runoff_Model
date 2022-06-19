@@ -159,6 +159,7 @@
     <ClCompile Include="MatricesPlusPlus\MatrixPP_f32.cpp" />
     <ClCompile Include="MatricesPlusPlus\VectorMaths.cpp" />
     <ClCompile Include="ModelInterface.cpp" />
+    <ClCompile Include="Solvers.cpp" />
     <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
@@ -174,6 +175,7 @@
     <ClInclude Include="LogManager.hpp" />
     <ClInclude Include="Main.hpp" />
     <ClInclude Include="ModelInterface.hpp" />
+    <ClInclude Include="Solvers.hpp" />
     <ClInclude Include="Triangle.hpp" />
     <ClInclude Include="Viewport.hpp" />
   </ItemGroup>
