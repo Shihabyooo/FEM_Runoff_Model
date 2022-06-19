@@ -18,7 +18,6 @@ int main(int argc, char ** argv)
 	//grid.SetZValues(testZ);
 
 
-
 	//double x, y;
 	//int subdivs = 5;
 	//for (int i = 0; i <= subdivs; i++)

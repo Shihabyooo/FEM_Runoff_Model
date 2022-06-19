@@ -106,10 +106,10 @@ bool LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2> & out
 	return true;
 }
 
-bool LoadRaster(std::string const & path, void * output) //TODO handle returning pointer.
+bool LoadRaster(std::string const & path, void * output, int * outRasterID) //TODO handle returning pointer.
 {
 	LogMan::Log("Attempting to load raster file \"" + path + "\"");
-	if (!LoadGeoTIFF(path))
+	if (!LoadGeoTIFF(path, outRasterID))
 	{
 		LogMan::Log("Failed to load raster file \"" + path + "\"", LOG_ERROR);
 		return false;
