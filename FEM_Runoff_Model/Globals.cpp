@@ -193,8 +193,7 @@ Rect::Rect()
 
 Rect::Rect(Rect const & rect)
 {
-	minCorner = rect.minCorner;
-	maxCorner = rect.maxCorner;
+	*this = rect;
 }
 
 Rect::Rect(Vector2D const & cornerSW, Vector2D const & cornerNE)
@@ -299,10 +298,10 @@ Rect3D::Rect3D(Rect const & xyRect, double const heights[4])
 Rect3D & Rect3D::operator=(Rect3D const & rect3D)
 {
 	xy = rect3D.xy;
-	z_SW = rect3D.z_SE;
+	z_SW = rect3D.z_SW;
 	z_SE = rect3D.z_SE;
-	z_NE = rect3D.z_SE;
-	z_NW = rect3D.z_SE;
+	z_NE = rect3D.z_NE;
+	z_NW = rect3D.z_NW;
 
 	return *this;
 }
@@ -420,7 +419,7 @@ void Grid4x4::GridFromSWCorner(Vector2D const & cornerSW, double const cellWidth
 	for (int i = 0; i < 4; i++)
 	{
 		x[i] = cornerSW.x + static_cast<double>(i) * cellWidth;
-		y[i] = cornerSW.y * static_cast<double>(i) * cellHeight;
+		y[i] = cornerSW.y + static_cast<double>(i) * cellHeight;
 	}
 }
 
@@ -680,16 +679,15 @@ double BilinearInterpolation(Vector2D const & point, Grid4x4 const & grid)
 double BilinearInterpolation(Vector2D const & point, Rect3D const & grid)
 {
 	Vector2D normalizedPoint = point.Normalize(grid.MinCorner(), grid.MaxCorner());
-	//Print( Vector2(normalizedPoint.x, normalizedPoint.y));
 	double linearIntX[2];
 	
 	double edgeS[2]{ grid.z_SW, grid.z_SE };
 	double edgeN[2]{ grid.z_NW, grid.z_NE };
 
-	linearIntX[0] = LinearInterpolationNormalized(point.x, edgeS);
-	linearIntX[1] = LinearInterpolationNormalized(point.x, edgeN);
+	linearIntX[0] = LinearInterpolationNormalized(normalizedPoint.x, edgeS);
+	linearIntX[1] = LinearInterpolationNormalized(normalizedPoint.x, edgeN);
 
-	return LinearInterpolationNormalized(point.y, linearIntX);
+	return LinearInterpolationNormalized(normalizedPoint.y, linearIntX);
 }
 
 double BicubicInterpolation(Vector2D const & point, Grid4x4 const & grid)

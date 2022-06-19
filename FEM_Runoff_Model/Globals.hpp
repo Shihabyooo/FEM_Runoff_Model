@@ -284,6 +284,11 @@ static inline void Print(Vector2 const & vec)
 	std::cout << vec.x << ", " << vec.y << "\n";
 }
 
+static inline void Print(Vector2D const & vec)
+{
+	std::cout << vec.x << ", " << vec.y << "\n";
+}
+
 //Projection, Coordinate transformations and interpolation
 std::unique_ptr<double> ToUTM(double lng, double lat);
 std::unique_ptr<double> ToWGS84(double easting, double northing, bool isNortherHemisphere, int zone);
