@@ -3,6 +3,7 @@
 //#include <vector>
 //#include <filesystem>
 //#include <iostream>
+#include <string>
 
 #include "Globals.hpp"
 
