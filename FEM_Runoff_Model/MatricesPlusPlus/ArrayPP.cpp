@@ -193,13 +193,59 @@ _INDEX Array2D<T>::Columns() const
 	return columns;
 }
 
-template <typename T>
-bool Array2D<T>::IsEmpty() const
+template<typename T>
+std::unique_ptr<T[]> Array2D<T>::GetRow(_INDEX row) const
 {
-	if(content == NULL || (rows < 1 && columns < 1))
-		return true;
+	std::unique_ptr<T[]> rowCopy = std::make_unique<T[]>(columns);
 
-	return false;
+	for (_INDEX i = 0; i < columns; i++)
+		rowCopy[i] = content[row][i];
+
+	return rowCopy;
+}
+
+template<typename T>
+std::unique_ptr<T[]> Array2D<T>::GetColumn(_INDEX column) const
+{
+	std::unique_ptr<T[]> colCopy = std::make_unique<T[]>(rows);
+
+	for (_INDEX i = 0; i < rows; i++)
+		colCopy[i] = content[i][column];
+
+	return colCopy;
+}
+
+template<typename T>
+T * Array2D<T>::GetRowPtr(_INDEX row)
+{
+#ifdef _USE_BOUNDS_CHECK
+	if (row < 0 || row >= rows)
+		return NULL;
+#endif
+
+	return content[row];
+}
+
+template<typename T>
+T ** Array2D<T>::GetColumnPtr(_INDEX column)
+{
+#ifdef _USE_BOUNDS_CHECK
+	if (column < 0 || column >= columns)
+		return NULL;
+#endif
+
+	//need to create a new pointer
+	T ** colPtr = new T*[rows];
+	T * contentPtr = *content;
+	contentPtr += column;
+
+	for (_INDEX i = 0; i < rows; i++)
+	{
+		colPtr[i] = contentPtr;
+		contentPtr += columns;
+	}
+
+	return colPtr;
 }
 
 template <typename T>
@@ -273,7 +319,7 @@ void Array2D<T>::SwapRows(_INDEX firstRow, _INDEX secondRow)
 }
 
 template <typename T>
-bool Array2D<T>::IsSymmetric()
+bool Array2D<T>::IsSymmetric() const
 {
 	return IsSymmetric(*this);
 }
@@ -309,6 +355,15 @@ bool Array2D<T>::IsSymmetric(const Array2D<T> & arr)
 	}
 
 	return true;
+}
+
+template <typename T>
+bool Array2D<T>::IsEmpty() const
+{
+	if (content == NULL || (rows < 1 && columns < 1))
+		return true;
+
+	return false;
 }
 
 template <typename T>

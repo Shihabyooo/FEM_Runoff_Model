@@ -158,6 +158,7 @@
     <ClCompile Include="MatricesPlusPlus\ArrayPP.cpp" />
     <ClCompile Include="MatricesPlusPlus\MatrixPP_f32.cpp" />
     <ClCompile Include="MatricesPlusPlus\VectorMaths.cpp" />
+    <ClCompile Include="MatricesPlusPlus\VectorPP_f32.cpp" />
     <ClCompile Include="ModelInterface.cpp" />
     <ClCompile Include="Solvers.cpp" />
     <ClCompile Include="Triangle.cpp" />

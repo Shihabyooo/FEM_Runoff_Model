@@ -108,6 +108,9 @@
     <ClCompile Include="Solvers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MatricesPlusPlus\VectorPP_f32.cpp">
+      <Filter>Source Files\MatricesPP</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.hpp">
