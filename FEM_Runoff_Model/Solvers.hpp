@@ -2,9 +2,10 @@
 #include <MatricesPP.hpp>
 #include "Globals.hpp"
 
-#define DEFAULT_MAX_ITERATION 1000
+#define DEFAULT_MAX_ITERATION 10000
 #define DEFAULT_CONVERGENCE_THRESHOLD -1.0F
-#define INITIAL_X_VALUE 1.0F
+#define MIN_CONVERGENCE_THRESHOLD 0.001F
+#define INITIAL_X_VALUE 1.0F //Note! If initial value = 0.0F, some solvers may break
 
 //TODO in Vector_f32, add a method to compute (for a vector x) double = x_transpose * x
 
@@ -23,7 +24,6 @@ or the length does not equal b and x lengths, etc). Returns true otherwise (rega
 //Note: Not all issues with the system are treated as errors. e.g. for Jacobi and SOR, if the supplied bMatrix is not diagonal dominant\
 log a warning with the fact but still compute it.
 
-
 //TODO consider having a generalized struct for solver log (i.e. has statistics about solution process).
 
 bool SolverSimple(	Matrix_f32 const & aMatrix,
@@ -31,6 +31,10 @@ bool SolverSimple(	Matrix_f32 const & aMatrix,
 					Vector_f32 & outXVector,
 					Vector_f32 & outResiduals);
 
+bool Gaussian(	Matrix_f32 const & aMatrix,
+				Vector_f32 const & bVector,
+				Vector_f32 & outXVector,
+				Vector_f32 & outResiduals);
 
 //bool SolverGaussJordan(Matrix_f32 const & aMatrix,
 //						Vector_f32 const & bVector,
@@ -73,6 +77,14 @@ bool SolverBiCG(	Matrix_f32 const & aMatrix,
 //					Vector_f32 & outResiduals,
 //					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 //					size_t maxIterations = DEFAULT_MAX_ITERATION);
+
+bool SolverCGS(	Matrix_f32 const & aMatrix,
+					Vector_f32 const & bVector,
+					Vector_f32 & outXVector,
+					Vector_f32 & outResiduals,
+					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
+					size_t maxIterations = DEFAULT_MAX_ITERATION);
+
 
 void ComputeResiduals(	Matrix_f32 const & aMatrix,
 						Vector_f32 const & bVector,

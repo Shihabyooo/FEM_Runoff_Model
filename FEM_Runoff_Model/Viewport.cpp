@@ -419,8 +419,8 @@ void SetViewBounds(Vector2 swCorner, Vector2 nwCorner)
 
 	//adjust NW bound to maintain the current aspect ratio.
 	delta = viewBounds[1] - viewBounds[0]; //unadjusted delta
-	delta = Vector2(Max(delta.x, delta.y * screenAspectRatio),
-					Max(delta.y, delta.x / screenAspectRatio));
+	delta = Vector2(Max(static_cast<double>(delta.x), delta.y * screenAspectRatio),
+					Max(static_cast<double>(delta.y), delta.x / screenAspectRatio));
 
 	viewBounds[1] = viewBounds[0] + delta;
 

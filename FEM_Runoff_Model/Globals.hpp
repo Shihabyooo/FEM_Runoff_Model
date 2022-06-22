@@ -256,6 +256,11 @@ public:
 //Helper functions
 //TODO research whether there is any difference between having them on source file vs header file.
 
+static double Min(double const & a, double const & b)
+{
+	return (a > b ? b : a);
+}
+
 static float Min(float const & a, float const & b)
 {
 	return (a > b ? b : a);
@@ -264,6 +269,11 @@ static float Min(float const & a, float const & b)
 static int Min(int const & a, int const & b)
 {
 	return (a > b ? b : a);
+}
+
+static double Max(double const & a, double const & b)
+{
+	return (a > b ? a : b);
 }
 
 static float Max(float const & a, float const & b)
