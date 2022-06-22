@@ -12,7 +12,7 @@
 
 #include "ModelInterface.hpp"
 
-#define MIN_VIEWPORT_DELTA 1.0f
+#define MIN_VIEWPORT_DELTA 1.0
 
 #define CLEAR_ARRAY(x) if (x != NULL) { delete[] x; } x = NULL;
 
@@ -45,7 +45,7 @@ struct WindowDimensions
 public:
 	WindowDimensions()
 	{
-
+		positionX = positionY = width = height = 0;
 	};
 	
 	WindowDimensions(int _positionX, int _positionY, int _width, int _height)

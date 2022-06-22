@@ -8,7 +8,7 @@ double ComputeThreshold(Vector_f32 const & bVector)
 	for (int i = 0; i < bVector.Rows(); i++)
 		minValue = Min(abs(bVector.GetValue(i)), minValue);
 
-	float threshold = Max(0.001F * minValue, MIN_CONVERGENCE_THRESHOLD);
+	float threshold = Max(0.001 * minValue, MIN_CONVERGENCE_THRESHOLD);
 	LogMan::Log("Using automatic threshold of: " + std::to_string(threshold));
 	return threshold;
 }

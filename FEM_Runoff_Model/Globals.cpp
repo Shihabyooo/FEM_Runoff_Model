@@ -118,8 +118,8 @@ Vector2 Vector2Int::Normalize(Vector2Int const & min, Vector2Int const & max) co
 
 Vector2D::Vector2D()
 {
-	x = 0.0F;
-	y = 0.0F;
+	x = 0.0;
+	y = 0.0;
 }
 
 Vector2D::Vector2D(double _x, double _y)
@@ -257,7 +257,7 @@ bool Rect::Contains(Vector2D point)
 Rect3D::Rect3D()
 {
 	xy = Rect();
-	z_SW = z_SE = z_NE = z_NW = 0.0F;
+	z_SW = z_SE = z_NE = z_NW = 0.0;
 }
 
 Rect3D::Rect3D(Rect3D const & rect3D)
@@ -268,7 +268,7 @@ Rect3D::Rect3D(Rect3D const & rect3D)
 Rect3D::Rect3D(Rect const & xyRect)
 {
 	xy = xyRect;
-	z_SW = z_SE = z_NE = z_NW = 0.0F;
+	z_SW = z_SE = z_NE = z_NW = 0.0;
 }
 
 Rect3D::Rect3D(Rect const & xyRect, double uniformHeight)
@@ -327,10 +327,10 @@ Vector2D Rect3D::MaxCorner() const
 
 Grid4x4::Grid4x4()
 {
-	x[0] = x[1] = x[2] = x[3] = 0.0F;
-	y[0] = y[1] = y[2] = y[3] = 0.0F;
+	x[0] = x[1] = x[2] = x[3] = 0.0;
+	y[0] = y[1] = y[2] = y[3] = 0.0;
 	
-	SetUniformZValue(0.0F);
+	SetUniformZValue(0.0);
 }
 
 Grid4x4::Grid4x4(Grid4x4 const & grid)
@@ -341,7 +341,7 @@ Grid4x4::Grid4x4(Grid4x4 const & grid)
 Grid4x4::Grid4x4(Rect const & centralRect)
 {
 	GridFromCentralRect(centralRect);
-	SetUniformZValue(0.0F);
+	SetUniformZValue(0.0);
 }
 
 Grid4x4::Grid4x4(Rect const & centralRect, double const uniformZValue)
@@ -365,7 +365,7 @@ Grid4x4::Grid4x4(Rect const & centralRect, double const zValues[4][4])
 Grid4x4::Grid4x4(Vector2D const & cornerSW, double const cellWidth, double const cellHeight)
 {
 	GridFromSWCorner(cornerSW, cellWidth, cellHeight);
-	SetUniformZValue(0.0F);
+	SetUniformZValue(0.0);
 }
 
 Grid4x4::Grid4x4(Vector2D const & cornerSW, double const cellWidth, double const cellHeight, double const uniformZValue)
@@ -493,42 +493,42 @@ std::unique_ptr<double> ToUTM(double lng, double lat)
 
 	//std::cout << "\nDevWarning: Using Karney's method to convert from decimal degrees to UTM\n";
 
-	unsigned int zone = (unsigned int)floor((lng + 180.0F) / 6.0F) + 1;
-	double central_meridian_longitude = ((double)(zone - 1) * 6.0F - 180.0F + 3.0F) * PI_CONSTANT / 180.0F; //in radians
+	unsigned int zone = (unsigned int)floor((lng + 180.0) / 6.0) + 1;
+	double central_meridian_longitude = ((double)(zone - 1) * 6.0 - 180.0 + 3.0) * PI_CONSTANT / 180.0; //in radians
 	//TODO consider Norway/Svalbard exceptions.
 
-	const double e = sqrt(1.0 - pow((WGS_EARTH_RADIUS_POLES / WGS84_EARTH_RADIUS_EQUATOR), 2.0F));
+	const double e = sqrt(1.0 - pow((WGS_EARTH_RADIUS_POLES / WGS84_EARTH_RADIUS_EQUATOR), 2.0));
 	const double n = (WGS84_ELIPSOID_FLATTENING / (2 - WGS84_ELIPSOID_FLATTENING));
 
-	lat = lat * PI_CONSTANT / 180.0F;
-	lng = (lng * PI_CONSTANT / 180.0F) - central_meridian_longitude;
+	lat = lat * PI_CONSTANT / 180.0;
+	lng = (lng * PI_CONSTANT / 180.0) - central_meridian_longitude;
 
 	const double tao = tan(lat);
-	const double sigma = sinh(e * atanh(e * tao / sqrt(1.0F + pow(tao, 2.0))));
-	const double tao_prime = (tao * sqrt(1.0F + pow(sigma, 2.0F))) - (sigma * sqrt(1.0F + pow(tao, 2.0F)));
+	const double sigma = sinh(e * atanh(e * tao / sqrt(1.0 + pow(tao, 2.0))));
+	const double tao_prime = (tao * sqrt(1.0 + pow(sigma, 2.0))) - (sigma * sqrt(1.0 + pow(tao, 2.0)));
 	const double xi_prime = atan(tao_prime / cos(lng));
-	const double eta_prime = asinh(sin(lng) / sqrt(pow(tao_prime, 2.0F) + pow(cos(lng), 2)));
-	const double A = (WGS84_EARTH_RADIUS_EQUATOR / (1.0F + n)) * (1.0F + (1.0F / 4.0F)*pow(n, 2.0F) + (1.0F / 64.0F)*pow(n, 4.0F) + (1.0F / 256.0F)*pow(n, 6.0F)); //checked up to n^4 in source paper
+	const double eta_prime = asinh(sin(lng) / sqrt(pow(tao_prime, 2.0) + pow(cos(lng), 2)));
+	const double A = (WGS84_EARTH_RADIUS_EQUATOR / (1.0 + n)) * (1.0 + (1.0 / 4.0)*pow(n, 2.0) + (1.0 / 64.0)*pow(n, 4.0) + (1.0 / 256.0)*pow(n, 6.0)); //checked up to n^4 in source paper
 
 	double alpha[6] =
 	{ 
-		(1.0F / 2.0F) * n	- (2.0F / 3.0F) * pow(n,2.0F)		+ (5.0F / 16.0F) * pow(n,3.0F)		+ (41.0F / 180.0F)*pow(n,4.0F)			- (127.0F / 288.0F)*pow(n,5.0F)			+ (7891.0F / 37800.0F)*pow(n, 6.0F),
-							  (13.0F / 48.0F) * pow(n, 2.0F)	- (3.0F / 5.0F) * pow(n, 3.0F)		+ (557.0F / 1440.0F)*pow(n, 4.0F)		+ (281.0F / 630.0F)*pow(n, 5.0F)		- (1983433.0F / 1935360.0F)*pow(n, 6.0F),
-																  (61.0F / 240.0F) * pow(n, 3.0F)	- (103.0 / 140.0F)*pow(n, 4.0F)			+ (15061.0F / 26880.0F)*pow(n, 5.0F)	+ (167603.0F / 181440.0F)*pow(n, 6.0F),
-																									  (49561.0F / 161280.0F)*pow(n, 4.0F)	- (179.0F / 168.0F)*pow(n, 5.0)			+ (6601661.0 / 7257600.0)*pow(n, 6.0),
-																																			  (34729.0F / 80640.0F)*pow(n, 5.0F)	- (3418889.0F / 1995840.0F)*pow(n, 6.0),
-																																													  (212378941.0F / 319334400.0F)*pow(n, 6.0F)
+		(1.0 / 2.0) * n	- (2.0 / 3.0) * pow(n,2.0)		+ (5.0 / 16.0) * pow(n,3.0)		+ (41.0 / 180.0)*pow(n,4.0)			- (127.0 / 288.0)*pow(n,5.0)			+ (7891.0 / 37800.0)*pow(n, 6.0),
+							  (13.0 / 48.0) * pow(n, 2.0)	- (3.0 / 5.0) * pow(n, 3.0)		+ (557.0 / 1440.0)*pow(n, 4.0)		+ (281.0 / 630.0)*pow(n, 5.0)		- (1983433.0 / 1935360.0)*pow(n, 6.0),
+																  (61.0 / 240.0) * pow(n, 3.0)	- (103.0 / 140.0)*pow(n, 4.0)			+ (15061.0 / 26880.0)*pow(n, 5.0)	+ (167603.0 / 181440.0)*pow(n, 6.0),
+																									  (49561.0 / 161280.0)*pow(n, 4.0)	- (179.0 / 168.0)*pow(n, 5.0)			+ (6601661.0 / 7257600.0)*pow(n, 6.0),
+																																			  (34729.0 / 80640.0)*pow(n, 5.0)	- (3418889.0 / 1995840.0)*pow(n, 6.0),
+																																													  (212378941.0 / 319334400.0)*pow(n, 6.0)
 	};
 
 	double xi = xi_prime;
 	double eta = eta_prime;
-	double p_prime = 1.0F, q_prime = 0.0F;
+	double p_prime = 1.0, q_prime = 0.0;
 	for (int i = 0; i < 6; i++)
 	{
-		xi = xi + alpha[i] * sin(2.0F * (i + 1.0F)*xi_prime) * cosh(2.0F * (i + 1.0F) *eta_prime);
-		eta = eta + alpha[i] * cos(2.0F * (i + 1.0F) *xi_prime) * sinh(2.0F * (i + 1.0F) *eta_prime);
-		p_prime = p_prime + 2.0F*i*cos(2.0F * (i + 1.0F) *xi_prime) * cosh(2.0F * (i + 1.0F)* eta_prime);
-		q_prime = q_prime + 2.0F*i*sin(2.0F * (i + 1.0F)*xi_prime) * sinh(2.0F * (i + 1.0F) * eta_prime);
+		xi = xi + alpha[i] * sin(2.0 * (i + 1.0)*xi_prime) * cosh(2.0 * (i + 1.0) *eta_prime);
+		eta = eta + alpha[i] * cos(2.0 * (i + 1.0) *xi_prime) * sinh(2.0 * (i + 1.0) *eta_prime);
+		p_prime = p_prime + 2.0*i*cos(2.0 * (i + 1.0) *xi_prime) * cosh(2.0 * (i + 1.0)* eta_prime);
+		q_prime = q_prime + 2.0*i*sin(2.0 * (i + 1.0)*xi_prime) * sinh(2.0 * (i + 1.0) * eta_prime);
 	}
 
 	double x = UTM_MERIDIAN_SCALE * A * eta;
@@ -555,8 +555,8 @@ std::unique_ptr<double> ToWGS84(double easting, double northing, bool isNortherH
 	double _easting = easting - UTM_FALSE_EASTING;
 	double _northing = isNortherHemisphere ? northing : northing - UTM_FALSE_NORTHING;
 
-	double eccentricity = sqrt(WGS84_ELIPSOID_FLATTENING * (2.0F - WGS84_ELIPSOID_FLATTENING)); //this could be calculted outside and hardcoded into this program.
-	double n = WGS84_ELIPSOID_FLATTENING / (2.0F - WGS84_ELIPSOID_FLATTENING); //ditto
+	double eccentricity = sqrt(WGS84_ELIPSOID_FLATTENING * (2.0 - WGS84_ELIPSOID_FLATTENING)); //this could be calculted outside and hardcoded into this program.
+	double n = WGS84_ELIPSOID_FLATTENING / (2.0 - WGS84_ELIPSOID_FLATTENING); //ditto
 
 	double n2 = n * n;
 	double n3 = n2 * n;
@@ -564,19 +564,19 @@ std::unique_ptr<double> ToWGS84(double easting, double northing, bool isNortherH
 	double n5 = n4 * n;
 	double n6 = n5 * n;
 
-	double A = (WGS84_EARTH_RADIUS_EQUATOR / (1.0F + n)) * (1.0F + n2 * (1.0F / 4.0F) + n4 * (1.0F / 64.0F) + n6 * (1.0F / 256.0F));
+	double A = (WGS84_EARTH_RADIUS_EQUATOR / (1.0 + n)) * (1.0 + n2 * (1.0 / 4.0) + n4 * (1.0 / 64.0) + n6 * (1.0 / 256.0));
 
 	double eta = _easting / (UTM_MERIDIAN_SCALE * A);
 	double xi = _northing / (UTM_MERIDIAN_SCALE * A);
 
 	double beta[6] =
 	{
-		 n * (1.0F / 2.0F)	- n2 * (2.0F / 3.0F)	+ n3 * (37.0F / 96.0F)	- n4 * (1.0F / 360.0F)			- n5 * (81.0F / 512.0F)			+ n6 * (96199.0F / 604800.0F),
-							  n2 * (1.0F / 48.0F)	+ n3 * (1.0F / 15.0F)	- n4 * (437.0F / 1440.0F)		+ n5 * (46.0F / 105.0F)			- n6 * (1118711.0F / 3870720.0F),
-													  n3 * (17.0F / 480.0F)	- n4 * (37.0F / 840.0F)			- n5 * (209.0F / 4480.0F)		+ n6 * (5569.0F / 90720.0F),
-																			  n4 * (4397.0F / 161280.0F)	- n5 * (11.0F / 504.0F)			- n6 * (830251.0F / 7257600.0F),
-																											  n5 * (4583.0F / 161280.0F)	- n6 * (108847.0F / 3991680.0F),
-																																			  n6 * (20648693.0F / 638668800.0F)
+		 n * (1.0 / 2.0)	- n2 * (2.0 / 3.0)	+ n3 * (37.0 / 96.0)	- n4 * (1.0 / 360.0)		- n5 * (81.0 / 512.0)		+ n6 * (96199.0 / 604800.0),
+							  n2 * (1.0 / 48.0)	+ n3 * (1.0 / 15.0)		- n4 * (437.0 / 1440.0)		+ n5 * (46.0 / 105.0)		- n6 * (1118711.0 / 3870720.0),
+												  n3 * (17.0 / 480.0)	- n4 * (37.0 / 840.0)		- n5 * (209.0 / 4480.0)		+ n6 * (5569.0 / 90720.0),
+																		  n4 * (4397.0 / 161280.0)	- n5 * (11.0 / 504.0)		- n6 * (830251.0 / 7257600.0),
+																									  n5 * (4583.0 / 161280.0)	- n6 * (108847.0 / 3991680.0),
+																																  n6 * (20648693.0 / 638668800.0)
 	};
 
 	double xi_prime = xi;
@@ -584,8 +584,8 @@ std::unique_ptr<double> ToWGS84(double easting, double northing, bool isNortherH
 
 	for (int i = 0; i < 6; i++)
 	{
-		xi_prime -= beta[i] * sin(2.0F * (i + 1) * xi) * cosh(2.0F * (i + 1) * eta);
-		eta_prime -= beta[i] * cos(2.0F * (i + 1) * xi) * sinh(2.0F * (i + 1) * eta);
+		xi_prime -= beta[i] * sin(2.0 * (i + 1) * xi) * cosh(2.0 * (i + 1) * eta);
+		eta_prime -= beta[i] * cos(2.0 * (i + 1) * xi) * sinh(2.0 * (i + 1) * eta);
 	}
 
 	double sinh_eta_prime = sinh(eta_prime);
@@ -594,27 +594,27 @@ std::unique_ptr<double> ToWGS84(double easting, double northing, bool isNortherH
 
 	double tau_prime = sin_xi_prime / sqrt(sinh_eta_prime * sinh_eta_prime + cos_xi_prime * cos_xi_prime);
 
-	double deltaTau = 0.1F;
+	double deltaTau = 0.1;
 	double tau = tau_prime;
 
-	while (abs(deltaTau) > 0.00000000001F)
+	while (abs(deltaTau) > 0.00000000001)
 	{
-		double sigma = sinh(eccentricity * atanh(eccentricity * tau / sqrt(1.0F + tau * tau)));
-		double tau_i_prime = tau * sqrt(1.0F + sigma * sigma) - sigma * sqrt(1 + tau * tau);
-		deltaTau = ((tau_prime - tau_i_prime) / sqrt(1.0F + tau_i_prime * tau_i_prime)) * ((1.0F + (1.0F - eccentricity * eccentricity) * tau * tau) / ((1.0F - eccentricity * eccentricity) * sqrt(1.0F + tau * tau)));
+		double sigma = sinh(eccentricity * atanh(eccentricity * tau / sqrt(1.0 + tau * tau)));
+		double tau_i_prime = tau * sqrt(1.0 + sigma * sigma) - sigma * sqrt(1 + tau * tau);
+		deltaTau = ((tau_prime - tau_i_prime) / sqrt(1.0 + tau_i_prime * tau_i_prime)) * ((1.0 + (1.0 - eccentricity * eccentricity) * tau * tau) / ((1.0 - eccentricity * eccentricity) * sqrt(1.0 + tau * tau)));
 		tau += deltaTau;
 	}
 
 	double phi = atan(tau);
 	double lambda = atan2(sinh_eta_prime, cos_xi_prime);
 
-	double p = 1.0F;
-	double q = 0.0F;
+	double p = 1.0;
+	double q = 0.0;
 
 	for (int i = 0; i < 6; i++)
 	{
-		p -= 2.0F * i * beta[i] * cos(2.0F * (i + 1) * xi) * cosh(2.0F * (i + 1) * eta);
-		q += 2.0F * i * beta[i] * sin(2.0F * (i + 1) * xi) * sinh(2.0F * (i + 1) * eta);
+		p -= 2.0 * i * beta[i] * cos(2.0 * (i + 1) * xi) * cosh(2.0 * (i + 1) * eta);
+		q += 2.0 * i * beta[i] * sin(2.0 * (i + 1) * xi) * sinh(2.0 * (i + 1) * eta);
 	}
 
 	double gamma_prime = atan(tan(xi_prime) * tanh(eta_prime));
@@ -623,28 +623,21 @@ std::unique_ptr<double> ToWGS84(double easting, double northing, bool isNortherH
 
 	double sin_phi = sin(phi);
 
-	double k_prime = sqrt(1.0F - eccentricity * eccentricity *sin_phi * sin_phi) * sqrt(1.0F + tau * tau) * sqrt(sinh_eta_prime * sinh_eta_prime + cos_xi_prime * cos_xi_prime);
+	double k_prime = sqrt(1.0 - eccentricity * eccentricity *sin_phi * sin_phi) * sqrt(1.0 + tau * tau) * sqrt(sinh_eta_prime * sinh_eta_prime + cos_xi_prime * cos_xi_prime);
 	double k_prime_prime = (A / WGS84_EARTH_RADIUS_EQUATOR) * sqrt(p * p + q * q);
 	double k = UTM_MERIDIAN_SCALE * k_prime * k_prime_prime;
 
-	double lambda_0 = (PI_CONSTANT / 180.0F)* (double)((zone - 1) * 6 - 180 + 3);
+	double lambda_0 = (PI_CONSTANT / 180.0)* (double)((zone - 1) * 6 - 180 + 3);
 	lambda += lambda_0;
 
 	std::unique_ptr<double> coords = std::unique_ptr<double>(new double[2]);
 
-	coords.get()[0] = lambda * (180.0F / PI_CONSTANT);
-	coords.get()[1] = phi * (180.0F / PI_CONSTANT);
+	coords.get()[0] = lambda * (180.0 / PI_CONSTANT);
+	coords.get()[1] = phi * (180.0 / PI_CONSTANT);
 
 
-	double convergence = gamma * 180.0F / PI_CONSTANT;
+	double convergence = gamma * 180.0 / PI_CONSTANT;
 	double scale = k;
-
-	//The part bellow would severely impact performance, in case of large profiles.
-	/*if (isDebug)
-	{
-		std::cout << "\n in ToUTM, returning coords: " << std::fixed << std::setprecision(11) << coords.get()[0] << " and " << coords.get()[1] << std::endl;
-		std::cout << "Convergence: " << std::fixed << std::setprecision(11) << convergence << ", scale" << scale << std::endl;
-	}*/
 
 	return coords;
 }
@@ -663,12 +656,15 @@ Vector2D WrapPoint(Vector2D const & point, bool isNorthernHemisphere, int zone)
 
 double LinearInterpolationNormalized(double normalizedPoint, double values[2])
 {
-	return normalizedPoint * values[0] + (1.0F - normalizedPoint) * values[1];
+	return normalizedPoint * values[0] + (1.0 - normalizedPoint) * values[1];
 }
 
 double CubicInterpolationNormalized(double const normalizedPoint, double const values[4])
 {
-	return values[1] + 0.5 * normalizedPoint*(values[2] - values[0] + normalizedPoint * (2.0*values[0] - 5.0*values[1] + 4.0*values[2] - values[3] + normalizedPoint * (3.0*(values[1] - values[2]) + values[3] - values[0])));
+	return values[1] + 0.5 * normalizedPoint *
+			(values[2] - values[0] + normalizedPoint *
+				(2.0 * values[0] - 5.0 * values[1] + 4.0 * values[2] - values[3] + normalizedPoint *
+					(3.0 * (values[1] - values[2]) + values[3] - values[0])));
 }
 
 double BilinearInterpolation(Vector2D const & point, Grid4x4 const & grid)

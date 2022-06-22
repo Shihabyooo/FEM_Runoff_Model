@@ -415,7 +415,8 @@ Updates scale and delta.
 void SetViewBounds(Vector2 swCorner, Vector2 nwCorner)
 {
 	viewBounds[0] = swCorner;
-	viewBounds[1] = Vector2(Max(nwCorner.x, swCorner.x + MIN_VIEWPORT_DELTA), Max(nwCorner.y, swCorner.y + MIN_VIEWPORT_DELTA));
+	viewBounds[1] = Vector2(Max(static_cast<double>(nwCorner.x), swCorner.x + MIN_VIEWPORT_DELTA),
+							Max(static_cast<double>(nwCorner.y), swCorner.y + MIN_VIEWPORT_DELTA));
 
 	//adjust NW bound to maintain the current aspect ratio.
 	delta = viewBounds[1] - viewBounds[0]; //unadjusted delta

@@ -68,41 +68,48 @@ int main(int argc, char ** argv)
 	LogMan::Log("Startup.");
 	//TODO uncomment line bellow after solver testing is done
 	//return StartUI(1280, 720);
-
-	GenerateTestSystem(false, true);
 	
 	TIME start;
 	long time;
-	
-	//start = NOW;
-	//SolverSimple(testA, testB, testX, testR);
-	/*time = DURATION_SINCE(start);
-	std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;*/
-	
-	start = NOW;
-	SolverJacobi(testA, testB, testX, testR);
-	time = DURATION_SINCE(start);
-	std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
-	
-	start = NOW;
-	SolverSOR(testA, testB, testX, testR);
-	time = DURATION_SINCE(start);
-	std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
-	
-	start = NOW;
-	SolverPCG(testA, testB, testX, testR);
-	time = DURATION_SINCE(start);
-	std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
-	
-	start = NOW;
-	SolverBiCG(testA, testB, testX, testR);
-	time = DURATION_SINCE(start);
-	std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
 
-	start = NOW;
-	SolverCGS(testA, testB, testX, testR);
-	time = DURATION_SINCE(start);
-	std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
+	for (int i = 0; i < 10; i++)
+	{
+		std::cout << "\n================================================\n";
+		std::cout << "Test iteration: " << i << std::endl;
+		std::cout << "\================================================\n";
+		GenerateTestSystem(false, true);
 
-	std::cin >> modulus;
+		//start = NOW;
+		//SolverSimple(testA, testB, testX, testR);
+		/*time = DURATION_SINCE(start);
+		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;*/
+
+		/*start = NOW;
+		SolverJacobi(testA, testB, testX, testR);
+		time = DURATION_SINCE(start);
+		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
+
+		start = NOW;
+		SolverSOR(testA, testB, testX, testR);
+		time = DURATION_SINCE(start);
+		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;*/
+
+		start = NOW;
+		SolverPCG(testA, testB, testX, testR);
+		time = DURATION_SINCE(start);
+		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
+
+		start = NOW;
+		SolverBiCG(testA, testB, testX, testR);
+		time = DURATION_SINCE(start);
+		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
+
+		start = NOW;
+		SolverCGS(testA, testB, testX, testR);
+		time = DURATION_SINCE(start);
+		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
+	}
+
+	std::cin.sync();
+	std::cin.get();
 }

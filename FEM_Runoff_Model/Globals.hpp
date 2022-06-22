@@ -15,28 +15,28 @@
 
 //Colours
 #pragma region Colour templates
-#define COLOUR_BLUE Colour(0.0f, 0.0f, 1.0f)
-#define COLOUR_RED Colour(1.0f, 0.0f, 0.0f)
-#define COLOUR_GREEN Colour(0.0f, 1.0f, 0.0f)
+#define COLOUR_BLUE Colour(0.0, 0.0, 1.0)
+#define COLOUR_RED Colour(1.0, 0.0, 0.0)
+#define COLOUR_GREEN Colour(0.0, 1.0, 0.0)
 #define COLOUR_BLACK Colour()
-#define COLOUR_WHITE Colour(1.0f)
-#define COLOUR_GRAY Colour(0.5f)
-#define COLOUR_MAGENTA Colour(1.0f, 0.0f, 1.0f)
-#define COLOUR_CYAN Colour(0.0f, 1.0f, 1.0f)
-#define COLOUR_YELLOW Colour(1.0f, 1.0f, 0.0f)
-#define COLOUR_ORANGE Colour(1.0f, 0.5f, 0.0f)
-#define COLOUR_LIME Colour(0.5f, 1.0f, 0.0f)
-#define COLOUR_PURPLE Colour(0.5f, 0.0f, 1.0f)
+#define COLOUR_WHITE Colour(1.0)
+#define COLOUR_GRAY Colour(0.5)
+#define COLOUR_MAGENTA Colour(1.0, 0.0, 1.0)
+#define COLOUR_CYAN Colour(0.0, 1.0, 1.0)
+#define COLOUR_YELLOW Colour(1.0, 1.0, 0.0)
+#define COLOUR_ORANGE Colour(1.0, 0.5, 0.0)
+#define COLOUR_LIME Colour(0.5, 1.0, 0.0)
+#define COLOUR_PURPLE Colour(0.5, 0.0, 1.0)
 #pragma endregion
 
 //Mapping related defines.
-#define UTM_FALSE_EASTING (double)(500000.0F)
-#define UTM_FALSE_NORTHING (double)(10000000.0F)
-#define UTM_MERIDIAN_SCALE (double)(0.9996F)
-#define PI_CONSTANT (double)(3.14159265359F)
-#define WGS84_EARTH_RADIUS_EQUATOR (double)(6378137.0F)
-#define WGS_EARTH_RADIUS_POLES (double)(6356752.3142F)
-#define WGS84_ELIPSOID_FLATTENING (double)(1.0F/298.257223563F)
+#define UTM_FALSE_EASTING (double)(500000.0)
+#define UTM_FALSE_NORTHING (double)(10000000.0)
+#define UTM_MERIDIAN_SCALE (double)(0.9996)
+#define PI_CONSTANT (double)(3.14159265359)
+#define WGS84_EARTH_RADIUS_EQUATOR (double)(6378137.0)
+#define WGS_EARTH_RADIUS_POLES (double)(6356752.3142)
+#define WGS84_ELIPSOID_FLATTENING (double)(1.0F/298.257223563)
 
 enum class CRS
 {
@@ -74,7 +74,7 @@ public:
 	Vector2 operator*(float const & scalar) const;
 	Vector2 & operator= (Vector2 const & vec2);
 
-	Vector2 Normalize(Vector2 const & min, Vector2 const & max) const; //Returns normalized axes relative to min and max, result is between 0.0f to 1.0f if point is inside range min-max.
+	Vector2 Normalize(Vector2 const & min, Vector2 const & max) const; //Returns normalized axes relative to min and max, result is between 0.0 to 1.0 if point is inside range min-max.
 
 	float x;
 	float y;
@@ -92,7 +92,7 @@ public:
 	Vector2Int operator*(int const & scalar) const;
 	Vector2Int & operator= (Vector2Int const & vec2);
 
-	Vector2 Normalize(Vector2Int const & min, Vector2Int const & max) const; //Returns normalized axes relative to min and max, result is between 0.0f to 1.0f if point is inside range min-max.
+	Vector2 Normalize(Vector2Int const & min, Vector2Int const & max) const; //Returns normalized axes relative to min and max, result is between 0.0 to 1.0 if point is inside range min-max.
 
 	int x;
 	int y;
@@ -218,14 +218,14 @@ struct Colour
 public:
 	Colour()
 	{
-		r = g = b = 0.0f;
-		a = 1.0f;
+		r = g = b = 0.0;
+		a = 1.0;
 	}
 
 	Colour(float grayShade)
 	{
 		r = g = b = grayShade;
-		a = 1.0f;
+		a = 1.0;
 	}
 
 	Colour(float _r, float _g, float _b)
@@ -233,7 +233,7 @@ public:
 		r = _r;
 		g = _g;
 		b = _b;
-		a = 1.0f;
+		a = 1.0;
 	}
 
 	Colour(float _r, float _g, float _b, float _a)

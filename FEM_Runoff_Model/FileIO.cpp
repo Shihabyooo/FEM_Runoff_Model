@@ -6,7 +6,7 @@
 
 bool SkipNLines(std::ifstream & file, unsigned int const & linesToSkip)
 {
-	for (int i = 0; i < linesToSkip; i++)
+	for (size_t i = 0; i < linesToSkip; i++)
 	{
 		file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (file.eof())
