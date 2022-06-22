@@ -7,7 +7,7 @@ public:
 	Vector_f32(_INDEX const size);
 	Vector_f32(_INDEX const size, float defaultValue);
 	Vector_f32(Vector_f32 const & sourceVec);
-	explicit Vector_f32(Matrix_f32 const & sourceVec, _INDEX column = 0); //Creates a vector from the column of a matrix.
+	Vector_f32(Matrix_f32 const & sourceVec, _INDEX column = 0); //Creates a vector from the column of a matrix.
 	~Vector_f32();
 
 	Vector_f32 operator+ (Vector_f32 const & vec2) const;

@@ -293,7 +293,7 @@ Array2D<T> Array2D<T>::GetSubMatrix(_INDEX beginRow, _INDEX noOfRows, _INDEX beg
 }
 
 template <typename T>
-Array2D<T> Array2D<T>::Transpose()
+Array2D<T> Array2D<T>::Transpose() const
 {
 	return TransposeArray(*this);
 }
@@ -455,7 +455,7 @@ void Array2D<T>::DisplayArrayInCLI(unsigned int displayPrecision)
 }
 
 template <typename T>
-Array2D<T> Array2D<T>::TransposeArray(const Array2D<T> & sourceArr)
+Array2D<T> Array2D<T>::TransposeArray(const Array2D<T> & sourceArr) const
 {
 	if (sourceArr.content == NULL)
 	{

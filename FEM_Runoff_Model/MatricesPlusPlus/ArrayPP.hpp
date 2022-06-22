@@ -67,7 +67,7 @@ public:
 	//utilities
 	void SetEntireArrayToFixedValue(T value);
 	Array2D<T> GetSubMatrix(_INDEX beginRow, _INDEX noOfRows, _INDEX beginColumn, _INDEX noOfColumns) const;
-	Array2D<T> Transpose();	//Returns transpose of this object-array. While it made sense to overload operators for multiplication, addition and inversion, transposing doesn't have a C++ op that we can rationlize equivalence to.
+	Array2D<T> Transpose() const;	//Returns transpose of this object-array. While it made sense to overload operators for multiplication, addition and inversion, transposing doesn't have a C++ op that we can rationlize equivalence to.
 	void SwapRows(_INDEX firstRow, _INDEX secondRow);
 	//void Overlay(const Array2D<T> &arr2, _INDEX rowOffset, _INDEX columnOffset); //Add another Array2D of non-equal size to this Array2D element by element. If the second Array2D is larger, elements outside the boundary will be clipped. rowOffset and columnOffset determine which elements of the first Array2D the first element of the second Array2D will be added to.
 	bool IsSymmetric() const;
@@ -87,7 +87,7 @@ public:
 
 protected:
 	//basic methods
-	Array2D<T> TransposeArray(const Array2D<T> & sourceArr);
+	Array2D<T> TransposeArray(const Array2D<T> & sourceArr) const;
 	static Array2D<T> GetMinorSubMatrix(const Array2D<T> & sourceArr, _INDEX _row, _INDEX _column);
 	
 	//private utilities

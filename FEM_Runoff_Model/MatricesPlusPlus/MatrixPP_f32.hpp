@@ -17,9 +17,9 @@ public:
 	Matrix_f32(const Matrix_f32 & sourceMat); //copy constructor (Deep copy)
 	~Matrix_f32();
 
-    explicit Matrix_f32(Array2D<float> sourceArr);
-    explicit Matrix_f32(Array2D<int> sourceArr);
-	explicit Matrix_f32(Array2D<long> sourceArr);
+    Matrix_f32(Array2D<float> sourceArr);
+    Matrix_f32(Array2D<int> sourceArr);
+	Matrix_f32(Array2D<long> sourceArr);
 
     Matrix_f32 operator* (const Matrix_f32 & mat2) const;
     Matrix_f32 operator* (const float & scalar) const;
