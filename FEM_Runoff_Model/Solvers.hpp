@@ -6,6 +6,8 @@
 #define DEFAULT_CONVERGENCE_THRESHOLD -1.0F
 #define INITIAL_X_VALUE 1.0F
 
+//TODO in Vector_f32, add a method to compute (for a vector x) double = x_transpose * x
+
 //These functions assume the system is in the form Ax = b
 
 //Solver entry points, in general, require (for Ax=b system):
@@ -58,12 +60,12 @@ bool SolverPCG(		Matrix_f32 const & aMatrix,
 					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
-//bool SolverBiCG(	Matrix_f32 const & aMatrix,
-//					Vector_f32 const & bVector,
-//					Vector_f32 & outXVector,
-//					Vector_f32 & outResiduals,
-//					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
-//					size_t maxIterations = DEFAULT_MAX_ITERATION);
+bool SolverBiCG(	Matrix_f32 const & aMatrix,
+					Vector_f32 const & bVector,
+					Vector_f32 & outXVector,
+					Vector_f32 & outResiduals,
+					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
+					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
 //bool SolverGMRES(	Matrix_f32 const & aMatrix,
 //					Vector_f32 const & bVector,

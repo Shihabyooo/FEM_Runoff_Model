@@ -2,7 +2,6 @@
 #include "LogManager.hpp"
 
 
-
 bool SolverSimple(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals)
 {
 	if (aMatrix.Columns() != bVector.Rows())
@@ -127,7 +126,11 @@ bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 	}
 
 	size_t systemSize = bVector.Rows();
+	//init xVector
 	outXVector = Vector_f32(systemSize); //TODO check whether the PCG needs the middle elements to be zero. If not, use INITIAL_X_VALUE
+	outXVector[0] = bVector.GetValue(0);
+	outXVector[systemSize - 1] = bVector.GetValue(systemSize - 1);
+
 	ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
 
 	Matrix_f32 conditioner(aMatrix.Rows(), aMatrix.Columns()); //init zeroed conditioner matrix.
@@ -137,20 +140,20 @@ bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 
 	conditioner = conditioner.Invert();
 
-	Vector_f32 dVector = static_cast<Vector_f32>(conditioner * outResiduals);
+	Vector_f32 dVector = conditioner * outResiduals;
 
 	double delta = (static_cast<Matrix_f32>(outResiduals.Transpose()) * dVector).GetValue(0, 0);
-	double allowableTolerance = pow(threshold, 2.0F) * delta;
+	double allowableTolerance = pow(threshold, 2.0F) * delta; //why?
 
 	size_t counter = 0;
 	while (abs(delta) > allowableTolerance)
 	{
-		Vector_f32 qVector = static_cast<Vector_f32>(aMatrix * dVector);
+		Vector_f32 qVector = aMatrix * dVector;
 		double alpha = delta / ((static_cast<Matrix_f32>(dVector.Transpose()) * qVector).GetValue(0, 0));
 		outXVector = outXVector + dVector * alpha;
 		outResiduals = outResiduals - qVector * alpha;
 		
-		Vector_f32 sVector = static_cast<Vector_f32>(conditioner * outResiduals);
+		Vector_f32 sVector = conditioner * outResiduals;
 		
 		double deltaOld = delta;
 		delta = (static_cast<Matrix_f32>(outResiduals.Transpose()) * sVector).GetValue(0, 0);
@@ -173,8 +176,83 @@ bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 	return true;
 }
 
+//TODO cleanup comments
+bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals, double threshold, size_t maxIterations)
+{
+	LogMan::Log("Using Bi-Conjugate Gradients solver.");
+
+	if (aMatrix.Columns() != bVector.Rows())
+	{
+		LogMan::Log("Error! Supplied factors matrix and RHS vector are not of the same size.", LOG_ERROR);
+		return false;
+	}
+	
+	size_t systemSize = bVector.Rows();
+	//init xVector
+	outXVector = Vector_f32(systemSize); //TODO check whether the PCG needs the middle elements to be zero. If not, use INITIAL_X_VALUE
+	outXVector[0] = bVector.GetValue(0);
+	outXVector[systemSize - 1] = bVector.GetValue(systemSize - 1);
+
+	//compute r = r - alpha * A * x_initial
+	//compute r' = r' - alphat * A_transpose * x_initial
+	Vector_f32 residuals2;
+	ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
+	ComputeResiduals(static_cast<Matrix_f32>(aMatrix.Transpose()), bVector, outXVector, residuals2);
+	
+	//d = r
+	//d = r'
+	Vector_f32 d = outResiduals;
+	Vector_f32 d2 = residuals2;
+
+	//delta = r'_transpose * r
+	double delta = (static_cast<Matrix_f32>(residuals2.Transpose()) * outResiduals)[0][0];
+	double deltaOld = delta;
+	double allowableTolerance = pow(threshold, 2.0F) * delta; //why?
+	
+	//loop
+	for (int i = 0; i < maxIterations; i++)
+	{
+		//q = A * d
+		//q' = A_transpose * d'
+		Vector_f32 q = aMatrix * d;
+		Vector_f32 q2 = static_cast<Matrix_f32>(aMatrix.Transpose()) * d;
+
+		//alpha = delta / (d'_transpose * q)
+		double alpha = delta / (static_cast<Matrix_f32>(d2.Transpose()) * q)[0][0];
+		
+		//x = x + alpha * d
+		//x' ???
+		outXVector = outXVector + d * alpha;
+
+		//r = r - alpha * q
+		//r' = r - alphat * q'
+		outResiduals = outResiduals - q * alpha;
+		residuals2 = residuals2 - q2 * alpha;
+
+		//delata_0 = delta
+		deltaOld = delta;
+		//delta = r'_transpose * r
+		delta = (static_cast<Matrix_f32>(residuals2.Transpose()) * outResiduals)[0][0];
+		//beta = delta / delta_0
+		double beta = delta / deltaOld;
+		//d = r +  beta * d
+		//d' = r' + beta * d'
+		d = outResiduals + d * beta;
+		d2 = residuals2 + d2 * beta;
+
+		if (abs(delta) > allowableTolerance)
+		{
+			LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
+			return true;
+		}
+	}
+
+	LogMan::Log("Reached final iteration without converging on an acceptible solution.", LOG_WARN);
+	return true;
+}
+
 void ComputeResiduals(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 const & xVector, Vector_f32 & outResiduals)
 {
 	//LogMan::Log("Residual computation not implemented yet.", LOG_WARN);
-	outResiduals = bVector - static_cast<Vector_f32>(aMatrix * xVector);
+	outResiduals = bVector - aMatrix * xVector;
 }
