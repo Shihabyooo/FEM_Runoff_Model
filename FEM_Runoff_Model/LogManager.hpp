@@ -12,6 +12,8 @@
 void DrawLogPane();
 namespace LogMan
 {
+	void Init(bool logToDisk = true);
+	void Terminate();
 	void Log(std::string const & content, LogEntryType type = LOG_NORM);
 	void Log(char const * content, LogEntryType type = LOG_NORM);
 }

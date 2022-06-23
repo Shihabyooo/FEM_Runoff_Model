@@ -37,14 +37,16 @@ void GenerateTestSystem(bool isSymmetric, bool isDiagDominant)
 		if (isSymmetric)
 			testA[i][i - 1] = tempVal1;
 		else
-			testA[i][i - 1] = rand() % modulus;;
+			//testA[i][i - 1] = rand() % modulus;
+			testA[i][i - 1] = 1.6f;
 		
-		tempVal1 = testA[i][i + 1] = rand() % modulus;
+		//tempVal1 = testA[i][i + 1] = rand() % modulus;
+		tempVal1 = testA[i][i + 1] = 10.0f;
 
 		if (isDiagDominant)
 			testA[i][i] = testA[i][i - 1] + testA[i][i + 1] + rand() % modulus;
 		else
-			testA[i + 1][i + 1] = rand() % modulus;
+			testA[i][i] = rand() % modulus;
 
 	
 		/*testA[i][i - 1] = 1.0f;
@@ -65,9 +67,10 @@ void GenerateTestSystem(bool isSymmetric, bool isDiagDominant)
 
 int main(int argc, char ** argv)
 {
+	LogMan::Init(true);
 	LogMan::Log("Startup.");
 	//TODO uncomment line bellow after solver testing is done
-	//return StartUI(1280, 720);
+	//int returnVal = StartUI(1280, 720);
 	
 	TIME start;
 	long time;
@@ -77,7 +80,7 @@ int main(int argc, char ** argv)
 		std::cout << "\n================================================\n";
 		std::cout << "Test iteration: " << i << std::endl;
 		std::cout << "\================================================\n";
-		GenerateTestSystem(false, true);
+		GenerateTestSystem(true, true);
 
 		//start = NOW;
 		//SolverSimple(testA, testB, testX, testR);
@@ -110,6 +113,7 @@ int main(int argc, char ** argv)
 		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
 	}
 
+	LogMan::Terminate();
 	std::cin.sync();
 	std::cin.get();
 }

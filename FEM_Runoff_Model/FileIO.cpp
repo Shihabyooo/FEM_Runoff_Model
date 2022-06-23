@@ -117,3 +117,38 @@ bool LoadRaster(std::string const & path, void * output, int * outRasterID) //TO
 
 	LogMan::Log("Sucessfully loaded raster file!", LOG_SUCCESS);
 }
+
+std::ofstream logFile;
+
+bool InitLogFile()
+{
+	logFile.open(LOG_FILE_PATH, std::ios_base::app); //open LOG_FILE_PATH and always seek to the end before every write
+	
+	if (!logFile.is_open())
+	{
+		LogMan::Log("ERROR! Could not open log file " + std::string(LOG_FILE_PATH), LOG_ERROR);
+		return false;
+	}
+		
+	return true;
+}
+
+void CloseLogFile()
+{
+	if (logFile.is_open())
+		logFile.close();
+}
+
+bool WriteToLog(LogEntry const & newEntry)
+{
+	std::cout << "Writing to log file\n";//test
+	if (!logFile.good() || !logFile.is_open())
+	{
+		LogMan::Log("ERROR! I/O error.", LOG_ERROR);
+		return false;
+	}
+
+	logFile << newEntry.content << std::endl;
+	logFile.flush(); //flush results to disk
+	return true;
+}

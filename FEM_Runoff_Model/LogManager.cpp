@@ -3,8 +3,10 @@
 
 #include "LogManager.hpp"
 #include "GUI_Requirements.hpp"
+#include "FileIO.hpp"
 
 std::vector<LogEntry> logHistory;
+bool canLogToDisk = false;
 
 void DrawLogEntry(LogEntry const * entry)
 {
@@ -73,12 +75,27 @@ std::string GetTimeStamp()
 	return timeSamp;
 }
 
+void LogMan::Init(bool logToDisk)
+{
+	canLogToDisk = logToDisk && InitLogFile();
+}
+
+void LogMan::Terminate()
+{
+	CloseLogFile();
+}
+
 void LogMan::Log(std::string const & content, LogEntryType type)
 {
 	//TODO enrich the logging mechanism with a max value, after which the oldest logs are removed.
 	logHistory.push_back(LogEntry(GetTimeStamp() + content, type));
+	
+	if(canLogToDisk)
+		WriteToLog(logHistory.back());
 
-	std::cout << content.c_str() << std::endl;//test
+#ifdef LOG_TO_CLI
+	std::cout << content.c_str() << std::endl;
+#endif
 }
 
 void LogMan::Log(char const * content, LogEntryType type)

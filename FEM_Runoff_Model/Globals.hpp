@@ -38,6 +38,10 @@
 #define WGS_EARTH_RADIUS_POLES (double)(6356752.3142)
 #define WGS84_ELIPSOID_FLATTENING (double)(1.0F/298.257223563)
 
+//Misc Defines
+#define LOG_FILE_PATH "log_file.txt" //in same dir as exe
+#define LOG_TO_CLI //also outputs the logged messages to the CLI (using std::cout)
+
 enum class CRS
 {
 	WGS84,	//Geographic CRS, EPSG 4326
@@ -49,11 +53,12 @@ enum class Solver
 {
 	Simple, //Compute invert of paramters matrix and multiply with the RHS vector
 	GaussJordan, //Gauss-Jordan Elimination and backwards substitution
-	Jacobi,
+	Jacobi, //(Weighted) Jacobi
 	SOR, //Successive Overrelaxation (Or Gauss-Seidel when waight = 1)
 	PCG, //Preconditioned Congjugate Gradient
-	BiCG, //Biconjugate Gradient
-	GMRES //Generalized Minimum Residual
+	BiCG, //(Preconditioned) Biconjugate Gradient
+	CGS, //(Preconditioned) Conjugate Gradient Squared.
+	GMRES //Generalized Minimal Residual
 };
 
 struct Vector2;
@@ -208,8 +213,7 @@ public:
 		type = _type;
 	};
 
-	//TODO add timestamp
-	std::string content;
+	std::string content; //content is prefexed with a timestamp.
 	LogEntryType type;
 };
 
