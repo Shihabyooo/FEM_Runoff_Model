@@ -29,9 +29,72 @@ Vector_f32::Vector_f32(Vector_f32 const & sourceVec)
 	*this = sourceVec;
 }
 
+Vector_f32::Vector_f32(Vector_f32 && sourceVec)
+{
+	*this = std::move(sourceVec);
+}
+
 Vector_f32::Vector_f32(Matrix_f32 const & sourceMat, _INDEX column)
 {
 	VectorFromMatrix(sourceMat, column);
+}
+
+Vector_f32::~Vector_f32()
+{
+	DeleteContent();
+}
+
+Vector_f32 & Vector_f32::operator=(Vector_f32 const & vec2)
+{
+	DeleteContent();
+
+	rows = vec2.Rows();
+	columns = vec2.Columns();
+
+	if (vec2.content == NULL)
+	{
+		content = NULL;
+		return *this;
+	}
+
+	Alloc(rows, columns);
+
+	for (size_t i = 0; i < rows; i++)
+		content[i][0] = vec2.GetValue(i, 0);
+
+	return *this;
+}
+
+Vector_f32 & Vector_f32::operator=(Vector_f32 && vec2)
+{	
+	DeleteContent();
+	
+	rows = vec2.rows;
+	columns = vec2.columns;
+	content = vec2.content;
+	
+	vec2.content = NULL;
+	vec2.rows = vec2.columns = 0;
+
+	return *this;
+}
+
+Vector_f32 Vector_f32::operator+(Vector_f32 const & vec2) const
+{
+#ifdef _VECTORIZED_CODE
+	return AddVectorsVectorized(*this, vec2);
+#else
+	return AddVectors(*this, vec2);
+#endif
+}
+
+Vector_f32 Vector_f32::operator-(Vector_f32 const & vec2) const
+{
+#ifdef _VECTORIZED_CODE
+	return SubtractVectorsVectorized(*this, vec2);
+#else
+	return SubtractVectors(*this, vec2);
+#endif
 }
 
 Vector_f32 Vector_f32::operator*(double const scalar)
@@ -80,28 +143,6 @@ float & Vector_f32::operator[](const _INDEX row)
 	return content[row][0];
 }
 
-Vector_f32::~Vector_f32()
-{
-	DeleteContent();
-}
-
-Vector_f32 Vector_f32::operator+(Vector_f32 const & vec2) const
-{
-#ifdef _VECTORIZED_CODE
-	return AddVectorsVectorized(*this, vec2);
-#else
-	return AddVectors(*this, vec2);
-#endif
-}
-
-Vector_f32 Vector_f32::operator-(Vector_f32 const & vec2) const
-{
-#ifdef _VECTORIZED_CODE
-	return SubtractVectorsVectorized(*this, vec2);
-#else
-	return SubtractVectors(*this, vec2);
-#endif
-}
 
 float Vector_f32::GetValue(_INDEX row) const
 {
@@ -114,6 +155,11 @@ double Vector_f32::Magnitude()
 	for (_INDEX i = 0; i < rows; i++)
 		mag += pow(content[i][0], 2);
 	return sqrt(mag);
+}
+
+double Vector_f32::DotProduct(Vector_f32 const & vec2) const
+{
+	return DotProduct(*this, vec2);
 }
 
 void Vector_f32::AddInPlace(Vector_f32 const & vec2)
@@ -417,6 +463,20 @@ Vector_f32 Vector_f32::MultiplayVectorScalarVectorized(Vector_f32 const & vec1, 
 }
 
 #endif
+
+double Vector_f32::DotProduct(Vector_f32 const & vec1, Vector_f32 const & vec2)
+{
+#ifdef _USE_BOUNDS_CHECK
+	if (vec1.rows != vec2.rows)
+	{
+		std::cout << "ERROR! Attempting to multiply vectors of different sizes." << std::endl;
+		return 0.0;
+	}
+#endif // _USE_BOUNDS_CHECK
+
+	//TODO figure out a solution to the extra memory copy (from vec1.transpose() to Matrix_f32).
+	return (static_cast<Matrix_f32>(vec1.Transpose()) * vec2)[0][0];
+}
 
 void Vector_f32::VectorFromMatrix(Matrix_f32 const & sourceMat, _INDEX column)
 {

@@ -14,13 +14,19 @@ public:
 	Matrix_f32();
 	Matrix_f32(_INDEX _rows, _INDEX _columns);
 	Matrix_f32(_INDEX _rows, _INDEX _columns, float defaultValue);
-	Matrix_f32(const Matrix_f32 & sourceMat); //copy constructor (Deep copy)
+	Matrix_f32(const Matrix_f32 & sourceMat); //Copy constructor (Deep copy)
+	Matrix_f32(Matrix_f32 && sourceMat); //Move constructor
 	~Matrix_f32();
 
-    Matrix_f32(Array2D<float> sourceArr);
-    Matrix_f32(Array2D<int> sourceArr);
+    //explicit Matrix_f32(Array2D<float> sourceArr);
+	Matrix_f32(Array2D<float> sourceArr);
+    //explicit Matrix_f32(Array2D<int> sourceArr);
+	Matrix_f32(Array2D<int> sourceArr);
+	//explicit Matrix_f32(Array2D<long> sourceArr);
 	Matrix_f32(Array2D<long> sourceArr);
 
+	Matrix_f32 & operator= (Matrix_f32 const & mat2);
+	Matrix_f32 & operator= (Matrix_f32 && mat2);
     Matrix_f32 operator* (const Matrix_f32 & mat2) const;
     Matrix_f32 operator* (const float & scalar) const;
     Matrix_f32 operator+ (const Matrix_f32 & mat2) const;

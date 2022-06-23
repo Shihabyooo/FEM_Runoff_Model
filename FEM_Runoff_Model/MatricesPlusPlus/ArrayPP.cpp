@@ -31,16 +31,15 @@ Array2D<T>::Array2D(_INDEX _rows, _INDEX _columns, T defaultValue)
 template <typename T>
 Array2D<T>::Array2D(const Array2D<T> & sourceArr)
 {
-	//content = NULL;
+	std::cout << "Copy constructor\n" << std::endl; //test
 	*this = sourceArr;
 }
 
-// template <typename T>
-// Array2D<T>::Array2D(std::vector<std::vector<T>> & sourceVec)
-// {
-// 	//content = NULL;
-// 	*this = sourceVec;
-// }
+template<typename T>
+Array2D<T>::Array2D(Array2D<T>&& sourceArr)
+{
+	*this = std::move(sourceArr);
+}
 
 template <typename T>
 Array2D<T>::~Array2D()
@@ -49,7 +48,7 @@ Array2D<T>::~Array2D()
 }
 
 template <typename T>
-void Array2D<T>::operator=(const Array2D<T> & sourceArr)
+Array2D<T> & Array2D<T>::operator=(const Array2D<T> & sourceArr)
 {
 	//Before assigning a new conent to current instance of an object, we must first delete its current content, if it exists. The existence check is already done inside DeleteContent().
 	DeleteContent();
@@ -61,7 +60,7 @@ void Array2D<T>::operator=(const Array2D<T> & sourceArr)
 	if (sourceArr.content == NULL)
 	{
 		content = NULL;
-		return;
+		return *this;
 	}
 
 	Alloc(rows, columns);
@@ -69,6 +68,24 @@ void Array2D<T>::operator=(const Array2D<T> & sourceArr)
 	for (size_t i = 0; i < rows; i++)
 		for (size_t j = 0; j < columns; j++)
 			content[i][j] = sourceArr.GetValue(i, j);
+
+	return *this;
+}
+
+template<typename T>
+Array2D<T> & Array2D<T>::operator=(Array2D<T>&& sourceArr)
+{	
+	DeleteContent();
+	//assign address of content from sourceArr to this, and fill in size.
+	content = sourceArr.content;
+	columns = sourceArr.columns;
+	rows = sourceArr.rows;
+
+	//Prevent sourceArr from cleaning the memory now assigned to this obj (destructor first checks for NULL)
+	sourceArr.content = NULL; 
+	sourceArr.columns = sourceArr.rows = 0;
+
+	return *this;
 }
 
 // template <typename T>
@@ -434,7 +451,7 @@ Array2D<T> Array2D<T>::StackArrays(const Array2D<T> &arr1, const Array2D<T> &arr
 }
 
 template <typename T>
-void Array2D<T>::DisplayArrayInCLI(unsigned int displayPrecision)
+void Array2D<T>::DisplayOnCLI(unsigned int displayPrecision)
 {
 	if (content == NULL)
 	{

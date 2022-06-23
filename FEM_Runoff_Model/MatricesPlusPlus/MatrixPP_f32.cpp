@@ -30,6 +30,11 @@ Matrix_f32::Matrix_f32(const Matrix_f32 & sourceMat)
 	*this = sourceMat;
 }
 
+Matrix_f32::Matrix_f32(Matrix_f32 && sourceMat)
+{
+	*this = std::move(sourceMat);
+}
+
 Matrix_f32::~Matrix_f32()
 {
 	DeleteContent();
@@ -48,6 +53,40 @@ Matrix_f32::Matrix_f32(Array2D<int> sourceArr)
 Matrix_f32::Matrix_f32(Array2D<long> sourceArr)
 {
 	CopyFromArray2D(sourceArr);
+}
+
+Matrix_f32 & Matrix_f32::operator=(Matrix_f32 const & mat2)
+{
+	DeleteContent();
+
+	rows = mat2.Rows();
+	columns = mat2.Columns();
+
+	if (mat2.content == NULL)
+	{
+		content = NULL;
+		return *this;
+	}
+
+	Alloc(rows, columns);
+
+	for (size_t i = 0; i < rows; i++)
+		for (size_t j = 0; j < columns; j++)
+			content[i][j] = mat2.GetValue(i, j);
+
+	return *this;
+}
+
+Matrix_f32 & Matrix_f32::operator=(Matrix_f32 && mat2)
+{
+	DeleteContent();
+	rows = mat2.rows;
+	columns = mat2.columns;
+	content = mat2.content;
+
+	mat2.content = NULL;
+	mat2.rows = mat2.columns = 0;
+	return *this;
 }
 
 Matrix_f32 Matrix_f32::operator*(const Matrix_f32 & mat2) const

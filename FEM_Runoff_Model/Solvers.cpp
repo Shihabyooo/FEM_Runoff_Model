@@ -186,7 +186,7 @@ bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 
 	Vector_f32 dVector = conditioner * outResiduals;
 
-	double delta = (static_cast<Matrix_f32>(outResiduals.Transpose()) * dVector).GetValue(0, 0);
+	double delta = outResiduals.DotProduct(dVector);
 	double allowableTolerance = pow(threshold, 2) * delta; //source paper's algorithm
 	allowableTolerance = Min(allowableTolerance, threshold); //this is probably not necessary...
 
@@ -195,14 +195,14 @@ bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 	{
 		
 		Vector_f32 qVector = aMatrix * dVector;
-		double alpha = delta / ((static_cast<Matrix_f32>(dVector.Transpose()) * qVector).GetValue(0, 0));
+		double alpha = delta / dVector.DotProduct(qVector);
 		outXVector = outXVector + dVector * alpha;
 		outResiduals = outResiduals - qVector * alpha;
 		
 		Vector_f32 sVector = conditioner * outResiduals;
 		
 		double deltaOld = delta;
-		delta = (static_cast<Matrix_f32>(outResiduals.Transpose()) * sVector).GetValue(0, 0);
+		delta = outResiduals.DotProduct(sVector);
 		double beta = delta / deltaOld;
 
 		dVector = sVector + dVector * beta;
@@ -248,7 +248,7 @@ bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f
 	Vector_f32 d = outResiduals;
 	Vector_f32 d2 = residuals2;
 
-	double delta = (static_cast<Matrix_f32>(residuals2.Transpose()) * outResiduals)[0][0];
+	double delta = residuals2.DotProduct(outResiduals);
 	double deltaOld = delta;
 	double allowableTolerance = pow(threshold, 2) * delta; //source paper's algorithm
 	allowableTolerance = Min(allowableTolerance, threshold); //this is probably not necessary...
@@ -258,7 +258,7 @@ bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f
 		Vector_f32 q = aMatrix * d;
 		Vector_f32 q2 = static_cast<Matrix_f32>(aMatrix.Transpose()) * d;
 
-		double alpha = delta / (static_cast<Matrix_f32>(d2.Transpose()) * q)[0][0];
+		double alpha = delta / d2.DotProduct(q);
 		
 		if (alpha == 0.0F || isnan(alpha) || isinf(alpha))
 		{
@@ -271,15 +271,15 @@ bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f
 		residuals2 = residuals2 - q2 * alpha;
 
 		deltaOld = delta;
-		delta = (static_cast<Matrix_f32>(residuals2.Transpose()) * outResiduals)[0][0];
+		delta = residuals2.DotProduct(outResiduals);
 		
 		double beta = delta / deltaOld;
 		d = outResiduals + d * beta;
 		d2 = residuals2 + d2 * beta;
 
 		//test orthogonality relations:
-		//std::cout << "r'T * r: " << (static_cast<Matrix_f32>(residuals2.Transpose()) * outResiduals)[0][0] << std::endl; //test
-		//std::cout << "p'T A p: " << (static_cast<Matrix_f32>(d2.Transpose()) * q)[0][0] << std::endl; //test
+		//std::cout << "r'T * r: " <<  residuals2.DotProduct(outResiduals) << std::endl; //test
+		//std::cout << "p'T A p: " << d2.DotProduct(q) << std::endl; //test
 
 		if (abs(delta) < allowableTolerance)
 		{
@@ -354,12 +354,12 @@ bool SolverCGS(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 	//p = u
 	Vector_f32 u = outResiduals;
 	Vector_f32 p = u;
-	double delta = (static_cast<Matrix_f32>(residuals2.Transpose()) * outResiduals)[0][0];
+	double delta = residuals2.DotProduct(outResiduals);
 	for (int i = 0; i < maxIterations; i++)
 	{
 		//delta = r'Transpose * r
 		double deltaOld = delta;
-		delta = (static_cast<Matrix_f32>(residuals2.Transpose()) * outResiduals)[0][0];
+		delta = residuals2.DotProduct(outResiduals);
 		//if delta == zero -> fail
 		if (delta == 0.0F || isnan(delta) || isinf(delta))
 		{
@@ -373,7 +373,7 @@ bool SolverCGS(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 		Vector_f32 v = aMatrix * p2;
 
 		//alpha = delta / (r'Transpose * v')
-		double alpha = delta / (static_cast<Matrix_f32>(residuals2.Transpose()) * v)[0][0];
+		double alpha = delta / residuals2.DotProduct(v);
 
 		//q = u - alpha * v'
 		Vector_f32 q = u - v * alpha;
