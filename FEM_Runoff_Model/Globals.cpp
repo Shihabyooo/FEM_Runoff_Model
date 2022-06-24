@@ -700,4 +700,12 @@ double BicubicInterpolation(Vector2D const & point, Grid4x4 const & grid)
 	return CubicInterpolationNormalized(normalizedPoint.y, cubicIntX);
 }
 
+ModelParameters::ModelParameters()
+{
+}
 
+ModelParameters::~ModelParameters()
+{
+	if (unitTimeSeries != NULL)
+		delete[] unitTimeSeries;
+}

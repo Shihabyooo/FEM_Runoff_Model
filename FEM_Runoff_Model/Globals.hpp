@@ -51,6 +51,7 @@ enum class CRS
 
 enum class Solver
 {
+	Auto,
 	Simple, //Compute invert of paramters matrix and multiply with the RHS vector
 	GaussJordan, //Gauss-Jordan Elimination and backwards substitution
 	Jacobi, //(Weighted) Jacobi
@@ -59,6 +60,18 @@ enum class Solver
 	BiCG, //(Preconditioned) Biconjugate Gradient
 	CGS, //(Preconditioned) Conjugate Gradient Squared.
 	GMRES //Generalized Minimal Residual
+};
+
+enum class LogEntryType
+{
+	normal, warning, error, success
+};
+
+enum class InterpolationType
+{
+	nearest,
+	linear, //linear for 1D, bilinear for 2D
+	cubic //cubic for 1D, bicbic for 2D
 };
 
 struct Vector2;
@@ -199,11 +212,6 @@ public:
 	double z[4][4];
 };
 
-enum class LogEntryType
-{
-	normal, warning, error, success
-};
-
 struct LogEntry
 {
 public:
@@ -255,6 +263,67 @@ public:
 	}
 
 	float r, g, b, a;
+};
+
+struct ModelParameters
+{
+	//NOTE! Nodes and Elements should be already loaded and set by the time this struct is needed, so they are not included here, but still
+	//critical for model.
+public:
+	ModelParameters();	
+	~ModelParameters();
+
+	//Topographic/geogrpahic params
+	std::string demPath = "";
+	
+	InterpolationType topographySamplingMethod = InterpolationType::nearest;
+
+	//Precipitation
+	bool variablePrecipitation = true; //false is mostly for testing, use fixedPrecipitationValue for all elements for all periods.
+										//true, use gridded precipitation of 1D time series.
+
+	//bool griddedPrecipitation = false; //false: precipitation value from 1D time series for all elements. unitTimeSeries must be set to TS (must be pair<double, double>[]).
+									//True: precipitationRastersFolder must be set
+	
+	//std::string precipitationRastersFolder = ""; //Folder must contain rasters named appropriatly for each time step of simulation. To be implemented.
+
+	std::pair<double, double> * unitTimeSeries = NULL; //first double is time relative to startTime, second is in incremental mm.
+														//e.g. if simulation startTime 0.0 is equivalent to Jan 1st 00:00 AM, the TS:
+														//<0.0, 0.0>	-> 0mm at start. Should always be the case
+														//<1.0, 5.0>	->  5mm between 00:00 AM and 01:00 AM
+														//<2.0, 15.0>	-> 15mm between 01:00 AM and 02:00 AM
+														//<3.0, 30.0>	-> 30mm between 02:00 AM and 03:00 AM
+														//<4.0, 10.0>	-> 10mm between 03:00 AM and 04:00 AM	
+														//<10.0, 7.5>	-> 7.5mm between 04:00 AM and 010:00 AM	
+														//Any precipitation after 10AM will be assumed zero.
+														//Preciptation between 
+
+	InterpolationType precipitationInterpolationType = InterpolationType::linear; //should either be linear or cubic. Nearest should never 
+																				//be used unless timeSeries resolution is close to or finer than
+																				//simulation timeStep
+	double fixedPrecipitationValue = 1.0f;
+
+	//Hydraulic Parameters
+	bool variableManningCoefficients = false; //If false: using fixedManningCoeffients for all elements.
+												//If true: gridded manningCoefficientsRaster must be supplied.
+
+	double fixedManningCoeffient = 0.02;
+	std::string manningCoefficientRasterPath = "";
+
+	//bool useBuiltInLossModel = true;
+	//bool useHydrologicClassGrid = false; //if true, hydrologic class raster must be set
+	//std::string hydrologicClassRaster;
+
+	//temporal params
+	double timeStep = 0.5; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
+	double startTime = 0.0; //should be left at 0.0
+	double endTime = 10.0f; //hours after startTime to end simulation.
+
+	//Solver related params
+	Solver solverType = Solver::Auto;
+	double residualThreshold = -1.0; //Negative value -> use default threshold. Only for iterative solvers.
+	double weight = -1.0; //Negative value -> use default weight. Only for weighted solvers.
+	size_t maxIterations = 0; //0 -> Use default value. Only for iterative solvers.
 };
 
 //Helper functions

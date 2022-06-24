@@ -3,7 +3,6 @@
 #include "FileIO.hpp"
 #include "LogManager.hpp"
 
-
 bool SkipNLines(std::ifstream & file, unsigned int const & linesToSkip)
 {
 	for (size_t i = 0; i < linesToSkip; i++)
