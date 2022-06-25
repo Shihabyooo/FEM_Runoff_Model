@@ -51,15 +51,15 @@ enum class CRS
 
 enum class Solver
 {
-	Auto,
-	Simple, //Compute invert of paramters matrix and multiply with the RHS vector
-	GaussJordan, //Gauss-Jordan Elimination and backwards substitution
-	Jacobi, //(Weighted) Jacobi
-	SOR, //Successive Overrelaxation (Or Gauss-Seidel when waight = 1)
-	PCG, //Preconditioned Congjugate Gradient
-	BiCG, //(Preconditioned) Biconjugate Gradient
-	CGS, //(Preconditioned) Conjugate Gradient Squared.
-	GMRES //Generalized Minimal Residual
+	Auto = 0,
+	Simple = 1, //Compute invert of paramters matrix and multiply with the RHS vector
+	Gaussian = 2, //Gauss Elimination and backwards substitution
+	Jacobi = 3, //(Weighted) Jacobi
+	SOR = 4, //Successive Overrelaxation (Or Gauss-Seidel when waight = 1)
+	PCG = 5, //Preconditioned Congjugate Gradient
+	BiCG = 6, //(Preconditioned) Biconjugate Gradient
+	CGS = 7, //(Preconditioned) Conjugate Gradient Squared.
+	//GMRES = 8 //Generalized Minimal Residual
 };
 
 enum class LogEntryType
@@ -69,9 +69,9 @@ enum class LogEntryType
 
 enum class InterpolationType
 {
-	nearest,
-	linear, //linear for 1D, bilinear for 2D
-	cubic //cubic for 1D, bicbic for 2D
+	nearest = 0,
+	linear = 1, //linear for 1D, bilinear for 2D
+	cubic = 2 //cubic for 1D, bicbic for 2D
 };
 
 struct Vector2;
@@ -298,9 +298,11 @@ public:
 														//Any precipitation after 10AM will be assumed zero.
 														//Preciptation between 
 
-	InterpolationType precipitationInterpolationType = InterpolationType::linear; //should either be linear or cubic. Nearest should never 
+	InterpolationType precipitationTemporalInterpolationType = InterpolationType::linear; //should either be linear or cubic. Nearest should never 
 																				//be used unless timeSeries resolution is close to or finer than
 																				//simulation timeStep
+	InterpolationType precipitationSpatialInterpolationType = InterpolationType::nearest;
+
 	double fixedPrecipitationValue = -1.0f; //must be positive value > 0.0
 
 	//Hydraulic Parameters

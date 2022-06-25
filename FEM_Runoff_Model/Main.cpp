@@ -65,13 +65,8 @@ void GenerateTestSystem(bool isSymmetric, bool isDiagDominant)
 	//testB.DisplayArrayInCLI(1);
 }
 
-int main(int argc, char ** argv)
+void SolverTest()
 {
-	LogMan::Init(true);
-	LogMan::Log("Startup.");
-	//TODO uncomment line bellow after solver testing is done
-	//int returnVal = StartUI(1280, 720);
-	
 	TIME start;
 	long time;
 
@@ -112,8 +107,19 @@ int main(int argc, char ** argv)
 		time = DURATION_SINCE(start);
 		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
 	}
+}
+
+int main(int argc, char ** argv)
+{
+	LogMan::Init(true);
+	LogMan::Log("Startup.");
+	int returnVal = StartUI(1280, 720);
+	
+	//SolverTest();
 
 	LogMan::Terminate();
-	std::cin.sync();
-	std::cin.get();
+	//std::cin.sync(); //TODO remove
+	//std::cin.get(); //TODO remove
+
+	return returnVal;
 }

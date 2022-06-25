@@ -171,6 +171,7 @@ bool LoadInputRasters(ModelParameters const & params)
 
 bool Simulate(ModelParameters const & params)
 {
+	//TODO before simulating, unload all loaded rasters
 	if (!CheckParameters(params))
 		return false;
 	

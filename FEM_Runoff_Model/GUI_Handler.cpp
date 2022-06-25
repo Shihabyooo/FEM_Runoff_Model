@@ -115,10 +115,65 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 	UpdateViewport();
 }
 
-//TODO move window/viewport rendering/painting function to their own header/source files.
-//char meshNodes[260] = "Path to grid nodes file.";
-char meshNodes[260] = "Test_Nodes_R1.csv";
-char demFilePath[260] = "Test_Raster.tif";
+
+char meshNodes[260] = "Mesh Nodes Coordinates File Path";
+char demFilePath[260] = "DEM Raster Path";
+char precipRasterDir[260] = "Precipitation Rasters Directory Path";
+char manningFilePath[260] = "Manning Raster File Path";
+
+char fixedPrecipVal[24] = "";
+int timeSeriesSize = 3;
+
+bool useFixedManning = true;
+char fixedManningCoef[12] = "";
+
+char startTime[24] = "0.0";
+char endTime[24] = "";
+char deltaTime[24] = "";
+
+const char* solvers[] = { "Auto", "Simple", "Gaussian", "Jacobi", "SOR", "PCG", "BiCG", "CGS" };// , "GMRES" };
+const char* precipitationInput[] = { "Single, fixed value", "Single Time-Series", "Gridded Time-Series" };
+const char* interpMethods1D[] = {"Nearest", "Linear", "Cubic"};
+const char* interpMethods2D[] = { "Nearest", "Bilinear", "Bicubic" };
+int selectedPrecipInput = 0;
+int selectedPrecipTempoInterp = 1;
+int selectedPrecipSpaceInterp = 1;
+int selectedTopoInterp = 1;
+int selectedSolver = 0;
+
+char solverResidual[12] = "0.01";
+char solverWeight[12] = "1.0";
+int solverMaxIteration = 1000;
+
+
+void FillParametersStruct(ModelParameters & params)
+{
+	params.demPath = demFilePath;
+	params.topographySamplingMethod = static_cast<InterpolationType>(selectedTopoInterp);
+	params.variablePrecipitation = selectedPrecipInput == 0;
+
+	//params.unitTimeSeries = ; 
+	params.precipitationTemporalInterpolationType = static_cast<InterpolationType>(selectedPrecipTempoInterp);
+	params.precipitationSpatialInterpolationType = static_cast<InterpolationType>(selectedPrecipSpaceInterp);
+	params.fixedPrecipitationValue = atof(fixedPrecipVal);
+	params.variableManningCoefficients = !useFixedManning;
+	params.fixedManningCoeffient = atof(fixedManningCoef);
+	params.manningCoefficientRasterPath = manningFilePath;
+
+	//params.useBuiltInLossModel = ;
+	//params.useHydrologicClassGrid = ; //if true, hydrologic class raster must be set
+	//params.hydrologicClassRaster = ;
+	params.timeStep = atof(deltaTime);
+	params.startTime = atof(startTime);
+	params.endTime = atof(endTime);
+
+	params.solverType = static_cast<Solver>(selectedSolver);
+	params.residualThreshold = atof(solverResidual);
+	params.weight = atof(solverWeight);
+	params.maxIterations = solverMaxIteration < 0 ? 0 : solverMaxIteration;
+
+}
+
 
 void DrawLeftPane()
 {
@@ -145,42 +200,151 @@ void DrawLeftPane()
 	ImGui::Separator();
 	ImGui::NewLine();
 
-	//Geometry data
-	ImGui::Text("Mesh Nodes");
-	ImGui::PushItemWidth(-1);
-	ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
-	ImGui::PopItemWidth();
-	if (ImGui::Button("Browse for geometry directory"))
+	if (ImGui::CollapsingHeader("Topography and Geometry"))
 	{
-		//TODO spawn file browser here
-	}
-
-	/*DrawFileBrowser();
-	DrawFileList(geometryFilePath, &geometryNames, &selectedGeometry, DataType::geometry, false, GEOMETRY_LIST_ID);
-	ImGui::NewLine();*/
-
-	//DEM
-	ImGui::Text("DEM");
-	ImGui::PushItemWidth(-1);
-	ImGui::InputText("DEM File Path", demFilePath, IM_ARRAYSIZE(demFilePath));
-	ImGui::PopItemWidth();
-
-	if (ImGui::Button("Browse for DEM directory"))
-	{
-
-	}
-
-	if (ImGui::Button("Load DEM.", ImVec2(100, 50)))
-	{
-		//TestLoadDEM(demFilePath);
-		LogMan::Log("DEM loading implementation not finished yet.", LOG_WARN);
-	}
+		//Geometry data
+		ImGui::Text("Mesh Nodes");
+		ImGui::PushItemWidth(-1);
+		ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
+		ImGui::PopItemWidth();
+		if (ImGui::Button("Browse for geometry directory"))
+		{
+			//TODO spawn file browser here
+		}
 		
-	//Other input
+		ImGui::NewLine();
+
+		if (ImGui::Button("Generate Mesh", ImVec2(100, 50)))
+		{
+		}
+
+		/*DrawFileBrowser();
+		DrawFileList(geometryFilePath, &geometryNames, &selectedGeometry, DataType::geometry, false, GEOMETRY_LIST_ID);
+		ImGui::NewLine();*/
+
+		ImGui::Text("DEM");
+		ImGui::PushItemWidth(-1);
+		ImGui::InputText("##demFilePath", demFilePath, IM_ARRAYSIZE(demFilePath));
+		ImGui::PopItemWidth();
+
+		if (ImGui::Button("Browse for DEM directory"))
+			LogMan::Log("Not yet impltemented!", LOG_WARN);
+
+		ImGui::Text("Spatial interpolation method");
+		ImGui::Combo("##InterpT2D", &selectedTopoInterp, interpMethods2D, IM_ARRAYSIZE(interpMethods2D));
+	}
+
 	ImGui::NewLine();
+	ImGui::Separator();
+
+	if (ImGui::CollapsingHeader("Precipitation"))
+	{
+		ImGui::Text("Precipitation input method"); //TODO text warpping
+		ImGui::Combo("##precipInput", &selectedPrecipInput, precipitationInput, IM_ARRAYSIZE(precipitationInput));
+
+		if (selectedPrecipInput == 0)
+		{
+			ImGui::Text("Fixed Inrecemental Precipitation");
+			ImGui::InputText("##fixedPercipVal", fixedPrecipVal, 24, ImGuiInputTextFlags_CharsDecimal);
+		}
+		else if (selectedPrecipInput == 1)
+		{
+			ImGui::InputInt("Series length", &timeSeriesSize);
+			ImGui::Text("Time-series temporal interpolation method"); //TODO text warpping
+			ImGui::Combo("##InterpP1D", &selectedPrecipTempoInterp, interpMethods1D, IM_ARRAYSIZE(interpMethods1D));
+			if (ImGui::CollapsingHeader("Time-Series", ImGuiTreeNodeFlags_None))
+			{
+				//TODO time series input (HEC-HMS-esque)
+			}
+		}
+		else if (selectedPrecipInput == 2)
+		{
+			ImGui::Text("Precipitation rasters directories");
+			ImGui::PushItemWidth(-1);
+			ImGui::InputText("##precipRasDir", precipRasterDir, IM_ARRAYSIZE(precipRasterDir));
+			ImGui::PopItemWidth();
+			ImGui::Text("Time-series temporal interpolation method"); //TODO text warpping
+			ImGui::Combo("##InterpP1D", &selectedPrecipTempoInterp, interpMethods1D, IM_ARRAYSIZE(interpMethods1D));
+
+			ImGui::Text("Precipitation spatial interpolation method"); //TODO text warpping
+			ImGui::Combo("##InterpP2D", &selectedPrecipSpaceInterp, interpMethods2D, IM_ARRAYSIZE(interpMethods2D));
+		}
+	}
+
+	ImGui::NewLine();
+	ImGui::Separator();
+
+	if (ImGui::CollapsingHeader("Hydraulics"))
+	{
+		ImGui::Checkbox("Use Fixed Manning Coefficient", &useFixedManning);
+		if (useFixedManning)
+		{
+			ImGui::PushItemWidth(-1);
+			ImGui::Text("Manning Coefficient");
+			ImGui::SameLine();
+			ImGui::InputText("##fixedManningCoef", fixedManningCoef, 12, ImGuiInputTextFlags_CharsDecimal);
+			ImGui::PopItemWidth();
+		}
+		else
+		{
+			ImGui::Text("Manning Coefficients Raster");
+			ImGui::PushItemWidth(-1);
+			ImGui::InputText("##ManningRaster", manningFilePath, IM_ARRAYSIZE(manningFilePath));
+			ImGui::PopItemWidth();
+		}
+	}
+
+	ImGui::NewLine();
+	ImGui::Separator();
+
+	if (ImGui::CollapsingHeader("Simulation Run Parameters"))
+	{
+		ImGui::PushItemWidth(-1);
+		ImGui::Text("Start time");
+		ImGui::SameLine();
+		ImGui::InputText("##startTime", startTime, 24, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::Text("End time");
+		ImGui::SameLine();
+		ImGui::InputText("##endTime", endTime, 24, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::Text("Time step");
+		ImGui::SameLine();
+		ImGui::InputText("##deltaTime", deltaTime, 24, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::PopItemWidth();
+		
+		
+		ImGui::Text("Solver");
+		ImGui::Combo("##Solver", &selectedSolver, solvers, IM_ARRAYSIZE(solvers));
+
+		ImGui::PushItemWidth(-1);
+		ImGui::Text("Max residual");
+		ImGui::SameLine();
+		ImGui::InputText("##residual", solverResidual, 12, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::Text("Iterations");
+		ImGui::SameLine();
+		ImGui::InputInt("##iterations", &solverMaxIteration);
+		
+
+		if (selectedSolver == 3 || selectedSolver == 4)
+		{
+			ImGui::Text("Weight");
+			ImGui::SameLine();
+			ImGui::InputText("##weight", solverWeight, 12, ImGuiInputTextFlags_CharsDecimal);
+		}
+		ImGui::PopItemWidth();
+	}
+
+	ImGui::NewLine();
+	ImGui::Separator();
+
 	if (ImGui::Button("Run Simulation!", ImVec2(100, 50)))
 	{
-		TestSimulate(meshNodes);
+		//create params from current input
+		ModelParameters newParams;
+		FillParametersStruct(newParams);
+
+		Simulate(newParams);
+
+		//TestSimulate(meshNodes);
 		SetViewBounds(nodesSW, nodesNE);
 		UpdateViewport();
 	}
