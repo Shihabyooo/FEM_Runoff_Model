@@ -23,6 +23,14 @@ bool SkipNLines(std::ifstream & file, unsigned int const & linesToSkip)
 	}
 }
 
+bool FileExists(std::string const & path)
+{
+	if (std::filesystem::exists(path))
+		return true;
+	else
+		return false;
+}
+
 bool LoadCSV(std::string const & path, std::vector<float> & output, unsigned int const & firstLinesToSkip)
 {
 	LogMan::Log("Attempting to load csv file \"" + path + "\"");
@@ -105,7 +113,7 @@ bool LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2> & out
 	return true;
 }
 
-bool LoadRaster(std::string const & path, void * output, int * outRasterID) //TODO handle returning pointer.
+bool LoadRaster(std::string const & path, int * outRasterID) //TODO handle returning pointer.
 {
 	LogMan::Log("Attempting to load raster file \"" + path + "\"");
 	if (!LoadGeoTIFF(path, outRasterID))
@@ -115,6 +123,11 @@ bool LoadRaster(std::string const & path, void * output, int * outRasterID) //TO
 	}
 
 	LogMan::Log("Sucessfully loaded raster file!", LOG_SUCCESS);
+}
+
+void UnloadRaster(int rasterID)
+{
+	UnloadGeoTIFF(rasterID);
 }
 
 std::ofstream logFile;

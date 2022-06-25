@@ -8,6 +8,8 @@
 #include "Globals.hpp"
 #include "DelauneyTriangulation.hpp"
 
+
+
 //Process is as follows:
 //Recieve a model parameters from GUI (or CLI)
 //Load required rasters and datasets that need loading.
@@ -34,5 +36,7 @@ extern std::unordered_map<int, Triangle> triangles;
 extern std::vector<Vector2> nodes;
 extern std::vector<int> boundaryNodes;
 extern Vector2 nodesSW, nodesNE;
+
+bool Simulate(ModelParameters const & params);
 
 void TestSimulate(std::string const & nodesPath); //TODO remove this and its definition.

@@ -301,13 +301,13 @@ public:
 	InterpolationType precipitationInterpolationType = InterpolationType::linear; //should either be linear or cubic. Nearest should never 
 																				//be used unless timeSeries resolution is close to or finer than
 																				//simulation timeStep
-	double fixedPrecipitationValue = 1.0f;
+	double fixedPrecipitationValue = -1.0f; //must be positive value > 0.0
 
 	//Hydraulic Parameters
 	bool variableManningCoefficients = false; //If false: using fixedManningCoeffients for all elements.
 												//If true: gridded manningCoefficientsRaster must be supplied.
 
-	double fixedManningCoeffient = 0.02;
+	double fixedManningCoeffient = -1.0f; //must be positive value > 0.0
 	std::string manningCoefficientRasterPath = "";
 
 	//bool useBuiltInLossModel = true;
