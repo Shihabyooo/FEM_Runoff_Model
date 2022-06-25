@@ -13,7 +13,7 @@ Vector2 nodesSW, nodesNE;
 Matrix_f32 globalC, globalPsiX, globalPsiY;
 int demID, manningRasterID;
 
-void TestBoundingBox()
+void ComputeBoundingBox()
 {
 	//std::cout << "\n computing bounding box in model interface\n";
 	nodesSW = nodes[0];
@@ -169,6 +169,24 @@ bool LoadInputRasters(ModelParameters const & params)
 	return status;
 }
 
+bool GenerateMesh(std::string const & nodesPath)
+{
+	LogMan::Log("Attempting to generate FEM mesh");
+	
+	nodes.clear();
+	triangles.clear();
+	boundaryNodes.clear();
+
+	if (!LoadCoordinatePairsCSV(nodesPath, nodes))
+		return false;
+
+	ComputeBoundingBox();
+	Triangulate(nodes, &triangles, &boundaryNodes);
+
+	LogMan::Log("Succesfully generated mesh!", LOG_SUCCESS);
+	return true;
+}
+
 bool Simulate(ModelParameters const & params)
 {
 	//TODO before simulating, unload all loaded rasters
@@ -184,17 +202,4 @@ bool Simulate(ModelParameters const & params)
 
 
 	return true;
-}
-
-void TestSimulate(std::string const & nodesPath)
-{
-	std::cout << "\n test simulation start\n";
-	nodes.clear();
-	triangles.clear();
-	boundaryNodes.clear();
-
-	LoadCoordinatePairsCSV(nodesPath, nodes);
-	
-	TestBoundingBox();
-	Triangulate(nodes, &triangles, &boundaryNodes);
 }

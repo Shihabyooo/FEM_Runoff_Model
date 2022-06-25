@@ -14,6 +14,11 @@ ImVec4 viewportBGColour = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);
 WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimensions;
 WindowDimensions toolbarDimensions, statusBarDimensions;
 
+int fixedLeftPaneWidth = 250;
+int fixedLogPaneHeight = 200;
+int fixedToolBarHeight = 50;
+int fixedStatusBarHeight = 30;
+
 void OnGLFWError(int error, const char* description) //Callback
 {
 	fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -97,11 +102,7 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 	//left pane height = mainWindow height.
 	//log pane width = mainwindow width - fixed left pane width.
 	//viewport takes remainin area.
-	int fixedLeftPaneWidth = 250;
-	int fixedLogPaneHeight = 200;
-	int fixedToolBarHeight = 50;
-	int fixedStatusBarHeight = 30;
-
+	
 	statusBarDimensions = WindowDimensions(0, mainWinHeight - fixedStatusBarHeight, mainWinWidth, fixedStatusBarHeight);
 	leftPaneDimensions = WindowDimensions(0, 0, fixedLeftPaneWidth, mainWinHeight - fixedStatusBarHeight);
 	logPaneDimensions = WindowDimensions(leftPaneDimensions.width, mainWinHeight - fixedLogPaneHeight - fixedStatusBarHeight, mainWinWidth - fixedLeftPaneWidth, fixedLogPaneHeight);
@@ -174,7 +175,6 @@ void FillParametersStruct(ModelParameters & params)
 
 }
 
-
 void DrawLeftPane()
 {
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
@@ -216,6 +216,9 @@ void DrawLeftPane()
 
 		if (ImGui::Button("Generate Mesh", ImVec2(100, 50)))
 		{
+			GenerateMesh(meshNodes);
+			SetViewBounds(nodesSW, nodesNE);
+			UpdateViewport();
 		}
 
 		/*DrawFileBrowser();
@@ -338,15 +341,10 @@ void DrawLeftPane()
 
 	if (ImGui::Button("Run Simulation!", ImVec2(100, 50)))
 	{
-		//create params from current input
+		//create params from current input then pass to Simulate()
 		ModelParameters newParams;
 		FillParametersStruct(newParams);
-
 		Simulate(newParams);
-
-		//TestSimulate(meshNodes);
-		SetViewBounds(nodesSW, nodesNE);
-		UpdateViewport();
 	}
 
 	ImGui::End();
@@ -359,7 +357,32 @@ void DrawToolbar()
 	ImGui::SetNextWindowSize(ImVec2(toolbarDimensions.width, toolbarDimensions.height), ImGuiCond_Always);
 
 	ImGui::Begin("Toolbar", NULL, windowFlags);
+	ImVec2 buttonSize(32, 32);
+	ImVec4 buttongBGColour(1.0, 1.0f, 1.0f, 1.0f);
+	ImVec4 buttonTintColour(1.0f, 0.0f, 0.0f, 1.0f);
 	
+	ImGuiIO& io = ImGui::GetIO(); //test
+	ImTextureID my_tex_id = io.Fonts->TexID; //test
+
+	if (ImGui::ImageButton(my_tex_id, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttongBGColour, buttonTintColour))
+	{
+
+	}
+	ImGui::SameLine();
+	if (ImGui::ImageButton(my_tex_id, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttongBGColour, buttonTintColour))
+	{
+
+	}
+	ImGui::SameLine();
+	if (ImGui::ImageButton(my_tex_id, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttongBGColour, buttonTintColour))
+	{
+
+	}
+	ImGui::SameLine();
+	if (ImGui::ImageButton(my_tex_id, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttongBGColour, buttonTintColour))
+	{
+
+	}
 
 	ImGui::End();
 }

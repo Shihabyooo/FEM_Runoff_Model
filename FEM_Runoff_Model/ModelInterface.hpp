@@ -30,13 +30,11 @@
 		//if difference is accepable, break internal loop.
 	//handle data storage for results, residuals and any relative statistics, prepare for next loop.
 //Display results and return control to user.
-	
 
 extern std::unordered_map<int, Triangle> triangles;
 extern std::vector<Vector2> nodes;
 extern std::vector<int> boundaryNodes;
 extern Vector2 nodesSW, nodesNE;
 
+bool GenerateMesh(std::string const & nodesPath);
 bool Simulate(ModelParameters const & params);
-
-void TestSimulate(std::string const & nodesPath); //TODO remove this and its definition.
