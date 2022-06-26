@@ -132,6 +132,9 @@ char startTime[24] = "0.0";
 char endTime[24] = "";
 char deltaTime[24] = "";
 
+char femOmega[12] = "0.5";
+bool useLumped = true;
+
 const char* solvers[] = { "Auto", "Simple", "Gaussian", "Jacobi", "SOR", "PCG", "BiCG", "CGS" };// , "GMRES" };
 const char* precipitationInput[] = { "Single, fixed value", "Single Time-Series", "Gridded Time-Series" };
 const char* interpMethods1D[] = {"Nearest", "Linear", "Cubic"};
@@ -167,6 +170,9 @@ void FillParametersStruct(ModelParameters & params)
 	params.timeStep = atof(deltaTime);
 	params.startTime = atof(startTime);
 	params.endTime = atof(endTime);
+
+	params.useLumpedForm = useLumped;
+	params.femOmega = atof(femOmega);
 
 	params.solverType = static_cast<Solver>(selectedSolver);
 	params.residualThreshold = atof(solverResidual);
@@ -312,9 +318,16 @@ void DrawLeftPane()
 		ImGui::Text("Time step");
 		ImGui::SameLine();
 		ImGui::InputText("##deltaTime", deltaTime, 24, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::NewLine();
+		
+		ImGui::Checkbox("Use Lumped formulation", &useLumped);
+		ImGui::Text("Time difference scheme (Omega value)");
+		ImGui::SameLine();
+		ImGui::InputText("##femOmega", femOmega, 12, ImGuiInputTextFlags_CharsDecimal);
+
 		ImGui::PopItemWidth();
 		
-		
+		ImGui::NewLine();
 		ImGui::Text("Solver");
 		ImGui::Combo("##Solver", &selectedSolver, solvers, IM_ARRAYSIZE(solvers));
 

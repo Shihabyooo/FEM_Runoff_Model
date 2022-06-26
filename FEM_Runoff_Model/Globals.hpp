@@ -321,6 +321,11 @@ public:
 	double startTime = 0.0; //should be left at 0.0
 	double endTime = 10.0f; //hours after startTime to end simulation.
 
+	//FEM related params
+	bool useLumpedForm = true; //if false, uses consistant formulation
+	double femOmega = 0.5; //A weighting factor to control temporal approximation. 0.0 = Forward difference, 1.0 = Backward difference\
+							0.5 = Central difference (Crank-Nicholson method)
+
 	//Solver related params
 	Solver solverType = Solver::Auto;
 	double residualThreshold = -1.0; //Negative value -> use default threshold. Only for iterative solvers.

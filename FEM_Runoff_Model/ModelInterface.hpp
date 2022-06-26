@@ -8,7 +8,11 @@
 #include "Globals.hpp"
 #include "DelauneyTriangulation.hpp"
 
-
+//TODO the current time approximation uses a double for the omega variable. While it is mathematically correct, practically, the values\
+should typically either be 0.0, 0.5 or 1.0. In the first and last case, the RHS computation can be significantly sped up by omitting\
+that would -in each case- result in a vector of zeroes (see approximate solution formulation). It may make sense hence to instead use a\
+"mode" variable (i.e. an int = 0, 1 or 2) instead of a double, and a switch statement to do an optimized RHS computation based on the mode\
+e.g. if mode = 0 (backwards difference), qx, qy and Pe at t+dt are unnecessary, for mode = 2 (forward diff), qx, qy and Pe at t are uncessary.
 
 //Process is as follows:
 //Recieve a model parameters from GUI (or CLI)
