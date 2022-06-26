@@ -36,13 +36,13 @@ void ComputeBoundingBox()
 void ConstructGlobalConductanceMatrices(double deltaT)
 {
 	//Psi-X and Psi-Y (for each element) are 3x3 matrices.
-	//[Psi-X_e] = 1/6 * delta T *	|	yj-yk	yk-yi	yi-yk	|
-	//								|	yj-yk	yk-yi	yi-yk	|
-	//								|	yj-yk	yk-yi	yi-yk	|
+	//[Psi-X_e] = 1/6 * delta T *	|	yj-yk	yk-yi	yi-yj	|
+	//								|	yj-yk	yk-yi	yi-yj	|
+	//								|	yj-yk	yk-yi	yi-yj	|
 
-	//[Psi-Y_e] = 1/6 * delta T *	|	xk-xj	xi-xk	xk-xi	|
-	//								|	xk-xj	xi-xk	xk-xi	|
-	//								|	xk-xj	xi-xk	xk-xi	|
+	//[Psi-Y_e] = 1/6 * delta T *	|	xk-xj	xi-xk	xj-xi	|
+	//								|	xk-xj	xi-xk	xj-xi	|
+	//								|	xk-xj	xi-xk	xj-xi	|
 	//Where x(i/j/k) and y(i/j/k) are the x, y coord of the i/j/kth node.
 
 	//Create global  Psi-X and Psi-y of size (node x nodes), zero initial value.
@@ -53,17 +53,98 @@ void ConstructGlobalConductanceMatrices(double deltaT)
 			Psi-x[5][8] += Psi-x_e[1][2] = 1/6 * dT * (yK-yI), etc
 			//Ditto for Psi-Y
 
+	double multiplier = deltaT / 6.0;
+
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		int const * vert = it->second.vertIDs; //to simplify lines bellow.
+
+		//Since all values in a column (for each element matrix) have the same value, we compute them first hand then increment global matrix.
+		double valX1 = multiplier * (it->second.Node(1, nodes).y - it->second.Node(2, nodes).y); //1/6 * deltaT * (yj - yk)
+		double valX2 = multiplier * (it->second.Node(2, nodes).y - it->second.Node(0, nodes).y); //1/6 * deltaT * (yk - yi)
+		double valX3 = multiplier * (it->second.Node(0, nodes).y - it->second.Node(1, nodes).y); //1/6 * deltaT * (yi - yj)
+
+		double valY1 = multiplier * (it->second.Node(2, nodes).x - it->second.Node(1, nodes).x); //1/6 * deltaT * (xk - xj)
+		double valY2 = multiplier * (it->second.Node(0, nodes).x - it->second.Node(2, nodes).x); //1/6 * deltaT * (xi - xk)
+		double valY3 = multiplier * (it->second.Node(2, nodes).x - it->second.Node(0, nodes).x); //1/6 * deltaT * (xk - xi)
+
+
+		//Increment global matrix at position define by node IDs (3^2 = 9 positions)
+		globalPsiX[vert[0]][vert[0]] += valX1;
+		globalPsiX[vert[0]][vert[1]] += valX2;
+		globalPsiX[vert[0]][vert[2]] += valX3;
+
+		globalPsiX[vert[1]][vert[0]] += valX1;
+		globalPsiX[vert[1]][vert[1]] += valX2;
+		globalPsiX[vert[1]][vert[2]] += valX3;
+
+		globalPsiX[vert[2]][vert[0]] += valX1;
+		globalPsiX[vert[2]][vert[1]] += valX2;
+		globalPsiX[vert[2]][vert[2]] += valX3;
+		
+		globalPsiY[vert[0]][vert[0]] += valY1;
+		globalPsiY[vert[0]][vert[1]] += valY2;
+		globalPsiY[vert[0]][vert[2]] += valY3;
+
+		globalPsiY[vert[1]][vert[0]] += valY1;
+		globalPsiY[vert[1]][vert[1]] += valY2;
+		globalPsiY[vert[1]][vert[2]] += valY3;
+
+		globalPsiY[vert[2]][vert[0]] += valY1;
+		globalPsiY[vert[2]][vert[1]] += valY2;
+		globalPsiY[vert[2]][vert[2]] += valY3;
+	}
 }
 
-void ConstructGlobalCapacitanceMatrix()
+void ConstructGlobalCapacitanceMatrix(bool isLumped)
 {
-	//Capacitance matrix for each element is 3x3 matrix
+	//Lumped Capacitance matrix for each element is 3x3 matrix
 	//[C_e] = A/3 * |	1	0	0	|
 	//				|	0	1	0	|
 	//				|	0	0	1	|
 	//Where A is the area of element.
 
-	//Construct global matrix similar to procedure in ConstructGlobalConductanceMatrices()
+
+	//Consistent Capacitance matrix for each element is 3x3 matrix
+	//[C_e] = A/12 *	|	2	1	1	|
+	//					|	1	2	1	|
+	//					|	1	1	2	|
+	//Where A is the area of element.
+
+	globalC = Matrix_f32(nodes.size(), nodes.size());
+
+	//since element matrix comprises of two distinct val, we compute them per element depending on whether lumped formulation or consistent.
+	double diagVal, otherVal;
+
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		//compute diagVal and otherVal
+		if (isLumped)
+		{
+			diagVal = it->second.area / 3.0; //(A/3.0) * 1.0
+			otherVal = 0.0;
+		}
+		else
+		{
+			diagVal = 2.0 * it->second.area / 12.0; 
+			otherVal = it->second.area / 12.0; //(A/12.0) * 1.0
+		}
+		
+		int const * vert = it->second.vertIDs;
+
+		globalC[vert[0]][vert[0]] += diagVal;
+		globalC[vert[1]][vert[1]] += diagVal;
+		globalC[vert[2]][vert[2]] += diagVal;
+
+		globalC[vert[0]][vert[1]] += otherVal;
+		globalC[vert[0]][vert[2]] += otherVal;
+
+		globalC[vert[1]][vert[0]] += otherVal;
+		globalC[vert[1]][vert[2]] += otherVal;
+
+		globalC[vert[2]][vert[0]] += otherVal;
+		globalC[vert[2]][vert[1]] += otherVal;
+	}
 }
 
 void ConstructGlobalBetaMatrix()
@@ -133,9 +214,14 @@ bool CheckParameters(ModelParameters const & params)
 		status = false;
 	}
 
+	if (params.femOmega < 0.0 || params.femOmega > 1.0)
+	{
+		LogMan::Log("ERROR! Omega must be from 0.0 to 1.0", LOG_ERROR);
+		status = false;
+	}
+
 	//Check warn
 	//TODO add warning here about low iteration time and such.
-
 
 	return status;
 }
@@ -197,7 +283,7 @@ bool Simulate(ModelParameters const & params)
 		return false;
 
 	ConstructGlobalConductanceMatrices(params.timeStep);
-	ConstructGlobalCapacitanceMatrix();
+	ConstructGlobalCapacitanceMatrix(params.useLumpedForm);
 	ConstructGlobalBetaMatrix();
 
 
