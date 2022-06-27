@@ -11,6 +11,8 @@ Vector2 nodesSW, nodesNE;
 
 //Matrices and Vectors
 Matrix_f32 globalC, globalPsiX, globalPsiY;
+//Vector_f32 globalBeta;
+
 int demID, manningRasterID;
 
 void ComputeBoundingBox()
@@ -52,6 +54,9 @@ void ConstructGlobalConductanceMatrices(double deltaT)
 			Psi-x[3][3] += Psi-x_e[0][0] = 1/6 * dT * (yj-yk), and\
 			Psi-x[5][8] += Psi-x_e[1][2] = 1/6 * dT * (yK-yI), etc
 			//Ditto for Psi-Y
+	
+	globalPsiX = Matrix_f32(nodes.size(), nodes.size());
+	globalPsiY = Matrix_f32(nodes.size(), nodes.size());
 
 	double multiplier = deltaT / 6.0;
 
@@ -67,7 +72,6 @@ void ConstructGlobalConductanceMatrices(double deltaT)
 		double valY1 = multiplier * (it->second.Node(2, nodes).x - it->second.Node(1, nodes).x); //1/6 * deltaT * (xk - xj)
 		double valY2 = multiplier * (it->second.Node(0, nodes).x - it->second.Node(2, nodes).x); //1/6 * deltaT * (xi - xk)
 		double valY3 = multiplier * (it->second.Node(2, nodes).x - it->second.Node(0, nodes).x); //1/6 * deltaT * (xk - xi)
-
 
 		//Increment global matrix at position define by node IDs (3^2 = 9 positions)
 		globalPsiX[vert[0]][vert[0]] += valX1;
@@ -147,22 +151,33 @@ void ConstructGlobalCapacitanceMatrix(bool isLumped)
 	}
 }
 
-void ConstructGlobalBetaMatrix()
-{
-	//TODO figure out how to construct this matrix (or vector?)
-
-	//Beta matrix for each element is a 3x1 vector
-	//{Beta_e} = A/3 *	|	1	|
-	//					|	1	|
-	//					|	1	|
-	//Where A is the area of element.
-
-	////Construct global matrix similar to proceudre in ConstructGlobalConductanceMatrices()
-	//Nope. This isn't correct...	
-}
+//void ConstructGlobalBetaMatrix()
+//{
+//	//Beta matrix for each element is a 3x1 vector
+//	//{Beta_e} = A/3 *	|	1	|
+//	//					|	1	|
+//	//					|	1	|
+//	//Where A is the area of element.
+//
+//	////Construct global matrix similar to proceudre in ConstructGlobalConductanceMatrices(), difference being is that we're only working\
+//	on a row level.
+//
+//	globalBeta = Vector_f32(nodes.size());
+//
+//	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+//	{
+//		double areaThird = it->second.area / 3.0;
+//		int const * vert = it->second.vertIDs; //to simplify lines bellow.
+//
+//		globalBeta[vert[0]] += areaThird;
+//		globalBeta[vert[1]] += areaThird;
+//		globalBeta[vert[2]] += areaThird;
+//	}
+//}
 
 bool CheckParameters(ModelParameters const & params)
 {
+	LogMan::Log("Checking parameters");
 	bool status = true;
 
 	//Check fails
@@ -174,15 +189,16 @@ bool CheckParameters(ModelParameters const & params)
 		status = false;
 	}
 
-	if (!FileExists(params.demPath))
+	if (!FileIO::FileExists(params.demPath))
 	{
 		LogMan::Log("ERROR! Must supply a terrain DEM for the region.", LOG_ERROR);
 		status = false;
 	}
 
-	if (params.variablePrecipitation && params.unitTimeSeries == NULL) //TODO check for time series rasters also goes here
+	//if (params.variablePrecipitation && params.unitTimeSeries == NULL) //TODO check for time series rasters also goes here
+	if (params.variablePrecipitation && !params.unitTimeSeries.IsValid()) //TODO check for time series rasters also goes here
 	{
-		LogMan::Log("ERROR! Must set a time series for preciptation when using variable precipitation", LOG_ERROR);
+		LogMan::Log("ERROR! Invalid Time-series.", LOG_ERROR);
 		status = false;
 	}
 	else if (!params.variablePrecipitation && params.fixedPrecipitationValue <= 0.0)
@@ -191,7 +207,7 @@ bool CheckParameters(ModelParameters const & params)
 		status = false;
 	}
 
-	if (params.variableManningCoefficients && !FileExists(params.manningCoefficientRasterPath))
+	if (params.variableManningCoefficients && !FileIO::FileExists(params.manningCoefficientRasterPath))
 	{
 		LogMan::Log("ERROR! Must set a Manning coefficients raster when using variable manning coefficients", LOG_ERROR);
 		status = false;
@@ -206,7 +222,7 @@ bool CheckParameters(ModelParameters const & params)
 	{
 		LogMan::Log("ERROR! Time step must be a positive, real number", LOG_ERROR);
 		status = false;
-	}
+	} 
 
 	if (params.endTime <= params.startTime || (params.startTime + params.timeStep) > params.endTime)
 	{
@@ -228,6 +244,7 @@ bool CheckParameters(ModelParameters const & params)
 
 bool LoadInputRasters(ModelParameters const & params)
 {
+	LogMan::Log("Loading rasters");
 	//Note Variable Precipitation rasters are not loaded initially, but loaded at runtime. A pass should, however, be carried initially
 	//to create the time column of the time series vs raster path (so whe can tell when to load which raster). Caveats of this approach is
 	//that, due to inefficient GeoTIFF parser, this would signifcantly lower the performance.
@@ -240,16 +257,16 @@ bool LoadInputRasters(ModelParameters const & params)
 	//DEM always loaded
 	bool status;
 	
-	status = LoadRaster(params.demPath, &demID);
+	status = FileIO::LoadRaster(params.demPath, &demID);
 
 	if (params.variableManningCoefficients)
-		status = LoadRaster(params.manningCoefficientRasterPath, &manningRasterID);
+		status = FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID);
 	
 	if (!status) //error already logged with the function calls above.
 	{
-		UnloadRaster(demID);
+		FileIO::UnloadRaster(demID);
 		if (params.variableManningCoefficients)
-			UnloadRaster(manningRasterID);
+			FileIO::UnloadRaster(manningRasterID);
 	}
 
 	return status;
@@ -263,7 +280,7 @@ bool GenerateMesh(std::string const & nodesPath)
 	triangles.clear();
 	boundaryNodes.clear();
 
-	if (!LoadCoordinatePairsCSV(nodesPath, nodes))
+	if (!FileIO::LoadCoordinatePairsCSV(nodesPath, nodes))
 		return false;
 
 	ComputeBoundingBox();
@@ -273,8 +290,53 @@ bool GenerateMesh(std::string const & nodesPath)
 	return true;
 }
 
+bool LoadTimeSeries(std::string const & path, TimeSeries & ts)
+{
+	return FileIO::LoadTimeSeries(path, ts);
+}
+
+double GetCurrentPrecipitation(double time, ModelParameters const & params, Triangle const & triangle) //current impl doesn't need triangle, but later it would.
+{
+	if (params.variablePrecipitation)
+	{
+		return params.unitTimeSeries.Sample(time, params.precipitationTemporalInterpolationType);
+	}
+	else
+	{
+		return params.fixedPrecipitationValue;
+	}
+}
+
+void ComputePreciptationVector(double time, ModelParameters const & params, Vector_f32 & outVector)
+{
+	//Preciptation Vector is the last term of the RHS of the formulation. i.e. dT * {Beta} * ((1 - omega) * Pe_t + omega * Pe_t+dt)
+	
+	//Beta matrix for each element is a 3x1 vector
+	//{Beta_e} = A/3 *	|	1	|
+	//					|	1	|
+	//					|	1	|
+	//Where A is the area of element.
+
+
+	//zero out outVector before doing anything.
+	outVector = Vector_f32(nodes.size());
+
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		int const * vert = it->second.vertIDs; //to simplify lines bellow.
+		double newPrecipitation = GetCurrentPrecipitation(time, params, it->second);
+		double elementContrib = it->second.area / 3.0 * (( 1 - params.femOmega) * it->second.elementPrecipitation + params.femOmega * newPrecipitation);
+		it->second.elementPrecipitation = newPrecipitation;
+
+		outVector[vert[0]] += elementContrib;
+		outVector[vert[1]] += elementContrib;
+		outVector[vert[2]] += elementContrib;
+	}
+}
+
 bool Simulate(ModelParameters const & params)
 {
+	LogMan::Log("Starting a simulation run");
 	//TODO before simulating, unload all loaded rasters
 	if (!CheckParameters(params))
 		return false;
@@ -282,10 +344,34 @@ bool Simulate(ModelParameters const & params)
 	if (!LoadInputRasters(params))
 		return false;
 
+	LogMan::Log("Constructing global matrices and vectors");
 	ConstructGlobalConductanceMatrices(params.timeStep);
 	ConstructGlobalCapacitanceMatrix(params.useLumpedForm);
-	ConstructGlobalBetaMatrix();
+	//ConstructGlobalBetaMatrix();
 
+	//Set initial heads to zero (Dry conditions).
+	Vector_f32 head(nodes.size());
+
+	//Loop from start time to end time
+	double time = params.startTime;
+	LogMan::Log("Starting simulation loop at time: " + std::to_string(time));
+
+	while (time <= params.endTime)
+	{
+		LogMan::Log("At T= " + std::to_string(time));
+		//Compute effective rainfall for each element
+
+	//Compute qx and qy vectors using previous pass heads (for first loop, it's the initial head)
+	//Internal loop
+		//Solve the system of equations.
+		//Check the resulting heads with the ones assumed for qx and qy, if the difference is large, recompute qx and qy, loop again.
+		//if difference is accepable, break internal loop.
+	//handle data storage for results, residuals and any relative statistics, prepare for next loop.
+	//Display results and return control to user.
+
+		time += params.timeStep;
+	}
+	
 
 	return true;
 }

@@ -35,10 +35,13 @@ e.g. if mode = 0 (backwards difference), qx, qy and Pe at t+dt are unnecessary, 
 	//handle data storage for results, residuals and any relative statistics, prepare for next loop.
 //Display results and return control to user.
 
+//Note: Rainfall is expected in mm, but the spatial units are meters (squared), so divide Pe by 1000 before multiplying with beta.
+
 extern std::unordered_map<int, Triangle> triangles;
 extern std::vector<Vector2> nodes;
 extern std::vector<int> boundaryNodes;
 extern Vector2 nodesSW, nodesNE;
 
 bool GenerateMesh(std::string const & nodesPath);
+bool LoadTimeSeries(std::string const & path, TimeSeries & ts);
 bool Simulate(ModelParameters const & params);
