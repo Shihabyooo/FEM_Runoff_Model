@@ -23,7 +23,7 @@ bool SkipNLines(std::ifstream & file, unsigned int const & linesToSkip)
 	}
 }
 
-bool FileExists(std::string const & path)
+bool FileIO::FileExists(std::string const & path)
 {
 	if (std::filesystem::exists(path))
 		return true;
@@ -31,7 +31,55 @@ bool FileExists(std::string const & path)
 		return false;
 }
 
-bool LoadCSV(std::string const & path, std::vector<float> & output, unsigned int const & firstLinesToSkip)
+bool FileIO::LoadTimeSeries(std::string const & path, TimeSeries & timeSeries, unsigned int firstLinesToSkip)
+{
+	LogMan::Log("Attempting to load Time-series csv file \"" + path + "\"");
+	std::ifstream file;
+	file.open(path);
+
+	if (!file.is_open())
+	{
+		LogMan::Log("Failed to open file \"" + path + "\"", LOG_ERROR);
+		return false;
+	}
+	
+	char cBuffer = ' ';
+	std::string sBuffer = "";
+	std::vector<std::pair<size_t, double>> tsBuffer;
+
+	//skip firstLinesToSkip
+	SkipNLines(file, firstLinesToSkip);
+
+	long cachedLong;
+	bool second = false;
+
+	while (!file.eof())
+	{
+		file.read(&cBuffer, sizeof(cBuffer));
+
+		if (cBuffer == ',')
+		{
+			cachedLong = atol(sBuffer.c_str());
+			sBuffer = "";
+			second = true;
+		}
+		else if ((cBuffer == '\n' || file.eof()) && second)
+		{
+			tsBuffer.push_back(std::pair<size_t, double>(cachedLong, atof(sBuffer.c_str())));
+			sBuffer = "";
+			second = false;
+		}
+		else
+			sBuffer += cBuffer;
+	}
+
+	file.close();
+	timeSeries = TimeSeries(tsBuffer);
+	LogMan::Log("Sucessfully loaded Time-series file!", LOG_SUCCESS);
+	return true;
+}
+
+bool FileIO::LoadCSV(std::string const & path, std::vector<float> & output, unsigned int firstLinesToSkip)
 {
 	LogMan::Log("Attempting to load csv file \"" + path + "\"");
 	std::ifstream file;
@@ -67,7 +115,7 @@ bool LoadCSV(std::string const & path, std::vector<float> & output, unsigned int
 	return true;
 }
 
-bool LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2> & output, unsigned int const & firstLinesToSkip)
+bool FileIO::LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2> & output, unsigned int firstLinesToSkip)
 {
 	LogMan::Log("Attempting to load csv file \"" + path + "\"");
 	std::ifstream file;
@@ -113,7 +161,7 @@ bool LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2> & out
 	return true;
 }
 
-bool LoadRaster(std::string const & path, int * outRasterID) //TODO handle returning pointer.
+bool FileIO::LoadRaster(std::string const & path, int * outRasterID) //TODO handle returning pointer.
 {
 	LogMan::Log("Attempting to load raster file \"" + path + "\"");
 	if (!LoadGeoTIFF(path, outRasterID))
@@ -125,14 +173,14 @@ bool LoadRaster(std::string const & path, int * outRasterID) //TODO handle retur
 	LogMan::Log("Sucessfully loaded raster file!", LOG_SUCCESS);
 }
 
-void UnloadRaster(int rasterID)
+void FileIO::UnloadRaster(int rasterID)
 {
 	UnloadGeoTIFF(rasterID);
 }
 
 std::ofstream logFile;
 
-bool InitLogFile()
+bool FileIO::InitLogFile()
 {
 	logFile.open(LOG_FILE_PATH, std::ios_base::app); //open LOG_FILE_PATH and always seek to the end before every write
 	
@@ -145,13 +193,13 @@ bool InitLogFile()
 	return true;
 }
 
-void CloseLogFile()
+void FileIO::CloseLogFile()
 {
 	if (logFile.is_open())
 		logFile.close();
 }
 
-bool WriteToLog(LogEntry const & newEntry)
+bool FileIO::WriteToLog(LogEntry const & newEntry)
 {
 	std::cout << "Writing to log file\n";//test
 	if (!logFile.good() || !logFile.is_open())

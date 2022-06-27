@@ -77,12 +77,12 @@ std::string GetTimeStamp()
 
 void LogMan::Init(bool logToDisk)
 {
-	canLogToDisk = logToDisk && InitLogFile();
+	canLogToDisk = logToDisk && FileIO::InitLogFile();
 }
 
 void LogMan::Terminate()
 {
-	CloseLogFile();
+	FileIO::CloseLogFile();
 }
 
 void LogMan::Log(std::string const & content, LogEntryType type)
@@ -91,7 +91,7 @@ void LogMan::Log(std::string const & content, LogEntryType type)
 	logHistory.push_back(LogEntry(GetTimeStamp() + content, type));
 	
 	if(canLogToDisk)
-		WriteToLog(logHistory.back());
+		FileIO::WriteToLog(logHistory.back());
 
 #ifdef LOG_TO_CLI
 	std::cout << content.c_str() << std::endl;
