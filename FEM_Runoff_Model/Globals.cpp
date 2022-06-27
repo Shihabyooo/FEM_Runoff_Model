@@ -484,6 +484,170 @@ Rect3D Grid4x4::GetCell(unsigned int i, unsigned int j) const
 
 #pragma endregion
 
+#pragma region TimeSeries Definitions
+
+TimeSeries::TimeSeries()
+{
+	size = 2;
+	series = new std::pair<size_t, double>[size]();
+}
+
+TimeSeries::TimeSeries(size_t _size)
+{
+	size = Max(_size, static_cast<size_t>(2));
+	series = new std::pair<size_t, double>[size](); 
+}
+
+TimeSeries::TimeSeries(std::vector<std::pair<size_t, double>> const & ts)
+{
+	if (ts.size() < 2)
+	{
+		size = 2;
+		series = new std::pair<size_t, double>[size]();
+		return;
+	}
+
+	size = ts.size();
+	series = new std::pair<size_t, double>[size]();
+
+	for (int i = 0; i < size; i++)
+		series[i] = ts[i];
+}
+
+TimeSeries::~TimeSeries()
+{
+	if (series != NULL)
+		delete[] series;
+}
+
+void TimeSeries::operator=(TimeSeries const & ts)
+{
+	delete[] series;
+	
+	size = ts.size;
+	series = new std::pair<size_t, double>[size]();
+
+	for (int i = 0; i < size; i++)
+		series[i] = ts.series[i];
+}
+
+bool TimeSeries::IsValid() const
+{
+	//first element must be {0, 0.0}
+	//no negative precipitation
+	//every size_t is greater than preceding one.
+	
+	if (series[0].first != 0 || series[0].second != 0.0)
+		return false;
+
+	for (size_t i = 1; i < size; i++)
+	{
+		if (series[i].first <= series[i - 1].first
+			|| series[i].second < 0.0)
+			return false;
+	}
+
+	return true;
+}
+
+void TimeSeries::AdjustSize(size_t newSize)
+{
+	if (newSize == size) //nothing to do
+		return;
+
+	newSize = Max(newSize, static_cast<size_t>(2));
+
+	//create a temporary holder for current data
+	std::pair<size_t, double> * tempHolder = new std::pair<size_t, double>[newSize]();
+
+	size_t minSize = Min(newSize, size);
+	
+	for (size_t i = 0; i < minSize; i++)
+		tempHolder[i] = series[i];
+	
+	delete[] series;
+	series = tempHolder;
+}
+
+double TimeSeries::HoursToLocalUnits(double time) const
+{
+	switch (timeUnit)
+	{
+	case TimeUnit::second:
+		return time * 3600.0;
+	case TimeUnit::minute:
+		return time * 60.0;
+	case TimeUnit::hour:
+		return time;
+	case TimeUnit::day:
+		return time / 24.0;
+	default:
+		return 0.0;
+	}
+}
+
+double TimeSeries::Sample(double timeSinceStart, InterpolationType interpolationType) const
+{
+	//convert timeSinceStart (in hours) to TS units
+	timeSinceStart = HoursToLocalUnits(timeSinceStart);
+
+	if (timeSinceStart > series[size - 1].first || timeSinceStart < 0.0)
+		return 0.0;
+
+	size_t upperBound = size - 1;
+	for (size_t i = 0; i < size; i++)
+	{
+		if (series[i].first >= timeSinceStart)
+		{
+			upperBound = i;
+			break;
+		}
+	}
+
+	double relativePosition = (timeSinceStart - series[upperBound - 1].first) / (series[upperBound].first - series[upperBound - 1].first);
+
+	switch (interpolationType)	
+	{
+	case InterpolationType::nearest:
+		return relativePosition < 0.5 ? series[upperBound - 1].second : series[upperBound].second;
+	case InterpolationType::linear:
+	{
+		double bounds[2];
+		bounds[0] = series[upperBound - 1].second;
+		bounds[1] = series[upperBound].second;
+		return LinearInterpolationNormalized(relativePosition, bounds);
+	}
+	case InterpolationType::cubic:
+	{
+		double bounds[4];
+		bounds[0] = upperBound == 1 ? 0.0 : series[upperBound - 2].second;
+		bounds[1] = series[upperBound - 1].second;
+		bounds[2] = series[upperBound].second;
+		bounds[3] = upperBound == size - 1 ? series[upperBound].second : series[upperBound + 1].second;
+		return CubicInterpolationNormalized(relativePosition, bounds);
+	}
+	default: //shouldn't happen
+		return 0.0;
+	}
+}
+
+#pragma endregion
+
+#pragma region ModelParameters Definitions
+
+ModelParameters::ModelParameters()
+{
+}
+
+ModelParameters::~ModelParameters()
+{
+	/*if (unitTimeSeries != NULL)
+		delete[] unitTimeSeries;*/
+}
+
+#pragma endregion
+
+
 std::unique_ptr<double> ToUTM(double lng, double lat)
 {
 	//converting this http://www.movable-type.co.uk/scripts/latlong-utm-mgrs.html
@@ -654,7 +818,7 @@ Vector2D WrapPoint(Vector2D const & point, bool isNorthernHemisphere, int zone)
 	return Vector2D(result.get()[0], result.get()[1]);
 }
 
-double LinearInterpolationNormalized(double normalizedPoint, double values[2])
+double LinearInterpolationNormalized(double normalizedPoint, double const values[2])
 {
 	return normalizedPoint * values[0] + (1.0 - normalizedPoint) * values[1];
 }
@@ -700,12 +864,3 @@ double BicubicInterpolation(Vector2D const & point, Grid4x4 const & grid)
 	return CubicInterpolationNormalized(normalizedPoint.y, cubicIntX);
 }
 
-ModelParameters::ModelParameters()
-{
-}
-
-ModelParameters::~ModelParameters()
-{
-	if (unitTimeSeries != NULL)
-		delete[] unitTimeSeries;
-}

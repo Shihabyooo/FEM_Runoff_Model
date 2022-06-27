@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <vector>
 #define PROGRAM_NAME "FEM_Runoff_Model"
 
 //Error codes.
@@ -72,6 +73,14 @@ enum class InterpolationType
 	nearest = 0,
 	linear = 1, //linear for 1D, bilinear for 2D
 	cubic = 2 //cubic for 1D, bicbic for 2D
+};
+
+enum class TimeUnit
+{
+	second = 0,
+	minute = 1,
+	hour = 2,
+	day = 3
 };
 
 struct Vector2;
@@ -265,6 +274,27 @@ public:
 	float r, g, b, a;
 };
 
+struct TimeSeries //Always ensures at least a time series of 2 entries.
+{
+public:
+	TimeSeries();
+	TimeSeries(size_t _size); //Will force size to 2 if _size < 2
+	TimeSeries(std::vector<std::pair<size_t, double>> const & ts);
+	~TimeSeries();
+
+	void operator= (TimeSeries const & ts);
+
+	bool IsValid() const;
+	void AdjustSize(size_t newSize);
+	double HoursToLocalUnits(double time) const;
+	double Sample(double timeSinceStart, InterpolationType interpolationType) const; //timeSinceStart in hours 
+
+	size_t size = 0;
+	TimeUnit timeUnit = TimeUnit::hour;
+	//probably would make more sense to use a vector...
+	std::pair<size_t, double> * series = NULL;
+};
+
 struct ModelParameters
 {
 	//NOTE! Nodes and Elements should be already loaded and set by the time this struct is needed, so they are not included here, but still
@@ -287,16 +317,17 @@ public:
 	
 	//std::string precipitationRastersFolder = ""; //Folder must contain rasters named appropriatly for each time step of simulation. To be implemented.
 
-	std::pair<double, double> * unitTimeSeries = NULL; //first double is time relative to startTime, second is in incremental mm.
-														//e.g. if simulation startTime 0.0 is equivalent to Jan 1st 00:00 AM, the TS:
-														//<0.0, 0.0>	-> 0mm at start. Should always be the case
-														//<1.0, 5.0>	->  5mm between 00:00 AM and 01:00 AM
-														//<2.0, 15.0>	-> 15mm between 01:00 AM and 02:00 AM
-														//<3.0, 30.0>	-> 30mm between 02:00 AM and 03:00 AM
-														//<4.0, 10.0>	-> 10mm between 03:00 AM and 04:00 AM	
-														//<10.0, 7.5>	-> 7.5mm between 04:00 AM and 010:00 AM	
-														//Any precipitation after 10AM will be assumed zero.
-														//Preciptation between 
+	TimeSeries unitTimeSeries;	//(Discription bellow is from old impl that was a simple std::pair<double, double> array
+								//first double is time relative to startTime, second is in incremental mm.
+								//e.g. if simulation startTime 0.0 is equivalent to Jan 1st 00:00 AM, the TS:
+								//<0.0, 0.0>	-> 0mm at start. Should always be the case
+								//<1.0, 5.0>	->  5mm between 00:00 AM and 01:00 AM
+								//<2.0, 15.0>	-> 15mm between 01:00 AM and 02:00 AM
+								//<3.0, 30.0>	-> 30mm between 02:00 AM and 03:00 AM
+								//<4.0, 10.0>	-> 10mm between 03:00 AM and 04:00 AM	
+								//<10.0, 7.5>	-> 7.5mm between 04:00 AM and 010:00 AM	
+								//Any precipitation after 10AM will be assumed zero.
+								//Preciptation between 
 
 	InterpolationType precipitationTemporalInterpolationType = InterpolationType::linear; //should either be linear or cubic. Nearest should never 
 																				//be used unless timeSeries resolution is close to or finer than
@@ -351,6 +382,11 @@ static int Min(int const & a, int const & b)
 	return (a > b ? b : a);
 }
 
+static size_t Min(size_t const & a, size_t const & b)
+{
+	return (a > b ? b : a);
+}
+
 static double Max(double const & a, double const & b)
 {
 	return (a > b ? a : b);
@@ -362,6 +398,11 @@ static float Max(float const & a, float const & b)
 }
 
 static int Max(int const & a, int const & b)
+{
+	return (a > b ? a : b);
+}
+
+static size_t Max(size_t const & a, size_t const & b)
 {
 	return (a > b ? a : b);
 }
@@ -400,7 +441,7 @@ Vector2D WrapPoint(Vector2D const & point, bool isNorthernHemisphere, int zone);
 																				 result.x = longitude, result.y = latitude
 
 
-double LinearInterpolationNormalized(double normalizedPoint, double values[2]);
+double LinearInterpolationNormalized(double normalizedPoint, double const values[2]);
 double CubicInterpolationNormalized(double const normalizedPoint, double const values[4]); 
 
 double BilinearInterpolation(Vector2D const & point, Grid4x4 const & grid);
