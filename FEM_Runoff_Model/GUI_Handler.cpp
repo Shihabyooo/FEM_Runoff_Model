@@ -120,10 +120,12 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 char meshNodes[260] = "Mesh Nodes Coordinates File Path";
 char demFilePath[260] = "DEM Raster Path";
 char precipRasterDir[260] = "Precipitation Rasters Directory Path";
+char percipTSPath[260] = "Precipitation Time-Series File Path";
 char manningFilePath[260] = "Manning Raster File Path";
 
 char fixedPrecipVal[24] = "";
 int timeSeriesSize = 3;
+TimeSeries inputTS;
 
 bool useFixedManning = true;
 char fixedManningCoef[12] = "";
@@ -139,10 +141,12 @@ const char* solvers[] = { "Auto", "Simple", "Gaussian", "Jacobi", "SOR", "PCG", 
 const char* precipitationInput[] = { "Single, fixed value", "Single Time-Series", "Gridded Time-Series" };
 const char* interpMethods1D[] = {"Nearest", "Linear", "Cubic"};
 const char* interpMethods2D[] = { "Nearest", "Bilinear", "Bicubic" };
+const char* timeUnits[] = { "Seconds", "Minutes", "Hours", "Days" };
 int selectedPrecipInput = 0;
 int selectedPrecipTempoInterp = 1;
 int selectedPrecipSpaceInterp = 1;
 int selectedTopoInterp = 1;
+int selectedTimeUnit = 2;
 int selectedSolver = 0;
 
 char solverResidual[12] = "0.01";
@@ -152,6 +156,8 @@ int solverMaxIteration = 1000;
 
 void FillParametersStruct(ModelParameters & params)
 {
+	LogMan::Log("Processing Input Parameters");
+
 	params.demPath = demFilePath;
 	params.topographySamplingMethod = static_cast<InterpolationType>(selectedTopoInterp);
 	params.variablePrecipitation = selectedPrecipInput == 0;
@@ -179,6 +185,10 @@ void FillParametersStruct(ModelParameters & params)
 	params.weight = atof(solverWeight);
 	params.maxIterations = solverMaxIteration < 0 ? 0 : solverMaxIteration;
 
+	params.unitTimeSeries = inputTS;
+	params.unitTimeSeries.timeUnit = static_cast<TimeUnit>(selectedTimeUnit);
+	
+	LogMan::Log("Finished processing Input Parameters", LOG_SUCCESS);
 }
 
 void DrawLeftPane()
@@ -259,11 +269,65 @@ void DrawLeftPane()
 		else if (selectedPrecipInput == 1)
 		{
 			ImGui::InputInt("Series length", &timeSeriesSize);
+			timeSeriesSize = Max(timeSeriesSize, 2);
 			ImGui::Text("Time-series temporal interpolation method"); //TODO text warpping
 			ImGui::Combo("##InterpP1D", &selectedPrecipTempoInterp, interpMethods1D, IM_ARRAYSIZE(interpMethods1D));
+
+			ImGui::Text("Time-series time units"); //TODO text warpping
+			ImGui::Combo("##tsTimeUnits", &selectedTimeUnit, timeUnits, IM_ARRAYSIZE(timeUnits));
+
+			ImGui::Text("Time-series file path");
+			ImGui::PushItemWidth(-1);
+			ImGui::InputText("##tsFilePath", percipTSPath, IM_ARRAYSIZE(percipTSPath));
+			ImGui::PopItemWidth();
+	
+			if (ImGui::Button("Load Time-Series"))
+			{
+				LoadTimeSeries(percipTSPath, inputTS);
+				timeSeriesSize = inputTS.size;
+			}
+
 			if (ImGui::CollapsingHeader("Time-Series", ImGuiTreeNodeFlags_None))
 			{
-				//TODO time series input (HEC-HMS-esque)
+				inputTS.AdjustSize(timeSeriesSize); //will do nothing if size is same
+			
+				ImGui::BeginTable("##timeSeriesTable", 3, ImGuiTableFlags_Resizable, ImVec2(fixedLeftPaneWidth - 10, 100));
+				
+				ImGui::TableNextColumn();
+				ImGui::Text(" ");
+				ImGui::TableNextColumn();
+				ImGui::Text("Time");
+				ImGui::TableNextColumn();
+				ImGui::Text("Precipitation (mm)");
+
+				ImGui::TableNextColumn();
+				ImGui::Text("1");
+				ImGui::TableNextColumn();
+				ImGui::Text("0");
+				ImGui::TableNextColumn();
+				ImGui::Text("0.0");
+
+				for (int i = 1; i < timeSeriesSize; i++)
+				{
+					ImGui::TableNextColumn();
+					ImGui::Text(std::to_string(i + 1).c_str());
+
+					ImGui::TableNextColumn();
+
+					std::pair<size_t, double> * currEntry = &inputTS.series[i];
+					int tempInt = currEntry->first;
+					ImGui::PushItemWidth(-1);
+					ImGui::InputInt("##precipTime" + i, &tempInt, 0);
+					ImGui::PopItemWidth();
+
+					ImGui::TableNextColumn();
+					ImGui::PushItemWidth(-1);
+					ImGui::InputDouble("##precipVal" + i, &currEntry->second);
+					ImGui::PopItemWidth();
+					
+					currEntry->first = Max(tempInt, 0);
+				}
+				ImGui::EndTable();
 			}
 		}
 		else if (selectedPrecipInput == 2)

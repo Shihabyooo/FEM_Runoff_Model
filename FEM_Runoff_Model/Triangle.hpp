@@ -32,6 +32,7 @@ public:
 	int vertIDs[3];
 	double area;
 	int id;
+	double elementPrecipitation = 0.0; //in mm. The precipitation at last pass.
 
 private:
 	
