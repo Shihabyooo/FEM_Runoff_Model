@@ -620,19 +620,18 @@ double TimeSeries::Sample(double timeSinceStart, InterpolationType interpolation
 	switch (interpolationType)	
 	{
 	case InterpolationType::nearest:
-		return relativePosition < 0.5 ? series[upperBound - 1].second : series[upperBound].second;
+		return relativePosition < 0.5 ? 0.0 : series[upperBound].second;
 	case InterpolationType::linear:
 	{
 		double bounds[2];
-		bounds[0] = series[upperBound - 1].second;
+		bounds[0] = 0.0;
 		bounds[1] = series[upperBound].second;
 		return LinearInterpolationNormalized(relativePosition, bounds);
 	}
 	case InterpolationType::cubic:
 	{
 		double bounds[4];
-		bounds[0] = upperBound == 1 ? 0.0 : series[upperBound - 2].second;
-		bounds[1] = series[upperBound - 1].second;
+		bounds[0] = bounds[1] = 0.0;
 		bounds[2] = series[upperBound].second;
 		bounds[3] = upperBound == size - 1 ? series[upperBound].second : series[upperBound + 1].second;
 		return CubicInterpolationNormalized(relativePosition, bounds);
