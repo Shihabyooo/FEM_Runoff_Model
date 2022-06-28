@@ -26,6 +26,12 @@ Vector2::Vector2(Vector2Int const & vec)
 	y = static_cast<float>(vec.y);
 }
 
+Vector2::Vector2(Vector2D const & vec)
+{
+	x = static_cast<float>(vec.x);
+	y = static_cast<float>(vec.y);
+}
+
 Vector2::Vector2(float const values[2])
 {
 	x = values[0];

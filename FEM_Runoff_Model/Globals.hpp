@@ -94,6 +94,7 @@ public:
 	Vector2(float _x, float _y);
 	Vector2(Vector2 const & vec);
 	Vector2(Vector2Int const & vec);
+	explicit Vector2(Vector2D const & vec);
 	Vector2(float const values[2]);
 	
 	Vector2 operator+(Vector2 const & vec2) const;

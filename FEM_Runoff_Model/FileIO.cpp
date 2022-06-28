@@ -161,7 +161,7 @@ bool FileIO::LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector
 	return true;
 }
 
-bool FileIO::LoadRaster(std::string const & path, int * outRasterID) //TODO handle returning pointer.
+bool FileIO::LoadRaster(std::string const & path, int * outRasterID, Matrix_f32 const * outBitmapPtr) //TODO handle returning pointer.
 {
 	LogMan::Log("Attempting to load raster file \"" + path + "\"");
 	if (!LoadGeoTIFF(path, outRasterID))
@@ -170,7 +170,38 @@ bool FileIO::LoadRaster(std::string const & path, int * outRasterID) //TODO hand
 		return false;
 	}
 
+	outBitmapPtr = GetPointerToBitmap(*outRasterID);
 	LogMan::Log("Sucessfully loaded raster file!", LOG_SUCCESS);
+}
+
+bool FileIO::GetRasterMappingParameters(int rasterID, bool & outIsUTM, double ** outTiePoints, double * outPixelScale)
+{
+	//There is an assumption here that the A: raster is strictly tie-and-point and, B: it's either Geographic CRS or UTM.
+	//Probably should check and enforce rasters to be of those features at loading...
+
+	GeoTIFFDetails const * geoDetails = GetPointerToGeoTIFFDetails(rasterID);
+	if (geoDetails == NULL)
+	{
+		LogMan::Log("ERROR! Failed to get raster geotiff parameters!", LOG_ERROR);
+		return false;
+	}
+
+	outIsUTM = geoDetails->modelType == 1;
+
+	outTiePoints = new double *[2];
+	outTiePoints[0] = new double[3];
+	outTiePoints[1] = new double[3];
+
+	outPixelScale = new double[3];
+
+	for (int i = 0; i < 3; i++)
+	{
+		outTiePoints[0][i] = geoDetails->tiePoints[0][i];
+		outTiePoints[1][i] = geoDetails->tiePoints[1][i];
+		outPixelScale[i] = geoDetails->pixelScale[i];
+	}
+
+	return true;
 }
 
 void FileIO::UnloadRaster(int rasterID)

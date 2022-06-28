@@ -11,14 +11,14 @@ Triangle::~Triangle()
 {
 }
 
-void Triangle::Subdivide(int centroidID, int baseTriangleID, std::vector<Vector2> const & nodesList, std::vector<Triangle>& outNewTriangles)
+void Triangle::Subdivide(int centroidID, int baseTriangleID, std::vector<Vector2> const & nodesList, std::vector<Triangle>& outNewTriangles) const
 {
 	outNewTriangles.push_back(Triangle(baseTriangleID	 , centroidID, vertIDs[0], vertIDs[1], nodesList));
 	outNewTriangles.push_back(Triangle(baseTriangleID + 1, centroidID, vertIDs[0], vertIDs[2], nodesList));
 	outNewTriangles.push_back(Triangle(baseTriangleID + 2, centroidID, vertIDs[1], vertIDs[2], nodesList));
 }
 
-bool Triangle::ContainsPoint(Vector2 const & point, std::vector<Vector2> const & nodesList)
+bool Triangle::ContainsPoint(Vector2 const & point, std::vector<Vector2> const & nodesList) const
 {
 	//https://mathworld.wolfram.com/TriangleInterior.html
 
@@ -63,7 +63,7 @@ int Triangle::GetThirdVertexID(int vertID1, int vertID2) const
 	return -4;
 }
 
-bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts, int * outMeshEdgeContribCount)
+bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts, int * outMeshEdgeContribCount) const
 {
 	*outMeshEdgeContribCount = 0;
 	
@@ -88,7 +88,7 @@ bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts
 	return !isInternal;
 }
 
-bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int * outSharedVertsIDs)
+bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int * outSharedVertsIDs) const
 {
 	std::vector<int> edgeVerts;
 
@@ -110,7 +110,7 @@ bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int * o
 	}
 }
 
-bool Triangle::IsInsideCircumcircle(int vertexID, std::vector<Vector2> const & nodesList)
+bool Triangle::IsInsideCircumcircle(int vertexID, std::vector<Vector2> const & nodesList) const
 {
 	//https://stackoverflow.com/questions/39984709/how-can-i-check-wether-a-point-is-inside-the-circumcircle-of-3-points
 
@@ -167,12 +167,12 @@ void Triangle::DebugPrintDetails()
 	std::cout << "-ID: " << id << ".  \tVerts" << vertIDs[0] << ",\t" << vertIDs[1] << ",\t" << vertIDs[2] << std::endl;
 }
 
-double Triangle::Determinant(Vector2 const & a, Vector2 const & b)
+double Triangle::Determinant(Vector2 const & a, Vector2 const & b) const
 {
 	return ((static_cast<double>(a.x) * static_cast<double>(b.y)) - (static_cast<double>(a.y) * static_cast<double>(b.x)));
 }
 
-double Triangle::ComputeArea(Vector2 node1, Vector2 node2, Vector2 node3)
+double Triangle::ComputeArea(Vector2 node1, Vector2 node2, Vector2 node3) const
 {
 	return	0.5F *	( static_cast<double>(node1.x) * (static_cast<double>(node2.y) - static_cast<double>(node3.y))
 					+ static_cast<double>(node2.x) * (static_cast<double>(node3.y) - static_cast<double>(node1.y))
