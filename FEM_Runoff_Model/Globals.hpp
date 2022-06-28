@@ -142,6 +142,7 @@ public:
 	Vector2D & operator= (Vector2D const & vec2);
 
 	Vector2D Normalize(Vector2D const & min, Vector2D const & max) const; //Returns normalized axes relative to min and max, result is between 0.0F to 1.0F if point is inside range min-max.
+	double DistanceTo(Vector2D const & vec2) const;
 
 	double x;
 	double y;

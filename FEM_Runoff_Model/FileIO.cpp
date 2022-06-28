@@ -161,7 +161,7 @@ bool FileIO::LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector
 	return true;
 }
 
-bool FileIO::LoadRaster(std::string const & path, int * outRasterID, Matrix_f32 const * outBitmapPtr) //TODO handle returning pointer.
+bool FileIO::LoadRaster(std::string const & path, int * outRasterID, void const * outBitmapPtr) //TODO handle returning pointer.
 {
 	LogMan::Log("Attempting to load raster file \"" + path + "\"");
 	if (!LoadGeoTIFF(path, outRasterID))

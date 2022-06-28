@@ -187,6 +187,11 @@ Vector2D Vector2D::Normalize(Vector2D const & min, Vector2D const & max) const
 					(y - min.y) / delta.y);
 }
 
+double Vector2D::DistanceTo(Vector2D const & vec2) const
+{
+	return sqrt(pow(x - vec2.x , 2) + pow( y - vec2.y , 2));
+}
+
 #pragma endregion
 
 #pragma region Rect Definitions
@@ -826,7 +831,7 @@ Vector2D WrapPoint(Vector2D const & point, bool isNorthernHemisphere, int zone)
 
 double LinearInterpolationNormalized(double normalizedPoint, double const values[2])
 {
-	return normalizedPoint * values[0] + (1.0 - normalizedPoint) * values[1];
+	return normalizedPoint * values[1] + (1.0 - normalizedPoint) * values[0];
 }
 
 double CubicInterpolationNormalized(double const normalizedPoint, double const values[4])

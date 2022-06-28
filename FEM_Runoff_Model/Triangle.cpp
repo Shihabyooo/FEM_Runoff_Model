@@ -162,6 +162,16 @@ Vector2 Triangle::Node(int internalVertexID, std::vector<Vector2> const & nodesL
 	return nodesList[vertIDs[internalVertexID]];
 }
 
+Vector2 Triangle::Centroid(std::vector<Vector2> const & nodesList) const
+{
+	Vector2 centroid;
+
+	centroid = Node(0, nodesList) + Node(1, nodesList) + Node(2, nodesList);
+	centroid = Vector2(centroid.x / 3.0, centroid.y / 3.0);
+
+	return centroid;
+}
+
 void Triangle::DebugPrintDetails()
 {
 	std::cout << "-ID: " << id << ".  \tVerts" << vertIDs[0] << ",\t" << vertIDs[1] << ",\t" << vertIDs[2] << std::endl;

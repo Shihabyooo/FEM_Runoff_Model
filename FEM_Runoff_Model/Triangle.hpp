@@ -25,6 +25,7 @@ public:
 	void UpdateGeometry(int const & vertexID1, int const & vertexID2, int const & vertexID3, std::vector<Vector2> const & _nodesList);
 
 	Vector2 Node(int internalVertexID, std::vector<Vector2> const & nodesList) const;
+	Vector2 Centroid(std::vector<Vector2> const & nodesList) const;
 
 	void DebugPrintDetails();
 
@@ -36,6 +37,10 @@ public:
 	be sequential starting from 0.
 	double elementPrecipitation = 0.0; //in mm. The precipitation at last pass.
 	double manningCoef = 0.0; 
+	double slopeX = 0.0;
+	double slopeY = 0.0;
+	double qX = 0.0; //in m3/hr. X-Discharge of last pass;
+	double qY = 0.0; //in m3/hr. Y-Discharge of last pass;
 
 private:
 	
