@@ -18,12 +18,9 @@ public:
 	Matrix_f32(Matrix_f32 && sourceMat); //Move constructor
 	~Matrix_f32();
 
-    //explicit Matrix_f32(Array2D<float> sourceArr);
-	Matrix_f32(Array2D<float> sourceArr);
-    //explicit Matrix_f32(Array2D<int> sourceArr);
-	Matrix_f32(Array2D<int> sourceArr);
-	//explicit Matrix_f32(Array2D<long> sourceArr);
-	Matrix_f32(Array2D<long> sourceArr);
+	Matrix_f32(Array2D<float> const & sourceArr);
+	Matrix_f32(Array2D<int> const & sourceArr);
+	Matrix_f32(Array2D<long> const & sourceArr);
 
 	Matrix_f32 & operator= (Matrix_f32 const & mat2);
 	Matrix_f32 & operator= (Matrix_f32 && mat2);

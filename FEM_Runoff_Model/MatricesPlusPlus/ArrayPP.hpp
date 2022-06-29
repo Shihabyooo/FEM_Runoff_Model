@@ -53,6 +53,7 @@ public:
 	bool operator!= (const Array2D<T> arr2); //non equality check (what?)
 	T & operator() (const _INDEX _row, const _INDEX _column);	//Array like assignment and reading. //TODO force type matching
 	T * const & operator[] (const _INDEX _row);
+	T const * const & operator[] (const _INDEX _row) const;
 
 	//Setters and Getters
 	void SetValue(_INDEX _row, _INDEX _column, T value);

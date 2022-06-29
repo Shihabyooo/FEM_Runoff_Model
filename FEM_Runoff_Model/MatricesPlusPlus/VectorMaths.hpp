@@ -21,18 +21,21 @@
         #error Attempting to compile for 512bit AVX instructions without AVX-512F support.
     #endif
     #define _VECTOR_SIZE_F32 16
+	#define _VECTOR_SIZE_F64 8
     #define _VECTORIZED_CODE
 #elif defined(_USE_AVX256)
     #ifndef __AVX2__
         #error Attempting to compile for 256bit AVX instructions without AVX2 support.
     #endif
     #define _VECTOR_SIZE_F32 8
+	#define _VECTOR_SIZE_F64 4
     #define _VECTORIZED_CODE
 #elif defined(_USE_SSE)
     #ifndef __SSE2__
         #error Attempting to compile for 128bit SSE instructions without SSE2 support.
     #endif
     #define _VECTOR_SIZE_F32 4
+	#define _VECTOR_SIZE_F64 2
     #define _VECTORIZED_CODE
 #endif
 

@@ -1,3 +1,4 @@
+#pragma once
 #include "MatrixPP_f32.hpp"
 
 class Vector_f32 : public Matrix_f32
@@ -21,6 +22,7 @@ public:
 	Vector_f32 & operator-= (Vector_f32 const & vec2);
 	Vector_f32 & operator*= (const double scalar);
 	float & operator[] (const _INDEX row);
+	float operator[] (const _INDEX row) const;
 	
 	float GetValue(_INDEX row) const;	//getter, read only.
 	double Magnitude();

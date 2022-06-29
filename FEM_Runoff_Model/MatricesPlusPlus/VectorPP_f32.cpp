@@ -143,6 +143,17 @@ float & Vector_f32::operator[](const _INDEX row)
 	return content[row][0];
 }
 
+float Vector_f32::operator[](const _INDEX row) const
+{
+#ifdef _USE_BOUNDS_CHECK
+	if (content == NULL			//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
+		|| row >= rows)		//Checking out-of-bound writes.
+		throw std::out_of_range("ERROR! Row value out of range or content set to NULL");
+#endif
+
+	return content[row][0];
+}
+
 
 float Vector_f32::GetValue(_INDEX row) const
 {

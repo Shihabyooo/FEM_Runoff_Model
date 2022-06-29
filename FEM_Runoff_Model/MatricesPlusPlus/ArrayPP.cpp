@@ -174,6 +174,18 @@ T * const & Array2D<T>::operator[] (const _INDEX _row)
 	return content[_row];
 }
 
+template<typename T>
+T const * const & Array2D<T>::operator[](const _INDEX _row) const
+{
+#ifdef _USE_BOUNDS_CHECK
+	if (content == NULL			//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
+		|| _row >= rows)		//Checking out-of-bound writes.
+		throw std::out_of_range("ERROR! Column or Row value out of range or content set to NULL");
+#endif
+
+	return content[_row];
+}
+
 template <typename T>
 void Array2D<T>::SetValue(_INDEX _row, _INDEX _column, T value)
 {
