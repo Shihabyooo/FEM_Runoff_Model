@@ -8,6 +8,8 @@
 #include "Globals.hpp"
 #include "DelauneyTriangulation.hpp"
 
+ //TODO change "DEM" to "slopeMap" or something similar.
+
 //TODO the current time approximation uses a double for the omega variable. While it is mathematically correct, practically, the values\
 should typically either be 0.0, 0.5 or 1.0. In the first and last case, the RHS computation can be significantly sped up by omitting\
 that would -in each case- result in a vector of zeroes (see approximate solution formulation). It may make sense hence to instead use a\
@@ -38,9 +40,9 @@ e.g. if mode = 0 (backwards difference), qx, qy and Pe at t+dt are unnecessary, 
 //Note: Rainfall is expected in mm, but the spatial units are meters (squared), so divide Pe by 1000 before multiplying with beta.
 
 extern std::unordered_map<int, Triangle> triangles;
-extern std::vector<Vector2> nodes;
+extern std::vector<Vector2D> nodes;
 extern std::vector<int> boundaryNodes;
-extern Vector2 nodesSW, nodesNE;
+extern Vector2D nodesSW, nodesNE;
 
 bool GenerateMesh(std::string const & nodesPath);
 bool LoadTimeSeries(std::string const & path, TimeSeries & ts);

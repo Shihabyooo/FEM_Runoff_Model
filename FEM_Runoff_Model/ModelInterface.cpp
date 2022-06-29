@@ -5,19 +5,20 @@
 //std::unordered_map<int, Triangle> triangles;
 //std::vector<Vector2> nodes;
 std::unordered_map<int, Triangle> triangles;
-std::vector<Vector2> nodes;
+std::vector<Vector2D> nodes;
 std::vector<int> boundaryNodes;
-Vector2 nodesSW, nodesNE;
+Vector2D nodesSW, nodesNE;
 
 //Matrices and Vectors
 Matrix_f32 globalC, globalPsiX, globalPsiY;
 //Vector_f32 globalBeta;
 
-int demID, manningRasterID;
+Matrix_f32 const * dem = NULL, * manningRaster = NULL, * fdr;
+
+int demID, manningRasterID, fdrID;
 
 void ComputeBoundingBox()
 {
-	//std::cout << "\n computing bounding box in model interface\n";
 	nodesSW = nodes[0];
 	nodesNE = nodes[0];
 
@@ -65,13 +66,13 @@ void ConstructGlobalConductanceMatrices(double deltaT)
 		int const * vert = it->second.vertIDs; //to simplify lines bellow.
 
 		//Since all values in a column (for each element matrix) have the same value, we compute them first hand then increment global matrix.
-		double valX1 = multiplier * (it->second.Node(1, nodes).y - it->second.Node(2, nodes).y); //1/6 * deltaT * (yj - yk)
-		double valX2 = multiplier * (it->second.Node(2, nodes).y - it->second.Node(0, nodes).y); //1/6 * deltaT * (yk - yi)
-		double valX3 = multiplier * (it->second.Node(0, nodes).y - it->second.Node(1, nodes).y); //1/6 * deltaT * (yi - yj)
+		double valX1 = multiplier * (it->second.nodes[1].y - it->second.nodes[2].y); //1/6 * deltaT * (yj - yk)
+		double valX2 = multiplier * (it->second.nodes[2].y - it->second.nodes[0].y); //1/6 * deltaT * (yk - yi)
+		double valX3 = multiplier * (it->second.nodes[0].y - it->second.nodes[1].y); //1/6 * deltaT * (yi - yj)
 
-		double valY1 = multiplier * (it->second.Node(2, nodes).x - it->second.Node(1, nodes).x); //1/6 * deltaT * (xk - xj)
-		double valY2 = multiplier * (it->second.Node(0, nodes).x - it->second.Node(2, nodes).x); //1/6 * deltaT * (xi - xk)
-		double valY3 = multiplier * (it->second.Node(2, nodes).x - it->second.Node(0, nodes).x); //1/6 * deltaT * (xk - xi)
+		double valY1 = multiplier * (it->second.nodes[2].x - it->second.nodes[1].x); //1/6 * deltaT * (xk - xj)
+		double valY2 = multiplier * (it->second.nodes[0].x - it->second.nodes[2].x); //1/6 * deltaT * (xi - xk)
+		double valY3 = multiplier * (it->second.nodes[2].x - it->second.nodes[0].x); //1/6 * deltaT * (xk - xi)
 
 		//Increment global matrix at position define by node IDs (3^2 = 9 positions)
 		globalPsiX[vert[0]][vert[0]] += valX1;
@@ -175,6 +176,95 @@ void ConstructGlobalCapacitanceMatrix(bool isLumped)
 //	}
 //}
 
+double SampleRegionAveragedValue(Triangle const & element, Matrix_f32 const * raster, int rasterID) //get the average value of pixels in raster covered by element
+{
+	//This is a rasterization/coverage test problem. But for now, we'll do it a very crude way, i.e. test if centre of pixel lies within triangle.
+	//TODO improve this
+
+	double ** tiePoints = NULL;
+	double * pixelScale = NULL;
+	bool isUTM;
+
+	if (!FileIO::GetRasterMappingParameters(rasterID, isUTM, tiePoints, pixelScale))
+	{
+		//Error already logged in GetRasterMappingParameters();
+		//LogMan::Log("ERROR! At loading raster mapping parameters", LOG_ERROR);
+
+		return 0.0;
+	}
+
+	std::vector<double> pixelValues;
+
+	for (size_t i = 0; i < raster->Rows(); i++)
+		for (size_t j = 0; j < raster->Columns(); j++)
+		{
+			Vector2D pixelPos(	tiePoints[1][0] + j * pixelScale[0],
+								tiePoints[1][1] - i * pixelScale[1]);
+
+			if (element.ContainsPoint(pixelPos))
+				pixelValues.push_back(raster->GetValue(i, j));
+		}
+	
+	//There could be a case where element is small that it fits inside a pixel but not cover it's centre.
+	if (pixelValues.size() < 1)
+	{
+		//In this case, simply compute the centroid (average of ndoes), and find pixel that contains centroid, return its value
+		Vector2D centroid = element.Centroid();
+		size_t row, column;
+		double minDist = DBL_MAX;
+		
+		for (size_t i = 0; i < raster->Rows(); i++)
+			for (size_t j = 0; j < raster->Columns(); j++)
+			{
+				Vector2D pixelPos(tiePoints[1][0] + j * pixelScale[0],
+					tiePoints[1][1] - i * pixelScale[1]);
+
+				double distanceToCentroid = pixelPos.DistanceTo(centroid);
+				if (distanceToCentroid < minDist)
+				{
+					row = i;
+					column = j;
+				}
+			}
+
+		return raster->GetValue(row, column);
+	}
+
+	double sum = 0.0;
+	for (auto it = pixelValues.begin(); it != pixelValues.end(); ++it)
+		sum += *it;
+	
+	return sum / static_cast<double>(pixelValues.size());
+}
+
+void CacheManningCoefficients(ModelParameters const & params)
+{
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		if (!params.variableManningCoefficients)
+		{
+			it->second.manningCoef = params.fixedManningCoeffient;
+		}
+		else
+		{
+			it->second.manningCoef = SampleRegionAveragedValue(it->second, manningRaster, manningRasterID);
+		}
+	}
+}
+
+//Matrix_f32 D8FDR() //computes Flow Direction Map in 8 direction. Encoded as follows:
+//{
+//
+//}
+
+void CacheSlopes(ModelParameters const & params)
+{
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+
+	}
+}
+
 bool CheckParameters(ModelParameters const & params)
 {
 	LogMan::Log("Checking parameters");
@@ -257,10 +347,10 @@ bool LoadInputRasters(ModelParameters const & params)
 	//DEM always loaded
 	bool status;
 	
-	status = FileIO::LoadRaster(params.demPath, &demID);
+	status = FileIO::LoadRaster(params.demPath, &demID, dem);
 
 	if (params.variableManningCoefficients)
-		status = FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID);
+		status = FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID, manningRaster);
 	
 	if (!status) //error already logged with the function calls above.
 	{
@@ -286,6 +376,11 @@ bool GenerateMesh(std::string const & nodesPath)
 	ComputeBoundingBox();
 	Triangulate(nodes, &triangles, &boundaryNodes);
 
+	//Validate Triangles
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+		if (!it->second.Validate())
+			LogMan::Log("Warning! Invalid Triangle " + std::to_string(it->second.id) + ". Area: " + std::to_string(it->second.area), LOG_WARN);
+		
 	LogMan::Log("Succesfully generated mesh!", LOG_SUCCESS);
 	return true;
 }
@@ -334,6 +429,37 @@ void ComputePreciptationVector(double time, ModelParameters const & params, Vect
 	}
 }
 
+void ComputeDischargeVector(ModelParameters const & params, Vector_f32 const & heads, Vector_f32 & outVector)
+{
+	//Psi-X and Psi-Y (for each element) are 3x3 matrices.
+	//[Psi-X_e] = 1/6 * delta T *	|	yj-yk	yk-yi	yi-yj	|
+	//								|	yj-yk	yk-yi	yi-yj	|
+	//								|	yj-yk	yk-yi	yi-yj	|
+
+	//[Psi-Y_e] = 1/6 * delta T *	|	xk-xj	xi-xk	xj-xi	|
+	//								|	xk-xj	xi-xk	xj-xi	|
+	//								|	xk-xj	xi-xk	xj-xi	|
+	//Where x(i/j/k) and y(i/j/k) are the x, y coord of the i/j/kth node.
+
+	//For Qs, using Manning equation. Q = (A/n) * R^(2/3) * sqrt(S)
+	//Wide channel assumption, R ~= h.
+
+	//The per-Element qs vectors are given as:
+	// dT * Psi-X * ((1-omega) q-X_t + omega * q-X_t+dT) + dT * Psi-Y * ((1-omega) q-Y_t + omega * q-Y_t+dT)
+	
+	
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		int const * vert = it->second.vertIDs; //to simplify lines bellow.
+		double mult = (it->second.area / it->second.manningCoef);
+		double multX = mult * sqrt(it->second.slopeX);
+		double multY = mult * sqrt(it->second.slopeY);
+		double newDischargeX[3] = { multX * pow(heads.GetValue(vert[0]), 2.0 / 3.0), multX * pow(heads.GetValue(vert[1]), 2.0 / 3.0), multX * pow(heads.GetValue(vert[2]), 2.0 / 3.0) };
+		double newDischargeY[3] = { multY * pow(heads.GetValue(vert[0]), 2.0 / 3.0), multY * pow(heads.GetValue(vert[1]), 2.0 / 3.0), multY * pow(heads.GetValue(vert[2]), 2.0 / 3.0) };
+
+	}
+}
+
 bool Simulate(ModelParameters const & params)
 {
 	LogMan::Log("Starting a simulation run");
@@ -348,6 +474,8 @@ bool Simulate(ModelParameters const & params)
 	ConstructGlobalConductanceMatrices(params.timeStep);
 	ConstructGlobalCapacitanceMatrix(params.useLumpedForm);
 	//ConstructGlobalBetaMatrix();
+	CacheManningCoefficients(params);
+	CacheSlopes(params);
 
 	//Set initial heads to zero (Dry conditions).
 	Vector_f32 head(nodes.size());
@@ -355,19 +483,24 @@ bool Simulate(ModelParameters const & params)
 	//Loop from start time to end time
 	double time = params.startTime;
 	LogMan::Log("Starting simulation loop at time: " + std::to_string(time));
+	
+	Vector_f32 prectipitationComponent(nodes.size());
+	Vector_f32 dischargeComponent(nodes.size());
 
 	while (time <= params.endTime)
 	{
 		LogMan::Log("At T= " + std::to_string(time));
 		//Compute effective rainfall for each element
+		ComputePreciptationVector(time, params, prectipitationComponent);
 
-	//Compute qx and qy vectors using previous pass heads (for first loop, it's the initial head)
-	//Internal loop
-		//Solve the system of equations.
-		//Check the resulting heads with the ones assumed for qx and qy, if the difference is large, recompute qx and qy, loop again.
-		//if difference is accepable, break internal loop.
-	//handle data storage for results, residuals and any relative statistics, prepare for next loop.
-	//Display results and return control to user.
+		//Compute qx and qy vectors using previous pass heads (for first loop, it's the initial head)
+		ComputeDischargeVector(params, head, dischargeComponent);
+		//Internal loop
+			//Solve the system of equations.
+			//Check the resulting heads with the ones assumed for qx and qy, if the difference is large, recompute qx and qy, loop again.
+			//if difference is accepable, break internal loop.
+		//handle data storage for results, residuals and any relative statistics, prepare for next loop.
+		//Display results and return control to user.
 
 		time += params.timeStep;
 	}
