@@ -5,9 +5,9 @@
 int extVerts[3];//cached external vertices.
 int lastID = 0;
 
-std::unique_ptr<Vector2[]> ComputeBoundingBox(std::vector<Vector2> &nodesList) //SW then NE corner
+std::unique_ptr<Vector2D[]> ComputeBoundingBox(std::vector<Vector2D> &nodesList) //SW then NE corner
 {	//TODO replace this with a global func (since it's also computed in ModelInterface and required in several places).
-	auto boundingBox = std::make_unique<Vector2[]>(2);
+	auto boundingBox = std::make_unique<Vector2D[]>(2);
 
 	boundingBox[0] = nodesList[0];
 	boundingBox[1] = nodesList[0];
@@ -24,20 +24,20 @@ std::unique_ptr<Vector2[]> ComputeBoundingBox(std::vector<Vector2> &nodesList) /
 	return boundingBox;
 }
 
-void GenerateSuperTriangle(std::vector<Vector2> &nodesList, std::unordered_map<int, Triangle> * outTrianglesList)
+void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, std::unordered_map<int, Triangle> * outTrianglesList)
 {
 	LogMan::Log("Generating Super Triangle.");
 	auto boundingBox = ComputeBoundingBox(nodesList);
 
-	Vector2 dimensions = boundingBox[1] - boundingBox[0];
+	Vector2D dimensions = boundingBox[1] - boundingBox[0];
 	float boundHalfWidth = (dimensions.x / 2.0f) + SUPER_TRIANGLE_PADDING;
 	float boundHeight = dimensions.y + 2.0f * SUPER_TRIANGLE_PADDING;
 
-	Vector2 superVert1Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING + boundHalfWidth,
+	Vector2D superVert1Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING + boundHalfWidth,
 							boundingBox[1].y + SUPER_TRIANGLE_PADDING + boundHeight);
-	Vector2 superVert2Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING - boundHalfWidth,
+	Vector2D superVert2Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING - boundHalfWidth,
 							boundingBox[0].y - SUPER_TRIANGLE_PADDING);
-	Vector2 superVert3Pos(	boundingBox[1].x + SUPER_TRIANGLE_PADDING + boundHalfWidth,
+	Vector2D superVert3Pos(	boundingBox[1].x + SUPER_TRIANGLE_PADDING + boundHalfWidth,
 							boundingBox[0].y - SUPER_TRIANGLE_PADDING);
 
 	nodesList.push_back(superVert1Pos);
@@ -51,35 +51,7 @@ void GenerateSuperTriangle(std::vector<Vector2> &nodesList, std::unordered_map<i
 	outTrianglesList->insert({0, Triangle(0, extVerts[0],extVerts[1], extVerts[2], nodesList)});
 }
 
-//void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2> const & nodesList, std::vector<Triangle> & newTriangles, std::unordered_map<int, Triangle> * trianglesList)
-//{
-//	//TODO we don't actually need the shared verts, rather the non shared one of the neighbour tri. Redo related methods to get it directly
-//	int * sharedVertsIDs = new int[2];	
-//
-//	for (auto newTri = newTriangles.begin(); newTri != newTriangles.end(); ++newTri)
-//	{
-//		for (auto oldTri = trianglesList->begin(); oldTri != trianglesList->end(); ++oldTri)
-//		{
-//			if (newTri->IsNeighbour(oldTri->second, pivotVertexID, sharedVertsIDs)) //this is a neighbour
-//			{
-//				if (oldTri->second.IsInsideCircumcircle(pivotVertexID, nodesList)) //This is a viable optimization candidate.
-//				{
-//					int distantVertID = oldTri->second.GetThirdVertexID(sharedVertsIDs[0], sharedVertsIDs[1]);
-//					int newVerts1[3]{ pivotVertexID, distantVertID, newTri->vertIDs[1] };
-//					int newVerts2[3]{ pivotVertexID, distantVertID, newTri->vertIDs[2] };
-//
-//					//clockwise fixing doesn't affect the first vertID, for newTri first vertID is always the current pivtoVertexID
-//					newTri->UpdateGeometry(newVerts1, nodesList);
-//					oldTri->second.UpdateGeometry(newVerts2, nodesList);
-//				}
-//				break; //stop testing neighbours move on to the next new triangle.
-//			}
-//		}
-//	}
-//	delete[] sharedVertsIDs;
-//}
-
-void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2> const & nodesList, std::vector<Triangle *> & trianglesToOptimize, std::unordered_map<int, Triangle> * trianglesList)
+void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & nodesList, std::vector<Triangle *> & trianglesToOptimize, std::unordered_map<int, Triangle> * trianglesList)
 {
 	//TODO we don't actually need the shared verts, rather the non shared one of the neighbour tri. Redo related methods to get it directly
 	int * sharedVertsIDs = new int[2];
@@ -94,16 +66,18 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2> const & nodes
 		{
 			if (testedTri->id != oldTri->second.id && testedTri->IsNeighbour(oldTri->second, pivotVertexID, sharedVertsIDs)) //this is a neighbour
 			{
-				if (oldTri->second.IsInsideCircumcircle(pivotVertexID, nodesList)) //This is a viable optimization candidate.
+				if (oldTri->second.IsInsideCircumcircle(nodesList[pivotVertexID])) //This is a viable optimization candidate.
 				{
-					int distantVertID = oldTri->second.GetThirdVertexID(sharedVertsIDs[0], sharedVertsIDs[1]);
+					int distantVertID = oldTri->second.GetThirdVertexID(sharedVertsIDs[0], sharedVertsIDs[1]); 
+
 					int newVerts1[3]{ pivotVertexID, distantVertID, testedTri->vertIDs[1] };
 					int newVerts2[3]{ pivotVertexID, distantVertID, testedTri->vertIDs[2] };
+					Vector2D newNodes1[3]{ nodesList[pivotVertexID], nodesList[distantVertID], nodesList[testedTri->vertIDs[1]]};
+					Vector2D newNodes2[3]{ nodesList[pivotVertexID], nodesList[distantVertID], nodesList[testedTri->vertIDs[2]] };
 
-					//clockwise fixing doesn't affect the first vertID, for newTri first vertID is always the current pivtoVertexID
-					testedTri->UpdateGeometry(newVerts1, nodesList);
-					oldTri->second.UpdateGeometry(newVerts2, nodesList);
-					
+					testedTri->UpdateGeometry(newVerts1, newNodes1);
+					oldTri->second.UpdateGeometry(newVerts2, newNodes2);
+
 					//add those new two tris to trianglesToOptimize to test them with distant triangles.
 					trianglesToOptimize.push_back(testedTri);
 					trianglesToOptimize.push_back(&(oldTri->second));
@@ -116,24 +90,21 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2> const & nodes
 	delete[] sharedVertsIDs;
 }
 
-void DelauneyTriangulation(int vertexID, std::vector<Vector2> const & nodesList, std::unordered_map<int, Triangle> * trianglesList)
+void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * trianglesList)
 {
 	for (auto it = trianglesList->begin(); it != trianglesList->end(); ++it)
 	{
-		if (it->second.ContainsPoint(nodesList[vertexID], nodesList))
+		if (it->second.ContainsPoint(nodesList[vertexID]))
 		{
 			int baseID = lastID++;
 			std::vector<Triangle> newTriangles;
 			
 			//subdivide
-			it->second.Subdivide(vertexID, baseID, nodesList, newTriangles);
-			
+			it->second.Subdivide(vertexID, nodesList[vertexID], baseID, newTriangles);
+
 			//remove big triangle
 			trianglesList->erase(it->second.id);
 			
-			//optimize smaller triangles
-			//OptimizeTriangulation(vertexID, nodesList, newTriangles, trianglesList);
-
 			//optimize smaller triangles
 			//create a list of pointers to triangels that include current vertexID. For now it's exactly the contents
 			//of newTriangles, but more will be added inside OptimizeTriangulation(), so we keep our newTriangles list separate.
@@ -188,7 +159,7 @@ std::vector<int> * RemoveExteriorTriangles(std::unordered_map<int, Triangle> * t
 	return outerNodes;
 }
 
-bool Triangulate(std::vector<Vector2> nodesList, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes)
+bool Triangulate(std::vector<Vector2D> nodesList, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes)
 {
 	//check if nodesList has enough elements, else return false.
 	//compute bounding box
@@ -199,14 +170,6 @@ bool Triangulate(std::vector<Vector2> nodesList, std::unordered_map<int, Triangl
 	//Call RemoveExteriorTriangles()
 	//Compute edge nodes
 	//Set and return computation results
-
-	int counter = 0;
-	for (auto it = nodesList.begin(); it != nodesList.end(); ++it)
-	{
-		std::cout << counter <<": ";
-		Print(*it);
-		counter++;
-	}
 
 	if (nodesList.size() < MIN_NODES_TO_TRIANGULATE)
 	{
