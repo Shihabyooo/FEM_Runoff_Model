@@ -117,7 +117,8 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 }
 
 
-char meshNodes[260] = "Mesh Nodes Coordinates File Path";
+//char meshNodes[260] = "Mesh Nodes Coordinates File Path";
+char meshNodes[260] = "Test_Nodes_G.csv";
 char demFilePath[260] = "DEM Raster Path";
 char precipRasterDir[260] = "Precipitation Rasters Directory Path";
 char percipTSPath[260] = "Precipitation Time-Series File Path";

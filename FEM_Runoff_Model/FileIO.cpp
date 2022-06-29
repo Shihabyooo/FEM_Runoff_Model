@@ -115,7 +115,7 @@ bool FileIO::LoadCSV(std::string const & path, std::vector<float> & output, unsi
 	return true;
 }
 
-bool FileIO::LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2> & output, unsigned int firstLinesToSkip)
+bool FileIO::LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2D> & output, unsigned int firstLinesToSkip)
 {
 	LogMan::Log("Attempting to load csv file \"" + path + "\"");
 	std::ifstream file;
@@ -133,7 +133,7 @@ bool FileIO::LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector
 	//skip firstLinesToSkip
 	SkipNLines(file, firstLinesToSkip);
 	
-	float cachedFloat;
+	double cachedFloat;
 	bool second = false;
 
 	while (!file.eof())
@@ -148,7 +148,7 @@ bool FileIO::LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector
 		}
 		else if ((cBuffer == '\n' || file.eof()) && second)
 		{
-			output.push_back(Vector2(cachedFloat, atof(sBuffer.c_str())));
+			output.push_back(Vector2D(cachedFloat, atof(sBuffer.c_str())));
 			sBuffer = "";
 			second = false;
 		}
@@ -232,7 +232,7 @@ void FileIO::CloseLogFile()
 
 bool FileIO::WriteToLog(LogEntry const & newEntry)
 {
-	std::cout << "Writing to log file\n";//test
+	//std::cout << "Writing to log file\n";//test
 	if (!logFile.good() || !logFile.is_open())
 	{
 		LogMan::Log("ERROR! I/O error.", LOG_ERROR);

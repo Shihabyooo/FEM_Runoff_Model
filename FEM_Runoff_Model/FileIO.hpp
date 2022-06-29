@@ -14,7 +14,7 @@ namespace FileIO
 	bool LoadTimeSeries(std::string const & path, TimeSeries & timeSeries, unsigned int firstLinesToSkip = 0);
 
 	bool LoadCSV(std::string const & path, std::vector<float> & output, unsigned int firstLinesToSkip = 0);
-	bool LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2> & output, unsigned int firstLinesToSkip = 0);
+	bool LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2D> & output, unsigned int firstLinesToSkip = 0);
 
 	bool LoadRaster(std::string const & path, int * outRasterID, void const * outBitmapPtr); //outBitmapPtr will be a pointer to a matrixPP_f32
 	bool GetRasterMappingParameters(int rasterID,

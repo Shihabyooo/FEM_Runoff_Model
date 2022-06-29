@@ -35,13 +35,13 @@ extern OffScreenBuffer viewportBuffer;
 extern std::unordered_map <int, Layer> layers;
 extern Shader triangleShader, pointShader, lineShader;
 
-extern Vector2 currenViewportHoverPos; //in worldspace coordinates
-extern Vector2 currenViewportHoverPosPixels; //in local pixel screenspace of viewport
+extern Vector2D currenViewportHoverPos; //in worldspace coordinates
+extern Vector2D currenViewportHoverPosPixels; //in local pixel screenspace of viewport
 extern bool isHoveringViewport;
 extern double scale;
 extern double screenAspectRatio;
 extern double worldAspectRatio;
-extern Vector2 viewBounds[2];
+extern Vector2D viewBounds[2];
 
 void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount); //test test
 void UpdateMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
@@ -61,10 +61,10 @@ void UpdateNodes();
 void UpdateTriangles();
 
 void UpdateViewBounds();
-void SetViewBounds(Vector2 swCorner, Vector2 nwCorner);
+void SetViewBounds(Vector2D swCorner, Vector2D nwCorner);
 void UpdateCoordinateProjectionParameters();
-Vector2	NormalizeCoordinates(Vector2 & point); //converts from world space to viewport space
-void PanView(Vector2 posDelta);
+Vector2D NormalizeCoordinates(Vector2D & point); //converts from world space to viewport space
+void PanView(Vector2D posDelta);
 
 
 void TestSetupSuperTriangleRender();

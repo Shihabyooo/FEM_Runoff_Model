@@ -2,7 +2,7 @@
 
 OffScreenBuffer viewportBuffer;
 
-Vector2 delta;
+Vector2D delta;
 double scale = 0.5f;
 double screenAspectRatio = 1.0f;
 double worldAspectRatio = 1.0f;
@@ -18,10 +18,10 @@ Shader triangleShader, pointShader, lineShader;
 //Shader testSuperTriShader;
 float superTriMeshVerts[9];
 
-Vector2 lastViewportSize;
-Vector2 viewBounds[2];
-Vector2 currenViewportHoverPos;
-Vector2 currenViewportHoverPosPixels; //in local pixel screenspace of viewport
+Vector2D lastViewportSize;
+Vector2D viewBounds[2];
+Vector2D currenViewportHoverPos;
+Vector2D currenViewportHoverPosPixels; //in local pixel screenspace of viewport
 bool isHoveringViewport = false;
 
 //Create vertex buffer (VBO), vertex array object (VAO) and vertex array element object, store id in targetGLData struct. \
@@ -177,7 +177,7 @@ void HandleMousePan()
 	if (ImGui::IsMouseDragging(2) && viewportDimensions.Contains(posAtClick[2]))
 	{
 		ImVec2 mouseDelta = io.MouseDelta;
-		PanView(Vector2(-1.0f * mouseDelta.x, mouseDelta.y) * scale);
+		PanView(Vector2D(-1.0f * mouseDelta.x, mouseDelta.y) * scale);
 	}
 }
 
@@ -209,10 +209,10 @@ void UpdateMouseHoverPosition() //TODO fix
 	if (isHoveringViewport = viewportDimensions.Contains(mousePos))
 	{
 		currenViewportHoverPosPixels = viewportDimensions.LocalPosFromGlobal(mousePos);
-		Vector2 worldspaceDelta(currenViewportHoverPosPixels.x * scale,
+		Vector2D worldspaceDelta(currenViewportHoverPosPixels.x * scale,
 								(viewportDimensions.height - currenViewportHoverPosPixels.y) * scale * screenAspectRatio / worldAspectRatio);
 
-		currenViewportHoverPos = Vector2(	viewBounds[0].x + worldspaceDelta.x,
+		currenViewportHoverPos = Vector2D(	viewBounds[0].x + worldspaceDelta.x,
 											viewBounds[0].y + worldspaceDelta.y);
 	}
 	else
@@ -363,7 +363,7 @@ void UpdateNodes()
 	int counter = 0;
 	for (auto it = nodes.begin(); it != nodes.end(); ++it)
 	{
-		Vector2 relativePos = NormalizeCoordinates(*it);
+		Vector2D relativePos = NormalizeCoordinates(*it);
 		nodesMeshVerts[counter] = relativePos.x;
 		nodesMeshVerts[counter + 1] = relativePos.y;
 		nodesMeshVerts[counter + 2] = 0.0f;
@@ -402,7 +402,7 @@ void UpdateViewBounds()
 	//scale doesn't change when simply resizing viewport. (i.e. resizing would expose more area to paint on, but won't change size of elements.
 	screenAspectRatio = static_cast<double>(viewportDimensions.width) / static_cast<double>(viewportDimensions.height);
 	
-	Vector2 changeInView = viewportDimensions.Dimension() - lastViewportSize;	
+	Vector2D changeInView = static_cast<Vector2D>(viewportDimensions.Dimension()) - lastViewportSize;	
 	viewBounds[1].x += changeInView.x * scale;
 	viewBounds[1].y += changeInView.y * scale / screenAspectRatio;
 
@@ -412,15 +412,15 @@ void UpdateViewBounds()
 //Forces the viewportbounds to specific coordinates. SW bound is set as provided, NW corner is clamped to be at least \
 MIN_VIEWPORT_DELTA north and east (each) of the SW corner. New NW corner is adjusted to maintain current window aspect ratio. \
 Updates scale and delta.
-void SetViewBounds(Vector2 swCorner, Vector2 nwCorner)
+void SetViewBounds(Vector2D swCorner, Vector2D nwCorner)
 {
 	viewBounds[0] = swCorner;
-	viewBounds[1] = Vector2(Max(static_cast<double>(nwCorner.x), swCorner.x + MIN_VIEWPORT_DELTA),
+	viewBounds[1] = Vector2D(Max(static_cast<double>(nwCorner.x), swCorner.x + MIN_VIEWPORT_DELTA),
 							Max(static_cast<double>(nwCorner.y), swCorner.y + MIN_VIEWPORT_DELTA));
 
 	//adjust NW bound to maintain the current aspect ratio.
 	delta = viewBounds[1] - viewBounds[0]; //unadjusted delta
-	delta = Vector2(Max(static_cast<double>(delta.x), delta.y * screenAspectRatio),
+	delta = Vector2D(Max(static_cast<double>(delta.x), delta.y * screenAspectRatio),
 					Max(static_cast<double>(delta.y), delta.x / screenAspectRatio));
 
 	viewBounds[1] = viewBounds[0] + delta;
@@ -438,13 +438,13 @@ void UpdateCoordinateProjectionParameters()
 }
 
 //returns normalized coordinates (-1.0f to 1.0f) for a supplied point depending on the current projection parameters 
-Vector2 NormalizeCoordinates(Vector2 & point)
+Vector2D NormalizeCoordinates(Vector2D & point)
 {
-	/*Vector2 normPos((2.0f - 2.0f * margin) * (point.x - viewBounds[0].x) / (delta.x) - 1.0f + margin,
+	/*Vector2D normPos((2.0f - 2.0f * margin) * (point.x - viewBounds[0].x) / (delta.x) - 1.0f + margin,
 					(2.0f - 2.0f * margin) * (point.y - viewBounds[06].y) / (delta.y) - 1.0f + margin);*/
-	/*Vector2 normPos(2.0f * (point.x - viewBounds[0].x) / (delta.x) - 1.0f,
+	/*Vector2D normPos(2.0f * (point.x - viewBounds[0].x) / (delta.x) - 1.0f,
 					2.0f * (point.y - viewBounds[0].y) / (delta.y) - 1.0f);*/
-	Vector2 normPos(2.0f * ((point.x - viewBounds[0].x) / scale) / viewportDimensions.width  - 1.0f,
+	Vector2D normPos(2.0f * ((point.x - viewBounds[0].x) / scale) / viewportDimensions.width  - 1.0f,
 					2.0f * ((point.y - viewBounds[0].y) / scale) / viewportDimensions.height - 1.0f);
 	
 	normPos = normPos;
@@ -452,7 +452,7 @@ Vector2 NormalizeCoordinates(Vector2 & point)
 }
 
 //Shifts the viewBounds by posDelta. Calls UpdateContent before returning.
-void PanView(Vector2 posDelta)
+void PanView(Vector2D posDelta)
 {
 	SetViewBounds(viewBounds[0] + posDelta, viewBounds[1] + posDelta);
 	UpdateContent();
@@ -486,20 +486,20 @@ void TestUpdateSuperTriangle()
 	if (nodes.size() < 2)
 		return;
 
-	Vector2 diff = nodesNE - nodesSW;
+	Vector2D diff = nodesNE - nodesSW;
 	float boundHalfWidth = (diff.x / 2.0f) + SUPER_TRIANGLE_PADDING;
 	float boundHeight = diff.y + 2.0f * SUPER_TRIANGLE_PADDING;
-	Vector2 superVerts[3]{	Vector2(nodesSW.x - SUPER_TRIANGLE_PADDING + boundHalfWidth,
+	Vector2D superVerts[3]{	Vector2D(nodesSW.x - SUPER_TRIANGLE_PADDING + boundHalfWidth,
 									nodesNE.y + SUPER_TRIANGLE_PADDING + boundHeight),
-							Vector2(nodesSW.x - SUPER_TRIANGLE_PADDING - boundHalfWidth,
+							Vector2D(nodesSW.x - SUPER_TRIANGLE_PADDING - boundHalfWidth,
 									nodesSW.y - SUPER_TRIANGLE_PADDING),
-							Vector2(nodesNE.x + SUPER_TRIANGLE_PADDING + boundHalfWidth,
+							Vector2D(nodesNE.x + SUPER_TRIANGLE_PADDING + boundHalfWidth,
 									nodesSW.y - SUPER_TRIANGLE_PADDING) };
 
 	int counter = 0;
 	for (int i = 0; i < 9; i += 3)
 	{
-		Vector2 relativePos = NormalizeCoordinates(superVerts[counter]);
+		Vector2D relativePos = NormalizeCoordinates(superVerts[counter]);
 
 		superTriMeshVerts[i] = relativePos.x;
 		superTriMeshVerts[i + 1] = relativePos.y;

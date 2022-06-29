@@ -101,7 +101,7 @@ extern ImVec4 viewportBGColour;
 
 extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimensions;
 extern WindowDimensions toolbarDimensions, statusBarDimensions;
-extern Vector2 lastViewportSize;
+extern Vector2D lastViewportSize;
 
 namespace PointShader //TODO fix this
 {
