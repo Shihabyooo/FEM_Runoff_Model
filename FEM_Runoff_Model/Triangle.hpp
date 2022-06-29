@@ -6,31 +6,34 @@
 class Triangle
 {
 public:
-	Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2> const & nodesList);
+	Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2D> const & nodesList);
+	Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, Vector2D const & node1, Vector2D const & node2, Vector2D const & node3);
+	Triangle(int _id, int const vertexIDs[3], Vector2D const _nodes[3]);
 	~Triangle();
 
-	void Subdivide(int centroidID, int baseTriangleID, std::vector<Vector2> const & nodesList, std::vector<Triangle> & outNewTriangles) const;
-	bool ContainsPoint(Vector2 const &point, std::vector<Vector2> const & nodesList) const;
+	void Subdivide(int centroidID, Vector2D centroidPos, int baseTriangleID, std::vector<Triangle> & outNewTriangles) const;
+	bool ContainsPoint(Vector2D const &point) const;
 	
 	bool ContainsEdge(int vertID1, int vertID2) const;
-	bool ContainsVertex(int vertexID) const;
+	bool ContainsVertex(int vertexID) const; //Contains vertex as a nodal vertix, not inside area. Use ContainsPoint for the latter.
 
 	int GetThirdVertexID(int vertID1, int vertID2) const; //Warning! Assumes both vertices are indeed nodes of this triangle. Will return first vert doesn't match supplied vertices. Returns -4 if error
 	bool IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts, int * outMeshEdgeContribCount) const;
 	
 	bool IsNeighbour(Triangle const &triangle, int outsideVertex, int * outSharedVertsIDs) const; //sharedVertsIDs = int[2]
-	bool IsInsideCircumcircle(int vertexID, std::vector<Vector2> const & nodesList) const;
+	bool IsInsideCircumcircle(Vector2D point) const;
 	
-	void UpdateGeometry(int const * vertixIDs, std::vector<Vector2> const & _nodesList);
-	void UpdateGeometry(int const & vertexID1, int const & vertexID2, int const & vertexID3, std::vector<Vector2> const & _nodesList);
+	void UpdateGeometry(int const vertixIDs[3], Vector2D const _nodes[3]);
+	void UpdateGeometry(int vertexID1, int vertexID2, int vertexID3, Vector2D const & node1, Vector2D const & node2, Vector2D const & node3);
 
-	Vector2 Node(int internalVertexID, std::vector<Vector2> const & nodesList) const;
-	Vector2 Centroid(std::vector<Vector2> const & nodesList) const;
+	Vector2D Centroid() const;
 
+	bool Validate(); //Recomputes area, returns true if area > 0.0, else false.
 	void DebugPrintDetails();
 
 public:
 	int vertIDs[3];
+	Vector2D nodes[3];
 	double area;
 	int id;
 	//TODO the values bellow are better stored in a some object in ModelInterface. Leaving them here until I fix the element ID ordering to\
@@ -44,6 +47,6 @@ public:
 
 private:
 	
-	double Determinant(Vector2 const &a, Vector2 const &b) const;
-	double ComputeArea(Vector2 node1, Vector2 node2, Vector2 node3) const;
+	double Determinant(Vector2D const &a, Vector2D const &b) const;
+	double ComputeArea(Vector2D node1, Vector2D node2, Vector2D node3) const;
 };

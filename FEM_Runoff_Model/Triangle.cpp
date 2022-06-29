@@ -1,34 +1,46 @@
 #include "Triangle.hpp"
 #include <MatricesPP.hpp>
 
-Triangle::Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2> const & nodesList)
+Triangle::Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2D> const & nodesList)
 {
 	id = _id;
-	UpdateGeometry(vertexID1, vertexID2, vertexID3, nodesList);
+	UpdateGeometry(vertexID1, vertexID2, vertexID3, nodesList[vertexID1], nodesList[vertexID2], nodesList[vertexID3]);
+}
+
+Triangle::Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, Vector2D const & node1, Vector2D const & node2, Vector2D const & node3)
+{
+	id = _id;
+	UpdateGeometry(vertexID1, vertexID2, vertexID3, node1, node2, node3);
+}
+
+Triangle::Triangle(int _id, int const vertexIDs[3], Vector2D const _nodes[3])
+{
+	id = _id;
+	UpdateGeometry(vertexIDs, _nodes);
 }
 
 Triangle::~Triangle()
 {
 }
 
-void Triangle::Subdivide(int centroidID, int baseTriangleID, std::vector<Vector2> const & nodesList, std::vector<Triangle>& outNewTriangles) const
+void Triangle::Subdivide(int centroidID, Vector2D centroidPos, int baseTriangleID, std::vector<Triangle> & outNewTriangles) const
 {
-	outNewTriangles.push_back(Triangle(baseTriangleID	 , centroidID, vertIDs[0], vertIDs[1], nodesList));
-	outNewTriangles.push_back(Triangle(baseTriangleID + 1, centroidID, vertIDs[0], vertIDs[2], nodesList));
-	outNewTriangles.push_back(Triangle(baseTriangleID + 2, centroidID, vertIDs[1], vertIDs[2], nodesList));
+	outNewTriangles.push_back(Triangle(baseTriangleID	 , centroidID, vertIDs[0], vertIDs[1], centroidPos, nodes[0], nodes[1]));
+	outNewTriangles.push_back(Triangle(baseTriangleID + 1, centroidID, vertIDs[0], vertIDs[2], centroidPos, nodes[0], nodes[2]));
+	outNewTriangles.push_back(Triangle(baseTriangleID + 2, centroidID, vertIDs[1], vertIDs[2], centroidPos, nodes[1], nodes[2]));
 }
 
-bool Triangle::ContainsPoint(Vector2 const & point, std::vector<Vector2> const & nodesList) const
+bool Triangle::ContainsPoint(Vector2D const & point) const
 {
 	//https://mathworld.wolfram.com/TriangleInterior.html
 
-	Vector2 v1 = Node(1, nodesList) - Node(0, nodesList);
-	Vector2 v2 = Node(2, nodesList) - Node(0, nodesList);
+	Vector2D v1 = nodes[1] - nodes[0];
+	Vector2D v2 = nodes[2] - nodes[0];
 
-	double a = (Determinant(point, v2) - Determinant(Node(0, nodesList), v2)) / Determinant(v1, v2);
-	double b = -1.0F * (Determinant(point, v1) - Determinant(Node(0, nodesList), v1)) / Determinant(v1, v2);
+	double a = (Determinant(point, v2) - Determinant(nodes[0], v2)) / Determinant(v1, v2);
+	double b = -1.0 * (Determinant(point, v1) - Determinant(nodes[0], v1)) / Determinant(v1, v2);
 
-	if (a > 0.0F && b > 0.0F && (a + b) < 1.0F)
+	if (a > 0.0 && b > 0.0 && (a + b) < 1.0)
 		return true;
 
 	return false;
@@ -110,16 +122,15 @@ bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int * o
 	}
 }
 
-bool Triangle::IsInsideCircumcircle(int vertexID, std::vector<Vector2> const & nodesList) const
+bool Triangle::IsInsideCircumcircle(Vector2D pos) const
 {
 	//https://stackoverflow.com/questions/39984709/how-can-i-check-wether-a-point-is-inside-the-circumcircle-of-3-points
 
-	Vector2 pos = nodesList[vertexID];
-
 	Matrix_f32 matrix(3, 3);
-	Vector2 a = Node(0, nodesList);
-	Vector2 b = Node(1, nodesList);
-	Vector2 c = Node(2, nodesList);
+	//TODO a, b, and c are remnants from a previou implementationi. Remove them and directly access nodes[] in the lines bellow.
+	Vector2D a = nodes[0];
+	Vector2D b = nodes[1];
+	Vector2D c = nodes[2];
 
 	matrix[0][0] = a.x - pos.x;
 	matrix[0][1] = a.y - pos.y;
@@ -136,55 +147,66 @@ bool Triangle::IsInsideCircumcircle(int vertexID, std::vector<Vector2> const & n
 	return (matrix.Determinant() > 0.0f);
 }
 
-void Triangle::UpdateGeometry(int const * vertixIDs, std::vector<Vector2> const & _nodesList)
+void Triangle::UpdateGeometry(int const vertixIDs[3], Vector2D const _nodes[3])
 {
-	UpdateGeometry(vertixIDs[0], vertixIDs[1], vertixIDs[2], _nodesList);
+	UpdateGeometry(vertixIDs[0], vertixIDs[1], vertixIDs[2], _nodes[0], _nodes[1], _nodes[2]);
 }
 
-void Triangle::UpdateGeometry(int const & vertexID1, int const & vertexID2, int const & vertexID3, std::vector<Vector2> const & nodesList)
+void Triangle::UpdateGeometry(int vertexID1, int vertexID2, int vertexID3,
+								Vector2D const & node1, Vector2D const & node2, Vector2D const & node3)
 {
 	vertIDs[0] = vertexID1;
 	vertIDs[1] = vertexID2;
 	vertIDs[2] = vertexID3;
 
-	area = ComputeArea(Node(0, nodesList), Node(1, nodesList), Node(2, nodesList));
+	nodes[0] = node1;
+	nodes[1] = node2;
+	nodes[2] = node3;
+
+	area = ComputeArea(nodes[0], nodes[1], nodes[2]);
 	if (area < 0.0f) //points were passed clockwise, flip than and absolute the area.
 	{
-		int tempVertID = vertIDs[1];
+		int tempVertID = vertIDs[1];		
 		vertIDs[1] = vertIDs[2];
 		vertIDs[2] = tempVertID;
+		
+		Vector2D tempNode = nodes[1];
+		nodes[1] = nodes[2];
+		nodes[2] = tempNode;
+
 		area = abs(area); //no need to compute area again, vertex reording only changes sign.
 	}
 }
 
-Vector2 Triangle::Node(int internalVertexID, std::vector<Vector2> const & nodesList) const
+Vector2D Triangle::Centroid() const
 {
-	return nodesList[vertIDs[internalVertexID]];
-}
+	Vector2D centroid;
 
-Vector2 Triangle::Centroid(std::vector<Vector2> const & nodesList) const
-{
-	Vector2 centroid;
-
-	centroid = Node(0, nodesList) + Node(1, nodesList) + Node(2, nodesList);
-	centroid = Vector2(centroid.x / 3.0, centroid.y / 3.0);
+	centroid = nodes[0] + nodes[1] + nodes[2];
+	centroid = Vector2D(centroid.x / 3.0, centroid.y / 3.0);
 
 	return centroid;
 }
 
+bool Triangle::Validate()
+{
+	area = ComputeArea(nodes[0], nodes[1], nodes[2]);
+	return area > 0.0;
+}
+
 void Triangle::DebugPrintDetails()
 {
-	std::cout << "-ID: " << id << ".  \tVerts" << vertIDs[0] << ",\t" << vertIDs[1] << ",\t" << vertIDs[2] << std::endl;
+	std::cout << "-ID: " << id << ".  \tVerts: " << vertIDs[0] << ", " << vertIDs[1] << ", " << vertIDs[2] << std::endl;
 }
 
-double Triangle::Determinant(Vector2 const & a, Vector2 const & b) const
+double Triangle::Determinant(Vector2D const & a, Vector2D const & b) const
 {
-	return ((static_cast<double>(a.x) * static_cast<double>(b.y)) - (static_cast<double>(a.y) * static_cast<double>(b.x)));
+	return ((a.x * b.y) - (a.y * b.x));
 }
 
-double Triangle::ComputeArea(Vector2 node1, Vector2 node2, Vector2 node3) const
+double Triangle::ComputeArea(Vector2D node1, Vector2D node2, Vector2D node3) const
 {
-	return	0.5F *	( static_cast<double>(node1.x) * (static_cast<double>(node2.y) - static_cast<double>(node3.y))
-					+ static_cast<double>(node2.x) * (static_cast<double>(node3.y) - static_cast<double>(node1.y))
-					+ static_cast<double>(node3.x) * (static_cast<double>(node1.y) - static_cast<double>(node2.y)));
+	return	0.5 *	( node1.x * (node2.y - node3.y)
+					+ node2.x * (node3.y - node1.y)
+					+ node3.x * (node1.y - node2.y));
 }
