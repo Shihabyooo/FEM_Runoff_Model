@@ -5,10 +5,10 @@
 #define DEFAULT_MAX_ITERATION 10000
 #define DEFAULT_CONVERGENCE_THRESHOLD -1.0
 #define MIN_CONVERGENCE_THRESHOLD 0.001
-#define INITIAL_X_VALUE 1.0f //Note! If initial value = 0.0, some solvers may break
+#define INITIAL_X_VALUE 1.0 //Note! If initial value = 0.0, some solvers may break
 //TODO remove the f from INITIAL_X_VALUE after switching vectors and matrices to double precision.
 
-//TODO in Vector_f32, add a method to compute (for a vector x) double = x_transpose * x
+//TODO in Vector_f64, add a method to compute (for a vector x) double = x_transpose * x
 
 //These functions assume the system is in the form Ax = b
 
@@ -27,67 +27,73 @@ log a warning with the fact but still compute it.
 
 //TODO consider having a generalized struct for solver log (i.e. has statistics about solution process).
 
-bool SolverSimple(	Matrix_f32 const & aMatrix,
-					Vector_f32 const & bVector,
-					Vector_f32 & outXVector,
-					Vector_f32 & outResiduals);
+bool Solve(	Matrix_f64 const & aMatrix,
+			Vector_f64 const & bVector,
+			Vector_f64 & outXVector,
+			Vector_f64 & outResiduals,
+			ModelParameters const & params);
 
-bool Gaussian(	Matrix_f32 const & aMatrix,
-				Vector_f32 const & bVector,
-				Vector_f32 & outXVector,
-				Vector_f32 & outResiduals);
+bool SolverSimple(	Matrix_f64 const & aMatrix,
+					Vector_f64 const & bVector,
+					Vector_f64 & outXVector,
+					Vector_f64 & outResiduals);
 
-//bool SolverGaussJordan(Matrix_f32 const & aMatrix,
-//						Vector_f32 const & bVector,
-//						Vector_f32 & outXVector,
-//						Vector_f32 & outResiduals);
+bool Gaussian(	Matrix_f64 const & aMatrix,
+				Vector_f64 const & bVector,
+				Vector_f64 & outXVector,
+				Vector_f64 & outResiduals);
 
-bool SolverJacobi(	Matrix_f32 const & aMatrix,
-					Vector_f32 const & bVector,
-					Vector_f32 & outXVector,					
-					Vector_f32 & outResiduals,
+//bool SolverGaussJordan(Matrix_f64 const & aMatrix,
+//						Vector_f64 const & bVector,
+//						Vector_f64 & outXVector,
+//						Vector_f64 & outResiduals);
+
+bool SolverJacobi(	Matrix_f64 const & aMatrix,
+					Vector_f64 const & bVector,
+					Vector_f64 & outXVector,					
+					Vector_f64 & outResiduals,
 					double weight = 1.0F, //Weight must be > 0 and <= 1.0F.
 					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
-bool SolverSOR(		Matrix_f32 const & aMatrix,
-					Vector_f32 const & bVector,
-					Vector_f32 & outXVector,
-					Vector_f32 & outResiduals,
+bool SolverSOR(		Matrix_f64 const & aMatrix,
+					Vector_f64 const & bVector,
+					Vector_f64 & outXVector,
+					Vector_f64 & outResiduals,
 					double weight = 1.0F, //Weight must be from 0.0F to 2.0, clamped to range. 1.0F indicates Gauss-Seidel solution.
 					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
-bool SolverPCG(		Matrix_f32 const & aMatrix,
-					Vector_f32 const & bVector,
-					Vector_f32 & outXVector,
-					Vector_f32 & outResiduals, 
+bool SolverPCG(		Matrix_f64 const & aMatrix,
+					Vector_f64 const & bVector,
+					Vector_f64 & outXVector,
+					Vector_f64 & outResiduals, 
 					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
-bool SolverBiCG(	Matrix_f32 const & aMatrix,
-					Vector_f32 const & bVector,
-					Vector_f32 & outXVector,
-					Vector_f32 & outResiduals,
+bool SolverBiCG(	Matrix_f64 const & aMatrix,
+					Vector_f64 const & bVector,
+					Vector_f64 & outXVector,
+					Vector_f64 & outResiduals,
 					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
-//bool SolverGMRES(	Matrix_f32 const & aMatrix,
-//					Vector_f32 const & bVector,
-//					Vector_f32 & outXVector,
-//					Vector_f32 & outResiduals,
+//bool SolverGMRES(	Matrix_f64 const & aMatrix,
+//					Vector_f64 const & bVector,
+//					Vector_f64 & outXVector,
+//					Vector_f64 & outResiduals,
 //					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 //					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
-bool SolverCGS(	Matrix_f32 const & aMatrix,
-					Vector_f32 const & bVector,
-					Vector_f32 & outXVector,
-					Vector_f32 & outResiduals,
+bool SolverCGS(	Matrix_f64 const & aMatrix,
+					Vector_f64 const & bVector,
+					Vector_f64 & outXVector,
+					Vector_f64 & outResiduals,
 					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
 
-void ComputeResiduals(	Matrix_f32 const & aMatrix,
-						Vector_f32 const & bVector,
-						Vector_f32 const & xVector,
-						Vector_f32 & outResiduals);
+void ComputeResiduals(	Matrix_f64 const & aMatrix,
+						Vector_f64 const & bVector,
+						Vector_f64 const & xVector,
+						Vector_f64 & outResiduals);

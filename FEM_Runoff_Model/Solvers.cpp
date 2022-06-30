@@ -2,25 +2,25 @@
 #include "LogManager.hpp"
 
 
-double ComputeThreshold(Vector_f32 const & bVector)
+double ComputeThreshold(Vector_f64 const & bVector)
 {
-	float minValue = FLT_MAX;
+	double minValue = FLT_MAX;
 	for (int i = 0; i < bVector.Rows(); i++)
 		minValue = Min(abs(bVector.GetValue(i)), minValue);
 
-	float threshold = Max(0.001 * minValue, MIN_CONVERGENCE_THRESHOLD);
+	double threshold = Max(0.001 * minValue, MIN_CONVERGENCE_THRESHOLD);
 	LogMan::Log("Using automatic threshold of: " + std::to_string(threshold));
 	return threshold;
 }
 
-bool CheckSystem(Matrix_f32 const & aMatrix, Vector_f32 const & bVector)
+bool CheckSystem(Matrix_f64 const & aMatrix, Vector_f64 const & bVector)
 {
 	if (aMatrix.Columns() != bVector.Rows())
 	{
 		LogMan::Log("Error! Supplied factors matrix and RHS vector are not of the same size.", LOG_ERROR);
 		return false;
 	}
-	if (!Matrix_f32::IsSquared(aMatrix))
+	if (!Matrix_f64::IsSquared(aMatrix))
 	{
 		LogMan::Log("Error! Supplied factors matrix and RHS vector are not of the same size.", LOG_ERROR);
 		return false;
@@ -28,35 +28,63 @@ bool CheckSystem(Matrix_f32 const & aMatrix, Vector_f32 const & bVector)
 	return true;
 }
 
-bool SolverSimple(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals)
+bool Solve(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, ModelParameters const & params)
+{
+	//TODO finish this
+	switch (params.solverType)
+	{
+	case Solver::Auto: //TODO implement automatic solver selection here
+		return SolverJacobi(aMatrix, bVector, outXVector, outResiduals, params.weight, params.residualThreshold, params.maxIterations);
+	case Solver::BiCG:
+		return false;
+	case Solver::CGS:
+		return false;
+	case Solver::Gaussian:
+		return false;
+	case Solver::Jacobi:
+		return SolverJacobi(aMatrix, bVector, outXVector, outResiduals, params.weight, params.residualThreshold, params.maxIterations);
+	case Solver::PCG:
+		return false;
+	case Solver::Simple:
+		return false;
+	case Solver::SOR:
+		return false;
+	
+	default:
+		return false;
+	}
+	return false;
+}
+
+bool SolverSimple(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals)
 {
 	LogMan::Log("Using Simple solver.");
 
 	if (!CheckSystem(aMatrix, bVector))
 		return false;
 
-	else if( !Matrix_f32::IsInvertible(aMatrix, true))
+	else if( !Matrix_f64::IsInvertible(aMatrix, true))
 	{
 		LogMan::Log("Error! Supplied factors matrix is not invertible. ", LOG_ERROR);
 		return false;
 	}
 
-	outXVector = static_cast<Vector_f32>(aMatrix.Invert() * bVector);
+	outXVector = static_cast<Vector_f64>(aMatrix.Invert() * bVector);
 
 	ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
 
 	return true;
 }
 
-bool Gaussian(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals)
+bool Gaussian(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals)
 {
 	if (!CheckSystem(aMatrix, bVector))
 		return false;
 
 	//create augMat = [A|b]
-	//create a float ** = float * [systemSize], and then have each element point to address on xVector content. We need this because\
+	//create a double ** = double * [systemSize], and then have each element point to address on xVector content. We need this because\
 	the augMat may very likely get rearanged (row swapping), this means the order of x elements must change too, but we can't, so we\
-	change the float ** instead, and then when assigning x values, we dereference *float[i].
+	change the double ** instead, and then when assigning x values, we dereference *double[i].
 	//loop over first column elements, find row with largest element, swap it with the first row.
 		//If all first column elements are zero (unlikely here, but still), return false.
 	//typical elementary row ops to reduce matrix to upper tri echelon.
@@ -65,7 +93,7 @@ bool Gaussian(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32
 	return true;
 }
 
-bool SolverJacobi(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals, double weight,  double threshold, size_t maxIterations)
+bool SolverJacobi(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double weight,  double threshold, size_t maxIterations)
 {
 	LogMan::Log("Using Jacobi solver.");
 
@@ -76,10 +104,10 @@ bool SolverJacobi(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector
 		threshold = ComputeThreshold(bVector);
 
 	size_t systemSize = bVector.Rows();
-	outXVector = Vector_f32(systemSize, INITIAL_X_VALUE);
+	outXVector = Vector_f64(systemSize, INITIAL_X_VALUE);
 
 	//create diagonal (inverted), and lower + upper matrices, so that A = diag + (L + U)
-	Matrix_f32 diagInv(systemSize, systemSize), LU(systemSize, systemSize);
+	Matrix_f64 diagInv(systemSize, systemSize), LU(systemSize, systemSize);
 	for (int i = 0; i < systemSize; i++)
 	{
 		for (int j = 0; j < systemSize; j++)
@@ -91,10 +119,10 @@ bool SolverJacobi(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector
 		}
 	}
 
-	Vector_f32 tempX = outXVector;
+	Vector_f64 tempX = outXVector;
 	for (int i = 0; i < maxIterations; i++)
 	{
-		outXVector = static_cast<Vector_f32>((diagInv * (bVector - static_cast<Vector_f32>(LU * tempX))) * weight) + (tempX * (1.0F - weight));
+		outXVector = static_cast<Vector_f64>((diagInv * (bVector - static_cast<Vector_f64>(LU * tempX))) * weight) + (tempX * (1.0F - weight));
 
 		ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
 		if (outResiduals.Magnitude() <= threshold)
@@ -109,7 +137,7 @@ bool SolverJacobi(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector
 	return true; //while we didn't technically reach a good solution, the routine did execute to the end, so...
 }
 
-bool SolverSOR(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals, double weight, double threshold, size_t maxIterations)
+bool SolverSOR(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double weight, double threshold, size_t maxIterations)
 {
 	LogMan::Log("Using Succesive Over-Relaxation solver.");
 
@@ -120,7 +148,7 @@ bool SolverSOR(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 		threshold = ComputeThreshold(bVector);
 	
 	size_t systemSize = bVector.Rows();
-	outXVector = Vector_f32(systemSize, INITIAL_X_VALUE);
+	outXVector = Vector_f64(systemSize, INITIAL_X_VALUE);
 
 	//clamp weight to 0.0F-2.0F range
 	weight = weight < 0.0F ? 0.0F : (weight > 2.0F ? 2.0F : weight);
@@ -154,7 +182,7 @@ bool SolverSOR(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 
 //TODO double, triple and quadruple check this method. It was translated from text around coup time, and I don't really remember how the hell\
 it worked...
-bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals, double threshold, size_t maxIterations)
+bool SolverPCG(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double threshold, size_t maxIterations)
 {
 	LogMan::Log("Using Preconditioned Conjugate Gradients solver.");
 	
@@ -171,20 +199,20 @@ bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 
 	size_t systemSize = bVector.Rows();
 	//init xVector
-	outXVector = Vector_f32(systemSize, INITIAL_X_VALUE);
+	outXVector = Vector_f64(systemSize, INITIAL_X_VALUE);
 	/*outXVector[0] = bVector.GetValue(0);
 	outXVector[systemSize - 1] = bVector.GetValue(systemSize - 1);*/
 
 	ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
 
-	Matrix_f32 conditioner(systemSize, systemSize); //init zeroed conditioner matrix.
-	//Invert of a diagonal matrix = replace diagonal elements with reciprocal. No need to use expensive methods of Matrix_f32
+	Matrix_f64 conditioner(systemSize, systemSize); //init zeroed conditioner matrix.
+	//Invert of a diagonal matrix = replace diagonal elements with reciprocal. No need to use expensive methods of Matrix_f64
 	/*for (int i = 0; i < systemSize; i++)
 		conditioner[i][i] = 1.0F / aMatrix.GetValue(i, i);*/
 	
-	conditioner = Matrix_f32::Identity(systemSize); //test
+	conditioner = Matrix_f64::Identity(systemSize); //test
 
-	Vector_f32 dVector = conditioner * outResiduals;
+	Vector_f64 dVector = conditioner * outResiduals;
 
 	double delta = outResiduals.DotProduct(dVector);
 	double allowableTolerance = pow(threshold, 2) * delta; //source paper's algorithm
@@ -194,12 +222,12 @@ bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 	for (int i = 0; i < maxIterations; i++)
 	{
 		
-		Vector_f32 qVector = aMatrix * dVector;
+		Vector_f64 qVector = aMatrix * dVector;
 		double alpha = delta / dVector.DotProduct(qVector);
 		outXVector = outXVector + dVector * alpha;
 		outResiduals = outResiduals - qVector * alpha;
 		
-		Vector_f32 sVector = conditioner * outResiduals;
+		Vector_f64 sVector = conditioner * outResiduals;
 		
 		double deltaOld = delta;
 		delta = outResiduals.DotProduct(sVector);
@@ -220,7 +248,7 @@ bool SolverPCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 	return true;
 }
 
-bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals, double threshold, size_t maxIterations)
+bool SolverBiCG(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double threshold, size_t maxIterations)
 {
 	LogMan::Log("Using Bi-Conjugate Gradients solver.");
 
@@ -232,21 +260,21 @@ bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f
 
 	size_t systemSize = bVector.Rows();
 	//init xVector
-	outXVector = Vector_f32(systemSize, INITIAL_X_VALUE);
+	outXVector = Vector_f64(systemSize, INITIAL_X_VALUE);
 	/*outXVector[0] = bVector.GetValue(0);
 	outXVector[systemSize - 1] = bVector.GetValue(systemSize - 1);*/
 
 	ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
-	Vector_f32 residuals2 = outResiduals;
+	Vector_f64 residuals2 = outResiduals;
 	
-	//Matrix_f32 conditioner(systemSize, systemSize); //init zeroed conditioner matrix.
-	////Invert of a diagonal matrix = replace diagonal elements with reciprocal. No need to use expensive methods of Matrix_f32
+	//Matrix_f64 conditioner(systemSize, systemSize); //init zeroed conditioner matrix.
+	////Invert of a diagonal matrix = replace diagonal elements with reciprocal. No need to use expensive methods of Matrix_f64
 	//for (int i = 0; i < systemSize; i++)
 	//	conditioner[i][i] = 1.0F / aMatrix.GetValue(i, i);
-	////conditioner = Matrix_f32::Identity(systemSize); //test
+	////conditioner = Matrix_f64::Identity(systemSize); //test
 
-	Vector_f32 d = outResiduals;
-	Vector_f32 d2 = residuals2;
+	Vector_f64 d = outResiduals;
+	Vector_f64 d2 = residuals2;
 
 	double delta = residuals2.DotProduct(outResiduals);
 	double deltaOld = delta;
@@ -255,8 +283,8 @@ bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f
 	
 	for (int i = 0; i < maxIterations; i++)
 	{
-		Vector_f32 q = aMatrix * d;
-		Vector_f32 q2 = static_cast<Matrix_f32>(aMatrix.Transpose()) * d;
+		Vector_f64 q = aMatrix * d;
+		Vector_f64 q2 = static_cast<Matrix_f64>(aMatrix.Transpose()) * d;
 
 		double alpha = delta / d2.DotProduct(q);
 		
@@ -293,7 +321,7 @@ bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f
 	return true;
 }
 
-//bool SolverGMRES(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals, double threshold, size_t maxIterations)
+//bool SolverGMRES(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double threshold, size_t maxIterations)
 //{
 //	LogMan::Log("Using Generalized Minimal Residual solver.");
 //
@@ -305,7 +333,7 @@ bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f
 //
 //	size_t systemSize = bVector.Rows();
 //	//init xVector
-//	outXVector = Vector_f32(systemSize, INITIAL_X_VALUE);
+//	outXVector = Vector_f64(systemSize, INITIAL_X_VALUE);
 //
 //	for (int i = 0; i < maxIterations; i++)
 //	{
@@ -325,7 +353,7 @@ bool SolverBiCG(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f
 //	return true;
 //}
 
-bool SolverCGS(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 & outXVector, Vector_f32 & outResiduals, double threshold, size_t maxIterations)
+bool SolverCGS(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double threshold, size_t maxIterations)
 {
 	LogMan::Log("Using Conjugate Gradients Squared solver.");
 
@@ -337,23 +365,23 @@ bool SolverCGS(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 
 	size_t systemSize = bVector.Rows();
 	//init xVector
-	outXVector = Vector_f32(systemSize, INITIAL_X_VALUE);
+	outXVector = Vector_f64(systemSize, INITIAL_X_VALUE);
 
 	ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
 	
-	Matrix_f32 conditioner(systemSize, systemSize); //init zeroed conditioner matrix.
-	//Invert of a diagonal matrix = replace diagonal elements with reciprocal. No need to use expensive methods of Matrix_f32
+	Matrix_f64 conditioner(systemSize, systemSize); //init zeroed conditioner matrix.
+	//Invert of a diagonal matrix = replace diagonal elements with reciprocal. No need to use expensive methods of Matrix_f64
 	/*for (int i = 0; i < systemSize; i++)
 		conditioner[i][i] = 1.0F / aMatrix.GetValue(i, i);*/
 
-	conditioner = Matrix_f32::Identity(systemSize); //test
+	conditioner = Matrix_f64::Identity(systemSize); //test
 
-	Vector_f32 residuals2 = outResiduals;
+	Vector_f64 residuals2 = outResiduals;
 
 	//u = r
 	//p = u
-	Vector_f32 u = outResiduals;
-	Vector_f32 p = u;
+	Vector_f64 u = outResiduals;
+	Vector_f64 p = u;
 	double delta = residuals2.DotProduct(outResiduals);
 	for (int i = 0; i < maxIterations; i++)
 	{
@@ -369,20 +397,20 @@ bool SolverCGS(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 
 		//p' = Cp
 		//v' = Ap'
-		Vector_f32 p2 = conditioner * p;
-		Vector_f32 v = aMatrix * p2;
+		Vector_f64 p2 = conditioner * p;
+		Vector_f64 v = aMatrix * p2;
 
 		//alpha = delta / (r'Transpose * v')
 		double alpha = delta / residuals2.DotProduct(v);
 
 		//q = u - alpha * v'
-		Vector_f32 q = u - v * alpha;
+		Vector_f64 q = u - v * alpha;
 		//u' = u + q
-		Vector_f32 u2 = u + q;
+		Vector_f64 u2 = u + q;
 		//x = x + alpha * u'
 		outXVector = outXVector + u2 * alpha;
 		//q' = Au'
-		Vector_f32 q2 = aMatrix * u2;
+		Vector_f64 q2 = aMatrix * u2;
 		//r = r - alpha*q'
 		outResiduals = outResiduals - q2 * alpha;
 		//beta = alpha / alpha_old
@@ -403,7 +431,7 @@ bool SolverCGS(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f3
 	return true;
 }
 
-void ComputeResiduals(Matrix_f32 const & aMatrix, Vector_f32 const & bVector, Vector_f32 const & xVector, Vector_f32 & outResiduals)
+void ComputeResiduals(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 const & xVector, Vector_f64 & outResiduals)
 {
 	//LogMan::Log("Residual computation not implemented yet.", LOG_WARN);
 	outResiduals = bVector - aMatrix * xVector;

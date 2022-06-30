@@ -9,19 +9,19 @@
 #define DURATION_SINCE(x) std::chrono::duration_cast<std::chrono::milliseconds>(NOW - x).count()
 
 //Ax = b
-Matrix_f32 testA;
-Vector_f32 testB;
-Vector_f32 testR, testX;
+Matrix_f64 testA;
+Vector_f64 testB;
+Vector_f64 testR, testX;
 int size = 100;
 int modulus = 100;
 
 void GenerateTestSystem(bool isSymmetric, bool isDiagDominant)
 {
-	testA = Matrix_f32(size, size);
-	testB = Vector_f32(size);
+	testA = Matrix_f64(size, size);
+	testB = Vector_f64(size);
 	//testR and testX are set by solver.
 	srand(time(0));
-	float tempVal1;
+	double tempVal1;
 	
 	tempVal1 = testA[0][1] = rand() % modulus;
 	testA[0][0] = testA[0][1] + 1;

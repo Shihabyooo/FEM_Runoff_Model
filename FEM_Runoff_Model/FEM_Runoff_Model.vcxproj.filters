@@ -111,6 +111,12 @@
     <ClCompile Include="MatricesPlusPlus\VectorPP_f32.cpp">
       <Filter>Source Files\MatricesPP</Filter>
     </ClCompile>
+    <ClCompile Include="MatricesPlusPlus\MatrixPP_f64.cpp">
+      <Filter>Source Files\MatricesPP</Filter>
+    </ClCompile>
+    <ClCompile Include="MatricesPlusPlus\VectorPP_f64.cpp">
+      <Filter>Source Files\MatricesPP</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.hpp">
