@@ -111,6 +111,11 @@ Vector2Int & Vector2Int::operator= (Vector2Int const & vec2)
 	return *this;
 }
 
+bool Vector2Int::operator==(Vector2Int const & vec2)
+{
+	return (x == vec2.x) && (y == vec2.y);
+}
+
 Vector2 Vector2Int::Normalize(Vector2Int const & min, Vector2Int const & max) const
 {
 	Vector2 delta = max - min;

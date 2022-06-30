@@ -121,27 +121,31 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 //char meshNodes[260] = "Test_Nodes_G.csv";
 char meshNodes[260] = "Test_Data\\Grid_Nodes.csv";
 char demFilePath[260] = "DEM Raster Path";
+//char slopeFilePath[260] = "Slopes Raster Path";
+char slopeFilePath[260] = "Test_Data\\Slope_Percent.tif";
+//char fdrFilePath[260] = "Flow Direction Raster Path";
+char fdrFilePath[260] = "Test_Data\\FDR.tif";
+
 char precipRasterDir[260] = "Precipitation Rasters Directory Path";
 //char percipTSPath[260] = "Precipitation Time-Series File Path";
 char percipTSPath[260] = "Test_Data\\Test_Timeseries.csv";
 char manningFilePath[260] = "Manning Raster File Path";
 
-char fixedPrecipVal[24] = "";
 int timeSeriesSize = 3;
 TimeSeries inputTS;
 
 bool useFixedManning = true;
-char fixedManningCoef[12] = "";
+char fixedManningCoef[12] = "0.022";
 
 char startTime[24] = "0.0";
-char endTime[24] = "";
-char deltaTime[24] = "";
+char endTime[24] = "10";
+char deltaTime[24] = "0.5";
 
 char femOmega[12] = "0.5";
 bool useLumped = true;
 
 const char* solvers[] = { "Auto", "Simple", "Gaussian", "Jacobi", "SOR", "PCG", "BiCG", "CGS" };// , "GMRES" };
-const char* precipitationInput[] = { "Single, fixed value", "Single Time-Series", "Gridded Time-Series" };
+const char* precipitationInput[] = {"Single Time-Series", "Gridded Time-Series" };
 const char* interpMethods1D[] = {"Nearest", "Linear", "Cubic"};
 const char* interpMethods2D[] = { "Nearest", "Bilinear", "Bicubic" };
 const char* timeUnits[] = { "Seconds", "Minutes", "Hours", "Days" };
@@ -162,13 +166,14 @@ void FillParametersStruct(ModelParameters & params)
 	LogMan::Log("Processing Input Parameters");
 
 	params.demPath = demFilePath;
+	params.slopesPath = slopeFilePath;
+	params.fdrPath = fdrFilePath;
 	params.topographySamplingMethod = static_cast<InterpolationType>(selectedTopoInterp);
 	params.variablePrecipitation = selectedPrecipInput == 0;
 
 	//params.unitTimeSeries = ; 
 	params.precipitationTemporalInterpolationType = static_cast<InterpolationType>(selectedPrecipTempoInterp);
 	params.precipitationSpatialInterpolationType = static_cast<InterpolationType>(selectedPrecipSpaceInterp);
-	params.fixedPrecipitationValue = atof(fixedPrecipVal);
 	params.variableManningCoefficients = !useFixedManning;
 	params.fixedManningCoeffient = atof(fixedManningCoef);
 	params.manningCoefficientRasterPath = manningFilePath;
@@ -249,7 +254,23 @@ void DrawLeftPane()
 		ImGui::InputText("##demFilePath", demFilePath, IM_ARRAYSIZE(demFilePath));
 		ImGui::PopItemWidth();
 
-		if (ImGui::Button("Browse for DEM directory"))
+		if (ImGui::Button("Browse for DEM file"))
+			LogMan::Log("Not yet impltemented!", LOG_WARN);
+
+		ImGui::Text("Slopes");
+		ImGui::PushItemWidth(-1);
+		ImGui::InputText("##slopesFilePath", slopeFilePath, IM_ARRAYSIZE(slopeFilePath));
+		ImGui::PopItemWidth();
+
+		if (ImGui::Button("Browse for Slopes file"))
+			LogMan::Log("Not yet impltemented!", LOG_WARN);
+
+		ImGui::Text("Flow Direction");
+		ImGui::PushItemWidth(-1);
+		ImGui::InputText("##fdrFilePath", fdrFilePath, IM_ARRAYSIZE(fdrFilePath));
+		ImGui::PopItemWidth();
+
+		if (ImGui::Button("Browse for Flow Direction map file"))
 			LogMan::Log("Not yet impltemented!", LOG_WARN);
 
 		ImGui::Text("Spatial interpolation method");
@@ -265,11 +286,6 @@ void DrawLeftPane()
 		ImGui::Combo("##precipInput", &selectedPrecipInput, precipitationInput, IM_ARRAYSIZE(precipitationInput));
 
 		if (selectedPrecipInput == 0)
-		{
-			ImGui::Text("Fixed Inrecemental Precipitation");
-			ImGui::InputText("##fixedPercipVal", fixedPrecipVal, 24, ImGuiInputTextFlags_CharsDecimal);
-		}
-		else if (selectedPrecipInput == 1)
 		{
 			ImGui::InputInt("Series length", &timeSeriesSize);
 			timeSeriesSize = Max(timeSeriesSize, 2);
@@ -333,7 +349,7 @@ void DrawLeftPane()
 				ImGui::EndTable();
 			}
 		}
-		else if (selectedPrecipInput == 2)
+		else if (selectedPrecipInput == 1)
 		{
 			ImGui::Text("Precipitation rasters directories");
 			ImGui::PushItemWidth(-1);

@@ -119,6 +119,7 @@ public:
 	Vector2Int operator-(Vector2Int const & vec2) const;
 	Vector2Int operator*(int const & scalar) const;
 	Vector2Int & operator= (Vector2Int const & vec2);
+	bool operator== (Vector2Int const & vec2);
 
 	Vector2 Normalize(Vector2Int const & min, Vector2Int const & max) const; //Returns normalized axes relative to min and max, result is between 0.0 to 1.0 if point is inside range min-max.
 
@@ -307,11 +308,12 @@ public:
 
 	//Topographic/geogrpahic params
 	std::string demPath = "";
-	
+	std::string slopesPath = "";
+	std::string fdrPath = "";
 	InterpolationType topographySamplingMethod = InterpolationType::nearest;
 
 	//Precipitation
-	bool variablePrecipitation = true; //false is mostly for testing, use fixedPrecipitationValue for all elements for all periods.
+	bool variablePrecipitation = true; //false use unitTimeseries for all elements for all periods.
 										//true, use gridded precipitation of 1D time series.
 
 	//bool griddedPrecipitation = false; //false: precipitation value from 1D time series for all elements. unitTimeSeries must be set to TS (must be pair<double, double>[]).
@@ -336,7 +338,7 @@ public:
 																				//simulation timeStep
 	InterpolationType precipitationSpatialInterpolationType = InterpolationType::nearest;
 
-	double fixedPrecipitationValue = -1.0f; //must be positive value > 0.0
+	//double fixedPrecipitationValue = -1.0f; //must be positive value > 0.0
 
 	//Hydraulic Parameters
 	bool variableManningCoefficients = false; //If false: using fixedManningCoeffients for all elements.
