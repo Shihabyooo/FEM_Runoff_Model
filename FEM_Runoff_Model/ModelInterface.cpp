@@ -8,16 +8,16 @@ std::unordered_map<int, Triangle> triangles;
 std::vector<Vector2D> nodes;
 std::vector<int> boundaryNodes;
 Vector2D nodesSW, nodesNE;
-size_t exitNode;
+//TODO improve this
+size_t exitNode = 0; //Assume first node to be exit node 
 
 //Matrices and Vectors
 Matrix_f64 globalC, globalPsiX, globalPsiY;
-//Vector_f64 globalBeta;
 Vector_f64 heads;
 
-Matrix_f64 const * dem = NULL, * manningRaster = NULL, * fdr;
+Matrix_f64 const * dem = NULL, * manningRaster = NULL, * slopes = NULL, * fdr = NULL;
 
-int demID, manningRasterID, fdrID;
+int demID, manningRasterID, slopesID, fdrID;
 
 void ComputeBoundingBox()
 {
@@ -80,21 +80,32 @@ bool CheckParameters(ModelParameters const & params)
 		status = false;
 	}
 
-	if (!FileIO::FileExists(params.demPath))
+	/*if (!FileIO::FileExists(params.demPath))
 	{
 		LogMan::Log("ERROR! Must supply a terrain DEM for the region.", LOG_ERROR);
 		status = false;
-	}
+	}*/
 
-	//if (params.variablePrecipitation && params.unitTimeSeries == NULL) //TODO check for time series rasters also goes here
-	if (params.variablePrecipitation && !params.unitTimeSeries.IsValid()) //TODO check for time series rasters also goes here
+	if (!FileIO::FileExists(params.slopesPath))
 	{
-		LogMan::Log("ERROR! Invalid Time-series.", LOG_ERROR);
+		LogMan::Log("ERROR! Must supply a terrain Slopes for the region.", LOG_ERROR);
 		status = false;
 	}
-	else if (!params.variablePrecipitation && params.fixedPrecipitationValue <= 0.0)
+
+	if (!FileIO::FileExists(params.fdrPath))
 	{
-		LogMan::Log("ERROR! Must set a positive precipitation value when using fixed precipitation", LOG_ERROR);
+		LogMan::Log("ERROR! Must supply a flow direction map (AGNPS format) for the region.", LOG_ERROR);
+		status = false;
+	}
+
+	//if (params.variablePrecipitation && ) //TODO check for time series rasters also goes here
+	//{
+	//	LogMan::Log("ERROR! Invalid Time-series.", LOG_ERROR);
+	//	status = false;
+	//}
+	if (!params.variablePrecipitation && !params.unitTimeSeries.IsValid())
+	{
+		LogMan::Log("ERROR! Must provide a valid Time-series", LOG_ERROR);
 		status = false;
 	}
 
@@ -211,18 +222,20 @@ bool LoadInputRasters(ModelParameters const & params)
 	//fall within range of simulation time.
 	//A third alternative solution is to create these per-node timeseries, but cache them to disk instead. Performance would be slower than memory
 	//load, but faster than on-demand raster load. Memory would be much less than memory load.
+	
+	bool status = true;
 
-	//DEM always loaded
-	bool status;
-
-	status = FileIO::LoadRaster(params.demPath, &demID, dem);
+	//status = status && FileIO::LoadRaster(params.demPath, &demID, dem);
+	status = status && FileIO::LoadRaster(params.slopesPath, &slopesID, slopes);
+	status = status && FileIO::LoadRaster(params.fdrPath, &fdrID, fdr);
 
 	if (params.variableManningCoefficients)
-		status = FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID, manningRaster);
+		status = status && FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID, manningRaster);
 
 	if (!status) //error already logged with the function calls above.
 	{
 		FileIO::UnloadRaster(demID);
+		FileIO::UnloadRaster(slopesID);
 		if (params.variableManningCoefficients)
 			FileIO::UnloadRaster(manningRasterID);
 	}
@@ -237,7 +250,6 @@ void ConstructGlobalCapacitanceMatrix(bool isLumped)
 	//				|	0	1	0	|
 	//				|	0	0	1	|
 	//Where A is the area of element.
-
 
 	//Consistent Capacitance matrix for each element is 3x3 matrix
 	//[C_e] = A/12 *	|	2	1	1	|
@@ -327,7 +339,68 @@ void ConstructGlobalPsiMatrices(double timeStep)
 	}
 }
 
-double SampleRegionAveragedValue(Triangle const & element, Matrix_f64 const * raster, int rasterID) //get the average value of pixels in raster covered by element
+//double SampleRegionAveragedValue(Triangle const & element, Matrix_f64 const * raster, int rasterID) //get the average value of pixels in raster covered by element
+//{
+//	//This is a rasterization/coverage test problem. But for now, we'll do it a very crude way, i.e. test if centre of pixel lies within triangle.
+//	//TODO improve this
+//
+//	double ** tiePoints = NULL;
+//	double * pixelScale = NULL;
+//	bool isUTM;
+//
+//	if (!FileIO::GetRasterMappingParameters(rasterID, isUTM, tiePoints, pixelScale))
+//	{
+//		//Error already logged in GetRasterMappingParameters();
+//		//LogMan::Log("ERROR! At loading raster mapping parameters", LOG_ERROR);
+//
+//		return 0.0;
+//	}
+//
+//	std::vector<double> pixelValues;
+//
+//	for (size_t i = 0; i < raster->Rows(); i++)
+//		for (size_t j = 0; j < raster->Columns(); j++)
+//		{
+//			Vector2D pixelPos(	tiePoints[1][0] + j * pixelScale[0],
+//								tiePoints[1][1] - i * pixelScale[1]);
+//
+//			if (element.ContainsPoint(pixelPos))
+//				pixelValues.push_back(raster->GetValue(i, j));
+//		}
+//	
+//	//There could be a case where element is small that it fits inside a pixel but not cover it's centre.
+//	if (pixelValues.size() < 1)
+//	{
+//		//In this case, simply compute the centroid (average of ndoes), and find pixel that contains centroid, return its value
+//		Vector2D centroid = element.Centroid();
+//		size_t row, column;
+//		double minDist = DBL_MAX;
+//		
+//		for (size_t i = 0; i < raster->Rows(); i++)
+//			for (size_t j = 0; j < raster->Columns(); j++)
+//			{
+//				Vector2D pixelPos(tiePoints[1][0] + j * pixelScale[0],
+//					tiePoints[1][1] - i * pixelScale[1]);
+//
+//				double distanceToCentroid = pixelPos.DistanceTo(centroid);
+//				if (distanceToCentroid < minDist)
+//				{
+//					row = i;
+//					column = j;
+//				}
+//			}
+//
+//		return raster->GetValue(row, column);
+//	}
+//
+//	double sum = 0.0;
+//	for (auto it = pixelValues.begin(); it != pixelValues.end(); ++it)
+//		sum += *it;
+//	
+//	return sum / static_cast<double>(pixelValues.size());
+//}
+
+std::vector<std::pair<Vector2Int, double>> * SampleCoveredPixels(Triangle const & element, Matrix_f64 const * raster, int rasterID)
 {
 	//This is a rasterization/coverage test problem. But for now, we'll do it a very crude way, i.e. test if centre of pixel lies within triangle.
 	//TODO improve this
@@ -341,29 +414,29 @@ double SampleRegionAveragedValue(Triangle const & element, Matrix_f64 const * ra
 		//Error already logged in GetRasterMappingParameters();
 		//LogMan::Log("ERROR! At loading raster mapping parameters", LOG_ERROR);
 
-		return 0.0;
+		return NULL;
 	}
 
-	std::vector<double> pixelValues;
+	std::vector<std::pair<Vector2Int, double>> * pixelValues = new std::vector<std::pair<Vector2Int, double>>();
 
 	for (size_t i = 0; i < raster->Rows(); i++)
 		for (size_t j = 0; j < raster->Columns(); j++)
 		{
-			Vector2D pixelPos(	tiePoints[1][0] + j * pixelScale[0],
-								tiePoints[1][1] - i * pixelScale[1]);
+			Vector2D pixelPos(tiePoints[1][0] + j * pixelScale[0],
+				tiePoints[1][1] - i * pixelScale[1]);
 
 			if (element.ContainsPoint(pixelPos))
-				pixelValues.push_back(raster->GetValue(i, j));
+				pixelValues->push_back(std::pair< Vector2Int, double >(Vector2Int(i, j), raster->GetValue(i, j)));
 		}
-	
+
 	//There could be a case where element is small that it fits inside a pixel but not cover it's centre.
-	if (pixelValues.size() < 1)
+	if (pixelValues->size() < 1)
 	{
 		//In this case, simply compute the centroid (average of ndoes), and find pixel that contains centroid, return its value
 		Vector2D centroid = element.Centroid();
 		size_t row, column;
 		double minDist = DBL_MAX;
-		
+
 		for (size_t i = 0; i < raster->Rows(); i++)
 			for (size_t j = 0; j < raster->Columns(); j++)
 			{
@@ -377,18 +450,31 @@ double SampleRegionAveragedValue(Triangle const & element, Matrix_f64 const * ra
 					column = j;
 				}
 			}
-
-		return raster->GetValue(row, column);
+		
+		pixelValues->push_back(std::pair< Vector2Int, double >(Vector2Int(row, column), raster->GetValue(row, column)));
 	}
 
-	double sum = 0.0;
-	for (auto it = pixelValues.begin(); it != pixelValues.end(); ++it)
-		sum += *it;
-	
-	return sum / static_cast<double>(pixelValues.size());
+	return pixelValues;
+
 }
 
-void CacheManningCoefficients(ModelParameters const & params)
+double SampleRegionAveragedValue(Triangle const & element, Matrix_f64 const * raster, int rasterID) //get the average value of pixels in raster covered by element
+{
+	std::vector<std::pair<Vector2Int, double>> * values = SampleCoveredPixels(element, raster, rasterID);
+
+	if (values == NULL)
+		return 0.0;
+
+	double sum = 0.0;
+
+	for (auto it = values->begin(); it != values->end(); ++it)
+		sum += it->second;
+
+	delete values;
+	return sum / static_cast<double>(values->size());
+}
+
+bool CacheManningCoefficients(ModelParameters const & params)
 {
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
@@ -398,28 +484,91 @@ void CacheManningCoefficients(ModelParameters const & params)
 		}
 		else
 		{
-			it->second.manningCoef = SampleRegionAveragedValue(it->second, manningRaster, manningRasterID);
+			double manningCoeffElem = SampleRegionAveragedValue(it->second, manningRaster, manningRasterID);
+			if (manningCoeffElem == 0.0)
+			{
+				LogMan::Log("ERROR reading Manning coefficient value for element: " + std::to_string(it->second.id), LOG_ERROR);
+				return false;
+			}
+			it->second.manningCoef = manningCoeffElem;
 		}
 	}
+	return true;
 }
 
-void CacheSlopes(ModelParameters const & params)
+bool CacheSlopes(ModelParameters const & params)
 {
+	//agnps fdr format: 1 = north, 2 = NE, 3 = East, 4 = SE, 5 = South, 6 = SW, 7 = West, 8 = NW
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
+		std::vector<std::pair<Vector2Int, double>> * fdrPixels = SampleCoveredPixels(it->second, fdr, fdrID);
+		std::vector<std::pair<Vector2Int, double>> * slopePixels = SampleCoveredPixels(it->second, slopes, slopesID);
 
+		if (fdrPixels == NULL || slopePixels == NULL)
+		{
+			LogMan::Log("ERROR reading slopes or fdr values for triangle " + std::to_string(it->second.id), LOG_ERROR);
+
+			if (fdrPixels != NULL)
+				delete fdrPixels;
+			if (slopePixels != NULL)
+				delete slopePixels;
+
+			return false;
+		}
+
+		//compute x and y components for each value in slopePixels, and average them.
+
+		double sumX = 0.0, sumY = 0.0;
+		
+		//TODO rework this implemention so it doesn't not assume fdr and slopes map are exactly alike in gridding.
+		if (fdrPixels->size() != slopePixels->size())
+			LogMan::Log("Warning! Mismatching fdr and slope sampling for element: " + std::to_string(it->second.id), LOG_WARN);
+
+		for (auto slp = slopePixels->begin(); slp != slopePixels->end(); ++slp)
+		{	
+			//find fdr of slope
+			int dir = 2;
+			for (auto fdir = fdrPixels->begin(); fdir != fdrPixels->end(); ++fdir)
+			{
+				if (fdir->first == slp->first)
+				{
+					dir = lround(fdir->second);
+					break;
+				}
+			}
+
+			if (dir == 1 || dir == 5)
+				sumY += slp->second;
+			else if (dir == 3 || dir == 7)
+				sumX += slp->second;
+			else
+			{
+				double component = slp->second * 0.7071067811865475244; //adjacent = hypotenuse * cos(45)
+				sumX += component;
+				sumY += component;
+			}
+		}
+
+		it->second.slopeX = sumX / static_cast<double>(slopePixels->size());
+		it->second.slopeY = sumY / static_cast<double>(slopePixels->size());
+		
+		delete fdrPixels;
+		delete slopePixels;
 	}
+
+	return false;
 }
 
 double GetCurrentPrecipitation(double time, ModelParameters const & params, Triangle const & triangle) //current impl doesn't need triangle, but later it would.
 {
 	if (params.variablePrecipitation)
 	{
-		return params.unitTimeSeries.Sample(time, params.precipitationTemporalInterpolationType);
+		LogMan::Log("Warning! Variable precipitation is not yet implemented!", LOG_WARN);
+		return 0.0;
 	}
 	else
 	{
-		return params.fixedPrecipitationValue;
+		return params.unitTimeSeries.Sample(time, params.precipitationTemporalInterpolationType);
 	}
 }
 
@@ -505,8 +654,11 @@ bool Simulate(ModelParameters const & params)
 	ConstructGlobalCapacitanceMatrix(params.useLumpedForm);
 	ConstructGlobalPsiMatrices(params.timeStep);
 
-	CacheManningCoefficients(params);
-	CacheSlopes(params);
+	if (!CacheManningCoefficients(params))
+		return false;
+	
+	if (!CacheSlopes(params))
+		return false;
 
 	//Set initial heads to zero (Dry conditions).
 	heads = Vector_f64(nodes.size());
