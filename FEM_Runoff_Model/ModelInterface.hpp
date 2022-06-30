@@ -43,6 +43,7 @@ extern std::unordered_map<int, Triangle> triangles;
 extern std::vector<Vector2D> nodes;
 extern std::vector<int> boundaryNodes;
 extern Vector2D nodesSW, nodesNE;
+extern size_t exitNode;
 
 bool GenerateMesh(std::string const & nodesPath);
 bool LoadTimeSeries(std::string const & path, TimeSeries & ts);
