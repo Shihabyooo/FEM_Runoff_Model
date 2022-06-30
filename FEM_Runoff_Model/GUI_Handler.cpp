@@ -118,10 +118,12 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 
 
 //char meshNodes[260] = "Mesh Nodes Coordinates File Path";
-char meshNodes[260] = "Test_Nodes_G.csv";
+//char meshNodes[260] = "Test_Nodes_G.csv";
+char meshNodes[260] = "Test_Data\\Grid_Nodes.csv";
 char demFilePath[260] = "DEM Raster Path";
 char precipRasterDir[260] = "Precipitation Rasters Directory Path";
-char percipTSPath[260] = "Precipitation Time-Series File Path";
+//char percipTSPath[260] = "Precipitation Time-Series File Path";
+char percipTSPath[260] = "Test_Data\\Test_Timeseries.csv";
 char manningFilePath[260] = "Manning Raster File Path";
 
 char fixedPrecipVal[24] = "";

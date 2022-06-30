@@ -427,6 +427,8 @@ void SetViewBounds(Vector2D swCorner, Vector2D nwCorner)
 
 	scale = delta.x / static_cast<double>(viewportDimensions.width);
 	worldAspectRatio = static_cast<double>(delta.x) / static_cast<double>(delta.y);
+
+	scaleChangeTicks = 0.1 * scale;
 }
 
 void UpdateCoordinateProjectionParameters()
