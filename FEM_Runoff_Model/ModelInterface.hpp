@@ -40,11 +40,12 @@ e.g. if mode = 0 (backwards difference), qx, qy and Pe at t+dt are unnecessary, 
 //Note: Rainfall is expected in mm, but the spatial units are meters (squared), so divide Pe by 1000 before multiplying with beta.
 
 extern std::unordered_map<int, Triangle> triangles;
+extern Triangle superTriangles[2];
 extern std::vector<Vector2D> nodes;
 extern std::vector<int> boundaryNodes;
 extern Vector2D nodesSW, nodesNE;
 extern size_t exitNode;
 
-bool GenerateMesh(std::string const & nodesPath);
+bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding);
 bool LoadTimeSeries(std::string const & path, TimeSeries & ts);
 bool Simulate(ModelParameters const & params);

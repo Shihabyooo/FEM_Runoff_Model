@@ -2,9 +2,12 @@
 #include "FileIO.hpp"
 #include "Solvers.hpp"
 
+//TODO add a cleanup method to clear the allocated memory (superTriangles, rasters) when program closes.
+
 //std::unordered_map<int, Triangle> triangles;
 //std::vector<Vector2> nodes;
 std::unordered_map<int, Triangle> triangles;
+Triangle superTriangles[2];
 std::vector<Vector2D> nodes;
 std::vector<int> boundaryNodes;
 Vector2D nodesSW, nodesNE;
@@ -38,7 +41,7 @@ void ComputeBoundingBox()
 				+ std::to_string(nodesNE.x) + ", " + std::to_string(nodesNE.y));
 }
 
-bool GenerateMesh(std::string const & nodesPath)
+bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding)
 {
 	LogMan::Log("Attempting to generate FEM mesh");
 
@@ -50,7 +53,7 @@ bool GenerateMesh(std::string const & nodesPath)
 		return false;
 
 	ComputeBoundingBox();
-	Triangulate(nodes, &triangles, &boundaryNodes);
+	Triangulate(nodes, superTrianglePadding, &triangles, &boundaryNodes, superTriangles);
 
 	//Validate Triangles
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)

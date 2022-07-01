@@ -26,24 +26,24 @@ std::unique_ptr<Vector2D[]> ComputeBoundingBox(std::vector<Vector2D> &nodesList)
 	return boundingBox;
 }
 
-void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, std::unordered_map<int, Triangle> * outTrianglesList)
+void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, double padding, std::unordered_map<int, Triangle> * outTrianglesList, Triangle * outSuperTriangles)
 {
 	LogMan::Log("Generating Super Triangle.");
 	auto boundingBox = ComputeBoundingBox(nodesList);
 
 	/*Vector2D dimensions = boundingBox[1] - boundingBox[0];
-	float boundHalfWidth = (dimensions.x / 2.0f) + SUPER_TRIANGLE_PADDING;
+	double padding = SUPER_TRIANGLE_PADDING * Max(dimensions.x, dimensions.y);*/
+	/*float boundHalfWidth = (dimensions.x / 2.0f) + SUPER_TRIANGLE_PADDING;
 	float boundHeight = dimensions.y + 2.0f * SUPER_TRIANGLE_PADDING;*/
 
-	Vector2D superVert1Pos(	boundingBox[1].x + SUPER_TRIANGLE_PADDING,
-							boundingBox[0].y - SUPER_TRIANGLE_PADDING);
-	Vector2D superVert2Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING,
-							boundingBox[1].y + SUPER_TRIANGLE_PADDING);
-	Vector2D superVert3Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING,
-							boundingBox[0].y - SUPER_TRIANGLE_PADDING);
-
-	Vector2D superVert4Pos(	boundingBox[1].x + SUPER_TRIANGLE_PADDING,
-							boundingBox[1].y + SUPER_TRIANGLE_PADDING);
+	Vector2D superVert1Pos(	boundingBox[1].x + padding,
+							boundingBox[0].y - padding);
+	Vector2D superVert2Pos(	boundingBox[0].x - padding,
+							boundingBox[1].y + padding);
+	Vector2D superVert3Pos(	boundingBox[0].x - padding,
+							boundingBox[0].y - padding);
+	Vector2D superVert4Pos(	boundingBox[1].x + padding,
+							boundingBox[1].y + padding);
 
 	nodesList.push_back(superVert1Pos);
 	nodesList.push_back(superVert2Pos);
@@ -55,9 +55,11 @@ void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, std::unordered_map<
 	extVerts[2] = nodesList.size() - 2;
 	extVerts[3] = nodesList.size() - 1;
 
-	outTrianglesList->insert({0, Triangle(0, extVerts[0],extVerts[1], extVerts[2], nodesList)});
-	outTrianglesList->insert({ 1, Triangle(1, extVerts[0],extVerts[1], extVerts[3], nodesList) });
+	outTrianglesList->insert({-1, Triangle(-1, extVerts[0],extVerts[1], extVerts[2], nodesList)});
+	outTrianglesList->insert({-2, Triangle(-2, extVerts[0],extVerts[1], extVerts[3], nodesList)});
 
+	outSuperTriangles[0] = Triangle(-1, extVerts[0], extVerts[1], extVerts[2], nodesList);
+	outSuperTriangles[1] = Triangle(-2, extVerts[0], extVerts[1], extVerts[3], nodesList);
 }
 
 void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & nodesList, std::vector<Triangle *> & trianglesToOptimize, std::unordered_map<int, Triangle> * trianglesList)
@@ -79,10 +81,20 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & node
 				{
 					int distantVertID = oldTri->second.GetThirdVertexID(sharedVertsIDs[0], sharedVertsIDs[1]); 
 
-					int newVerts1[3]{ pivotVertexID, distantVertID, testedTri->vertIDs[1] };
-					int newVerts2[3]{ pivotVertexID, distantVertID, testedTri->vertIDs[2] };
-					Vector2D newNodes1[3]{ nodesList[pivotVertexID], nodesList[distantVertID], nodesList[testedTri->vertIDs[1]]};
-					Vector2D newNodes2[3]{ nodesList[pivotVertexID], nodesList[distantVertID], nodesList[testedTri->vertIDs[2]] };
+					int newVerts1[3]{ pivotVertexID, distantVertID, sharedVertsIDs[0] };
+					int newVerts2[3]{ pivotVertexID, distantVertID, sharedVertsIDs[1] };
+
+					Vector2D newNodes1[3]{ nodesList[pivotVertexID], nodesList[distantVertID], nodesList[sharedVertsIDs[0]] };
+					Vector2D newNodes2[3]{ nodesList[pivotVertexID], nodesList[distantVertID], nodesList[sharedVertsIDs[1]] };
+
+					/*std::cout << "tested tris:\n";
+					testedTri->DebugPrintDetails();
+					oldTri->second.DebugPrintDetails();
+					std::cout << "pivot vert: " << pivotVertexID << std::endl;
+					std::cout << "distant vert: " << distantVertID << std::endl;
+					std::cout << "edgeverts: " << sharedVertsIDs[0] << ", " << sharedVertsIDs[1] << std::endl;
+					std::cout << "new Verts1: " << newVerts1[0] << ", " << newVerts1[1] << ", " << newVerts1[2] << std::endl;
+					std::cout << "new Verts2: " << newVerts2[0] << ", " << newVerts2[1] << ", " << newVerts2[2] << std::endl;*/
 
 					testedTri->UpdateGeometry(newVerts1, newNodes1);
 					oldTri->second.UpdateGeometry(newVerts2, newNodes2);
@@ -90,6 +102,19 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & node
 					//add those new two tris to trianglesToOptimize to test them with distant triangles.
 					trianglesToOptimize.push_back(testedTri);
 					trianglesToOptimize.push_back(&(oldTri->second));
+
+					////test
+					//if (!testedTri->Validate())
+					//{
+					//	std::cout << "!!!!!!!!!!!!!!!!!!Error at:";
+					//	testedTri->DebugPrintDetails();
+					//}
+					//if (!oldTri->second.Validate())
+					//{
+					//	std::cout << "!!!!!!!!!!!!!!!!!!Error at:";
+					//	oldTri->second.DebugPrintDetails();
+					//}
+					////endtest
 				}
 				break; //stop testing neighbours move on to the next tested triangle.
 			}
@@ -171,7 +196,23 @@ std::vector<int> * RemoveExteriorTriangles(std::unordered_map<int, Triangle> * t
 	return outerNodes;
 }
 
-bool Triangulate(std::vector<Vector2D> nodesList, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes)
+void OptimizeAll(std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * triangles)
+{
+	LogMan::Log("Global Optimization run");
+
+	for (int i = 0; i < nodesList.size() - 4; i++)
+	{
+		std::vector<Triangle *> toOptimize;
+		for (auto it = triangles->begin(); it != triangles->end(); ++it)
+		{
+			if (it->second.ContainsVertex(i))
+				toOptimize.push_back(&(it->second));
+		}
+		OptimizeTriangulation(i, nodesList, toOptimize, triangles);
+	}
+}
+
+bool Triangulate(std::vector<Vector2D> nodesList, double superTrianglePadding, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes, Triangle * outSuperTriangles)
 {
 	//check if nodesList has enough elements, else return false.
 	//compute bounding box
@@ -190,17 +231,19 @@ bool Triangulate(std::vector<Vector2D> nodesList, std::unordered_map<int, Triang
 	}
 
 	LogMan::Log("Starting triangulation!");
-	lastID = 1;
+	lastID = 0;
 	failedPoints.clear();
-	GenerateSuperTriangle(nodesList, outTrianglesList);
+	GenerateSuperTriangle(nodesList, superTrianglePadding, outTrianglesList, outSuperTriangles);
 
-	int nodeCount = nodesList.size() - 3; //actual count, excluding ghost nodes of superTriangle
+	int nodeCount = nodesList.size() - 4; //actual count, excluding ghost nodes of superTriangle
 
 	//first pass
 	LogMan::Log("First pass");
 	for (int i = 0; i < nodeCount; i++)
+	{
+		//LogMan::Log("At node: " + std::to_string(i));
 		DelauneyTriangulation(i, nodesList, outTrianglesList);
-
+	}
 
 	//second pass	
 	LogMan::Log("Second pass");
@@ -208,6 +251,7 @@ bool Triangulate(std::vector<Vector2D> nodesList, std::unordered_map<int, Triang
 	srand(time(0));
 	for (auto it = failedPoints.begin(); it != failedPoints.end(); ++it)
 	{
+		//LogMan::Log("At node: " + std::to_string(*it));
 		//add some jitter to ths point
 		nodesList[*it].x += nodesList[*it].x * static_cast<double>(rand() % 10) * 0.00001 * pow(-1.0, rand() % 2);
 		srand(nodesList[*it].y);
@@ -215,13 +259,9 @@ bool Triangulate(std::vector<Vector2D> nodesList, std::unordered_map<int, Triang
 		//triangulate
 		DelauneyTriangulation(*it, nodesList, outTrianglesList, false);
 	}
-
+	
+	OptimizeAll(nodesList, outTrianglesList);
 	outBoundaryNodes = RemoveExteriorTriangles(outTrianglesList);
-
-	////remove added points
-	//nodesList.pop_back();
-	//nodesList.pop_back();
-	//nodesList.pop_back();
 
 	LogMan::Log("Finished triangulation!", LOG_SUCCESS);
 	return true;

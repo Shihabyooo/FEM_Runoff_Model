@@ -429,14 +429,24 @@ static int Clamp(int const & a, int const & b, int const & c)
 	return (a > max ? max : (a < min ? min : a));
 }
 
-static inline void Print(Vector2 const & vec)
+static inline void Print(Vector2 const & vec, bool sameLine = false)
 {
-	std::cout << vec.x << ", " << vec.y << "\n";
+	std::cout << vec.x << ", " << vec.y;
+	
+	if (sameLine)
+		std::cout << " ";
+	else
+		std::cout << "\n";
 }
 
-static inline void Print(Vector2D const & vec)
+static inline void Print(Vector2D const & vec, bool sameLine = false)
 {
-	std::cout << vec.x << ", " << vec.y << "\n";
+	std::cout << vec.x << ", " << vec.y;
+
+	if (sameLine)
+		std::cout << " ";
+	else
+		std::cout << "\n";
 }
 
 //Projection, Coordinate transformations and interpolation

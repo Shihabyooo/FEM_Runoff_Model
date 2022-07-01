@@ -6,10 +6,13 @@
 class Triangle
 {
 public:
+	Triangle();
 	Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2D> const & nodesList);
 	Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, Vector2D const & node1, Vector2D const & node2, Vector2D const & node3);
 	Triangle(int _id, int const vertexIDs[3], Vector2D const _nodes[3]);
 	~Triangle();
+
+	Triangle & operator= (Triangle const & tri2);
 
 	void Subdivide(int centroidID, Vector2D centroidPos, int baseTriangleID, std::vector<Triangle> & outNewTriangles) const;
 	bool ContainsPoint(Vector2D const &point) const;

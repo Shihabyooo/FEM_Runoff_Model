@@ -1,6 +1,10 @@
 #include "Triangle.hpp"
 #include <MatricesPP.hpp>
 
+Triangle::Triangle()
+{
+}
+
 Triangle::Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2D> const & nodesList)
 {
 	id = _id;
@@ -21,6 +25,21 @@ Triangle::Triangle(int _id, int const vertexIDs[3], Vector2D const _nodes[3])
 
 Triangle::~Triangle()
 {
+}
+
+Triangle & Triangle::operator=(Triangle const & tri2)
+{
+	id = tri2.id;
+	area = tri2.area;
+	vertIDs[0] = tri2.vertIDs[0];
+	vertIDs[1] = tri2.vertIDs[1];
+	vertIDs[2] = tri2.vertIDs[2];
+
+	nodes[0] = tri2.nodes[0];
+	nodes[1] = tri2.nodes[1];
+	nodes[2] = tri2.nodes[2];
+
+	return *this;
 }
 
 void Triangle::Subdivide(int centroidID, Vector2D centroidPos, int baseTriangleID, std::vector<Triangle> & outNewTriangles) const
@@ -196,7 +215,13 @@ bool Triangle::Validate()
 
 void Triangle::DebugPrintDetails()
 {
-	std::cout << "-ID: " << id << ".  \tVerts: " << vertIDs[0] << ", " << vertIDs[1] << ", " << vertIDs[2] << std::endl;
+	std::cout << "-ID: " << id << ".  \tVerts: " << vertIDs[0] << ", " << vertIDs[1] << ", " << vertIDs[2] << " - nodes: ";
+	Print(nodes[0], true);
+	std::cout << " | ";
+	Print(nodes[1], true);
+	std::cout << " | ";
+	Print(nodes[1], true);
+	std::cout << std::endl;
 }
 
 double Triangle::Determinant(Vector2D const & a, Vector2D const & b) const

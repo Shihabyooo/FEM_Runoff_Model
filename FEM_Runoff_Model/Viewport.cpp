@@ -16,7 +16,7 @@ int renderTrisIndicesCount = 0;
 std::unordered_map <int, Layer>  layers;
 Shader triangleShader, pointShader, lineShader;
 //Shader testSuperTriShader;
-float superTriMeshVerts[9];
+float superTriMeshVerts[18];
 
 Vector2D lastViewportSize;
 Vector2D viewBounds[2];
@@ -238,10 +238,10 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 		SetActiveShaderDiffuse(COLOUR_GREEN);
 		glBindVertexArray(layers[10].meshData.vertexArrayObject);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, layers[10].meshData.vertexArrayElementObject);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Wireframe only
 		SetActiveShaderDiffuse(COLOUR_BLACK);
-		glDrawArrays(GL_TRIANGLES, 0, 3); //stupid solution to draw line on top of tri.
+		glDrawArrays(GL_TRIANGLES, 0, 6); //stupid solution to draw line on top of tri.
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //return to normal filled render mode.
 	}
 
@@ -488,18 +488,11 @@ void TestUpdateSuperTriangle()
 	if (nodes.size() < 2)
 		return;
 
-	Vector2D diff = nodesNE - nodesSW;
-	float boundHalfWidth = (diff.x / 2.0f) + SUPER_TRIANGLE_PADDING;
-	float boundHeight = diff.y + 2.0f * SUPER_TRIANGLE_PADDING;
-	Vector2D superVerts[3]{	Vector2D(nodesSW.x - SUPER_TRIANGLE_PADDING + boundHalfWidth,
-									nodesNE.y + SUPER_TRIANGLE_PADDING + boundHeight),
-							Vector2D(nodesSW.x - SUPER_TRIANGLE_PADDING - boundHalfWidth,
-									nodesSW.y - SUPER_TRIANGLE_PADDING),
-							Vector2D(nodesNE.x + SUPER_TRIANGLE_PADDING + boundHalfWidth,
-									nodesSW.y - SUPER_TRIANGLE_PADDING) };
+	Vector2D superVerts[6]{ superTriangles[0].nodes[0], superTriangles[0].nodes[1], superTriangles[0].nodes[2],
+							superTriangles[1].nodes[0], superTriangles[1].nodes[1], superTriangles[1].nodes[2]};
 
 	int counter = 0;
-	for (int i = 0; i < 9; i += 3)
+	for (int i = 0; i < 18; i += 3)
 	{
 		Vector2D relativePos = NormalizeCoordinates(superVerts[counter]);
 
@@ -510,6 +503,6 @@ void TestUpdateSuperTriangle()
 		counter++;
 	}
 
-	SetupMesh(&(layers[10].meshData), superTriMeshVerts, 9, NULL, 0);
+	SetupMesh(&(layers[10].meshData), superTriMeshVerts, 18, NULL, 0);
 	GLErrorCheck();
 }

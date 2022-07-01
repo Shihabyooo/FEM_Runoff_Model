@@ -131,6 +131,8 @@ char precipRasterDir[260] = "Precipitation Rasters Directory Path";
 char percipTSPath[260] = "Test_Data\\Test_Timeseries.csv";
 char manningFilePath[260] = "Manning Raster File Path";
 
+char superTriPadding[24] = "1.0";
+
 int timeSeriesSize = 3;
 TimeSeries inputTS;
 
@@ -236,11 +238,16 @@ void DrawLeftPane()
 			//TODO spawn file browser here
 		}
 		
-		ImGui::NewLine();
+		//ImGui::NewLine();
+		ImGui::PushItemWidth(-1);
+		ImGui::Text("SuperTriangle padding");
+		ImGui::SameLine();
+		ImGui::InputText("##superTriPad", superTriPadding, 24, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::PopItemWidth();
 
 		if (ImGui::Button("Generate Mesh", ImVec2(100, 50)))
 		{
-			GenerateMesh(meshNodes);
+			GenerateMesh(meshNodes, atof(superTriPadding));
 			SetViewBounds(nodesSW, nodesNE);
 			UpdateViewport();
 		}
