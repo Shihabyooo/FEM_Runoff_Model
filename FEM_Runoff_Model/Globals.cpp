@@ -611,7 +611,7 @@ double TimeSeries::Sample(double timeSinceStart, InterpolationType interpolation
 		return 0.0;
 
 	size_t upperBound = size - 1;
-	for (size_t i = 0; i < size; i++)
+	for (size_t i = 1; i < size; i++)
 	{
 		if (series[i].first >= timeSinceStart)
 		{

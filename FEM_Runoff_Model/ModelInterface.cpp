@@ -226,11 +226,11 @@ bool LoadInputRasters(ModelParameters const & params)
 	bool status = true;
 
 	//status = status && FileIO::LoadRaster(params.demPath, &demID, dem);
-	status = status && FileIO::LoadRaster(params.slopesPath, &slopesID, slopes);
-	status = status && FileIO::LoadRaster(params.fdrPath, &fdrID, fdr);
+	status = status && FileIO::LoadRaster(params.slopesPath, &slopesID, (void const **) &slopes);
+	status = status && FileIO::LoadRaster(params.fdrPath, &fdrID, (void const **) &fdr);
 
 	if (params.variableManningCoefficients)
-		status = status && FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID, manningRaster);
+		status = status && FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID, (void const **) &manningRaster);
 
 	if (!status) //error already logged with the function calls above.
 	{
@@ -408,8 +408,10 @@ std::vector<std::pair<Vector2Int, double>> * SampleCoveredPixels(Triangle const 
 	double ** tiePoints = NULL;
 	double * pixelScale = NULL;
 	bool isUTM;
+	Vector2Int dimensions;
+	int samples;
 
-	if (!FileIO::GetRasterMappingParameters(rasterID, isUTM, tiePoints, pixelScale))
+	if (!FileIO::GetRasterMappingParameters(rasterID, dimensions, samples, isUTM, &tiePoints, &pixelScale))
 	{
 		//Error already logged in GetRasterMappingParameters();
 		//LogMan::Log("ERROR! At loading raster mapping parameters", LOG_ERROR);
@@ -419,14 +421,14 @@ std::vector<std::pair<Vector2Int, double>> * SampleCoveredPixels(Triangle const 
 
 	std::vector<std::pair<Vector2Int, double>> * pixelValues = new std::vector<std::pair<Vector2Int, double>>();
 
-	for (size_t i = 0; i < raster->Rows(); i++)
-		for (size_t j = 0; j < raster->Columns(); j++)
+	for (size_t row = 0; row < raster->Rows(); row++)
+		for (size_t column = 0; column < raster->Columns(); column++)
 		{
-			Vector2D pixelPos(tiePoints[1][0] + j * pixelScale[0],
-				tiePoints[1][1] - i * pixelScale[1]);
+			Vector2D pixelPos(tiePoints[1][0] + column * pixelScale[0],
+				tiePoints[1][1] - row * pixelScale[1]);
 
-			if (element.ContainsPoint(pixelPos))
-				pixelValues->push_back(std::pair< Vector2Int, double >(Vector2Int(i, j), raster->GetValue(i, j)));
+			if (element.ContainsPoint(pixelPos) && !isnan(raster->GetValue(row, column)))
+				pixelValues->push_back(std::pair< Vector2Int, double >(Vector2Int(column, row), raster->GetValue(row, column)));
 		}
 
 	//There could be a case where element is small that it fits inside a pixel but not cover it's centre.
@@ -434,24 +436,27 @@ std::vector<std::pair<Vector2Int, double>> * SampleCoveredPixels(Triangle const 
 	{
 		//In this case, simply compute the centroid (average of ndoes), and find pixel that contains centroid, return its value
 		Vector2D centroid = element.Centroid();
-		size_t row, column;
+		size_t _row, _column;
 		double minDist = DBL_MAX;
 
-		for (size_t i = 0; i < raster->Rows(); i++)
-			for (size_t j = 0; j < raster->Columns(); j++)
+		for (size_t row = 0; row < raster->Rows(); row++)
+			for (size_t column = 0; column < raster->Columns(); column++)
 			{
-				Vector2D pixelPos(tiePoints[1][0] + j * pixelScale[0],
-					tiePoints[1][1] - i * pixelScale[1]);
+				Vector2D pixelPos(tiePoints[1][0] + column * pixelScale[0],
+					tiePoints[1][1] - row * pixelScale[1]);
 
 				double distanceToCentroid = pixelPos.DistanceTo(centroid);
 				if (distanceToCentroid < minDist)
 				{
-					row = i;
-					column = j;
+					_row = row;
+					_column = column;
 				}
 			}
 		
-		pixelValues->push_back(std::pair< Vector2Int, double >(Vector2Int(row, column), raster->GetValue(row, column)));
+		if (isnan(raster->GetValue(_row, _column)))
+			return NULL;
+
+		pixelValues->push_back(std::pair< Vector2Int, double >(Vector2Int(_column, _row), raster->GetValue(_row, _column)));
 	}
 
 	return pixelValues;
@@ -549,14 +554,14 @@ bool CacheSlopes(ModelParameters const & params)
 			}
 		}
 
-		it->second.slopeX = sumX / static_cast<double>(slopePixels->size());
-		it->second.slopeY = sumY / static_cast<double>(slopePixels->size());
+		it->second.slopeX = sumX / static_cast<double>(slopePixels->size()) / 100.0;
+		it->second.slopeY = sumY / static_cast<double>(slopePixels->size()) / 100.0;
 		
 		delete fdrPixels;
 		delete slopePixels;
 	}
 
-	return false;
+	return true;
 }
 
 double GetCurrentPrecipitation(double time, ModelParameters const & params, Triangle const & triangle) //current impl doesn't need triangle, but later it would.
@@ -588,8 +593,8 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
 		int const * vert = it->second.vertIDs; //to simplify lines bellow.
-		double newPrecipitation = GetCurrentPrecipitation(time, params, it->second);
-		double elementContrib = it->second.area / 3.0 * (( 1 - params.femOmega) * it->second.elementPrecipitation + params.femOmega * newPrecipitation);
+		double newPrecipitation = GetCurrentPrecipitation(time + params.timeStep, params, it->second);
+		double elementContrib = (it->second.area / 3.0) * (( 1.0 - params.femOmega) * it->second.elementPrecipitation + params.femOmega * newPrecipitation);
 		elementContrib *= params.timeStep;
 		it->second.elementPrecipitation = newPrecipitation;
 
@@ -660,6 +665,34 @@ bool Simulate(ModelParameters const & params)
 	if (!CacheSlopes(params))
 		return false;
 
+	//test
+	std::cout << "\n===================================================\n";
+	std::cout << "Global Capacitance\n";
+	std::cout << "\n===================================================\n";
+	globalC.DisplayOnCLI();
+
+	std::cout << "\n===================================================\n";
+	std::cout << "Global Psi-x\n";
+	std::cout << "\n===================================================\n";
+	globalPsiX.DisplayOnCLI();
+
+	std::cout << "\n===================================================\n";
+	std::cout << "Global Psi-x\n";
+	std::cout << "\n===================================================\n";
+	globalPsiY.DisplayOnCLI();
+	
+	std::cout << "\n===================================================\n";
+	std::cout << "Triangle data\n";
+	std::cout << "\n===================================================\n";
+	
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		std::cout << it->second.id << " -- area: " << it->second.area << ", slopeX: " << it->second.slopeX << ", slopeY: " << it->second.slopeY << std::endl;
+	}
+	
+	//return false;
+	//end test
+
 	//Set initial heads to zero (Dry conditions).
 	heads = Vector_f64(nodes.size());
 
@@ -693,6 +726,11 @@ bool Simulate(ModelParameters const & params)
 			Vector_f64 RHS;
 			ComputeRHSVector(time, params, heads, newHeads, RHS);
 
+			std::cout << "\n===================================================\n";
+			std::cout << "RHS\n";
+			std::cout << "\n===================================================\n";
+			RHS.DisplayOnCLI();
+
 			//Adjust RHS for boundary cond
 			for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 			{
@@ -703,7 +741,11 @@ bool Simulate(ModelParameters const & params)
 			Vector_f64 residuals; //needed by solver
 			Vector_f64 fixedNewH;
 
-			Solve(adjustedGlobalC, RHS, fixedNewH, residuals, params);
+			if (!Solve(adjustedGlobalC, RHS, fixedNewH, residuals, params))
+			{
+				LogMan::Log("ERROR! Internal solver error.", LOG_ERROR);
+				return false;
+			}
 
 			if ((newHeads - fixedNewH).Magnitude() <= params.internalResidualTreshold)
 			{

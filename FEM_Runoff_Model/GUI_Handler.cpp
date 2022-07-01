@@ -156,7 +156,7 @@ int selectedTopoInterp = 1;
 int selectedTimeUnit = 2;
 int selectedSolver = 0;
 
-char solverResidual[12] = "0.01";
+char solverResidual[12] = "0.001";
 char solverWeight[12] = "1.0";
 int solverMaxIteration = 1000;
 
@@ -169,7 +169,7 @@ void FillParametersStruct(ModelParameters & params)
 	params.slopesPath = slopeFilePath;
 	params.fdrPath = fdrFilePath;
 	params.topographySamplingMethod = static_cast<InterpolationType>(selectedTopoInterp);
-	params.variablePrecipitation = selectedPrecipInput == 0;
+	params.variablePrecipitation = selectedPrecipInput == 1;
 
 	//params.unitTimeSeries = ; 
 	params.precipitationTemporalInterpolationType = static_cast<InterpolationType>(selectedPrecipTempoInterp);
