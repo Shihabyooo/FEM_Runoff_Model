@@ -81,7 +81,7 @@ bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts
 	
 	bool isInternal = true;
 
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 4; i++)
 		isInternal = isInternal && !ContainsVertex(externalVertices[i]);
 	
 

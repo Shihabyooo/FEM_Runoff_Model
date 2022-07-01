@@ -1,9 +1,11 @@
 #include <string>
+#include <chrono>
 #include "DelauneyTriangulation.hpp"
 
-
-int extVerts[3];//cached external vertices.
+//int extVerts[3];//cached external vertices.
+int extVerts[4];//cached external vertices.
 int lastID = 0;
+std::vector<int> failedPoints; //to hold points that failed to triangulate on first pass.
 
 std::unique_ptr<Vector2D[]> ComputeBoundingBox(std::vector<Vector2D> &nodesList) //SW then NE corner
 {	//TODO replace this with a global func (since it's also computed in ModelInterface and required in several places).
@@ -29,26 +31,33 @@ void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, std::unordered_map<
 	LogMan::Log("Generating Super Triangle.");
 	auto boundingBox = ComputeBoundingBox(nodesList);
 
-	Vector2D dimensions = boundingBox[1] - boundingBox[0];
+	/*Vector2D dimensions = boundingBox[1] - boundingBox[0];
 	float boundHalfWidth = (dimensions.x / 2.0f) + SUPER_TRIANGLE_PADDING;
-	float boundHeight = dimensions.y + 2.0f * SUPER_TRIANGLE_PADDING;
+	float boundHeight = dimensions.y + 2.0f * SUPER_TRIANGLE_PADDING;*/
 
-	Vector2D superVert1Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING + boundHalfWidth,
-							boundingBox[1].y + SUPER_TRIANGLE_PADDING + boundHeight);
-	Vector2D superVert2Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING - boundHalfWidth,
+	Vector2D superVert1Pos(	boundingBox[1].x + SUPER_TRIANGLE_PADDING,
 							boundingBox[0].y - SUPER_TRIANGLE_PADDING);
-	Vector2D superVert3Pos(	boundingBox[1].x + SUPER_TRIANGLE_PADDING + boundHalfWidth,
+	Vector2D superVert2Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING,
+							boundingBox[1].y + SUPER_TRIANGLE_PADDING);
+	Vector2D superVert3Pos(	boundingBox[0].x - SUPER_TRIANGLE_PADDING,
 							boundingBox[0].y - SUPER_TRIANGLE_PADDING);
+
+	Vector2D superVert4Pos(	boundingBox[1].x + SUPER_TRIANGLE_PADDING,
+							boundingBox[1].y + SUPER_TRIANGLE_PADDING);
 
 	nodesList.push_back(superVert1Pos);
 	nodesList.push_back(superVert2Pos);
 	nodesList.push_back(superVert3Pos);
+	nodesList.push_back(superVert4Pos);
 
-	extVerts[0] = nodesList.size() - 3;
-	extVerts[1] = nodesList.size() - 2;
-	extVerts[2] = nodesList.size() - 1;
+	extVerts[0] = nodesList.size() - 4;
+	extVerts[1] = nodesList.size() - 3;
+	extVerts[2] = nodesList.size() - 2;
+	extVerts[3] = nodesList.size() - 1;
 
 	outTrianglesList->insert({0, Triangle(0, extVerts[0],extVerts[1], extVerts[2], nodesList)});
+	outTrianglesList->insert({ 1, Triangle(1, extVerts[0],extVerts[1], extVerts[3], nodesList) });
+
 }
 
 void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & nodesList, std::vector<Triangle *> & trianglesToOptimize, std::unordered_map<int, Triangle> * trianglesList)
@@ -90,7 +99,7 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & node
 	delete[] sharedVertsIDs;
 }
 
-void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * trianglesList)
+void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * trianglesList, bool firstPass = true)
 {
 	for (auto it = trianglesList->begin(); it != trianglesList->end(); ++it)
 	{
@@ -126,6 +135,9 @@ void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList
 		}
 	}
 	LogMan::Log("Could not fit point " + std::to_string(vertexID) + " in a mesh. Colinear point?", LOG_WARN);
+	
+	if (firstPass)
+		failedPoints.push_back(vertexID);
 }
 
 std::vector<int> * RemoveExteriorTriangles(std::unordered_map<int, Triangle> * trianglesList) //returns a list of exterior nodes within the mesh
@@ -178,17 +190,39 @@ bool Triangulate(std::vector<Vector2D> nodesList, std::unordered_map<int, Triang
 	}
 
 	LogMan::Log("Starting triangulation!");
-	lastID = 0;
-
+	lastID = 1;
+	failedPoints.clear();
 	GenerateSuperTriangle(nodesList, outTrianglesList);
 
 	int nodeCount = nodesList.size() - 3; //actual count, excluding ghost nodes of superTriangle
 
+	//first pass
+	LogMan::Log("First pass");
 	for (int i = 0; i < nodeCount; i++)
 		DelauneyTriangulation(i, nodesList, outTrianglesList);
-	
+
+
+	//second pass	
+	LogMan::Log("Second pass");
+	//loop over failed points
+	srand(time(0));
+	for (auto it = failedPoints.begin(); it != failedPoints.end(); ++it)
+	{
+		//add some jitter to ths point
+		nodesList[*it].x += nodesList[*it].x * static_cast<double>(rand() % 10) * 0.00001 * pow(-1.0, rand() % 2);
+		srand(nodesList[*it].y);
+		nodesList[*it].y += nodesList[*it].y * static_cast<double>(rand() % 10) * 0.00001 * pow(-1.0, rand() % 2);
+		//triangulate
+		DelauneyTriangulation(*it, nodesList, outTrianglesList, false);
+	}
+
 	outBoundaryNodes = RemoveExteriorTriangles(outTrianglesList);
-	
+
+	////remove added points
+	//nodesList.pop_back();
+	//nodesList.pop_back();
+	//nodesList.pop_back();
+
 	LogMan::Log("Finished triangulation!", LOG_SUCCESS);
 	return true;
 }

@@ -9,6 +9,6 @@
 #include "LogManager.hpp"
 
 #define MIN_NODES_TO_TRIANGULATE 3
-#define SUPER_TRIANGLE_PADDING 1.0f
+#define SUPER_TRIANGLE_PADDING 10.0f
 
 bool Triangulate(std::vector<Vector2D> nodesList, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes); //Taking a copy of the nodes so I can modify it with the super tri points.
