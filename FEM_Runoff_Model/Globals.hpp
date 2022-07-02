@@ -290,7 +290,7 @@ public:
 	bool IsValid() const;
 	void AdjustSize(size_t newSize);
 	double HoursToLocalUnits(double time) const;
-	double Sample(double timeSinceStart, InterpolationType interpolationType) const; //timeSinceStart in hours 
+	double SampleRate(double timeSinceStart) const;// , double timeSpan, InterpolationType interpolationType) const; //timeSinceStart in hours. Returns rate as mm/hr
 
 	size_t size = 0;
 	TimeUnit timeUnit = TimeUnit::hour;

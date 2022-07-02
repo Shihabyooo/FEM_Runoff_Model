@@ -108,7 +108,7 @@ bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			if (vertIDs[i] != externalVertices[0] && vertIDs[i] != externalVertices[1] && vertIDs[i] != externalVertices[2])
+			if (vertIDs[i] != externalVertices[0] && vertIDs[i] != externalVertices[1] && vertIDs[i] != externalVertices[2] && vertIDs[i] != externalVertices[3])
 			{
 				outMeshEdgeVerts[*outMeshEdgeContribCount] = vertIDs[i];
 				(*outMeshEdgeContribCount)++;

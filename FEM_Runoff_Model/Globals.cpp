@@ -602,48 +602,54 @@ double TimeSeries::HoursToLocalUnits(double time) const
 	}
 }
 
-double TimeSeries::Sample(double timeSinceStart, InterpolationType interpolationType) const
+double TimeSeries::SampleRate(double timeSinceStart) const//, double timeSpan, InterpolationType interpolationType) const
 {
-	//convert timeSinceStart (in hours) to TS units
-	timeSinceStart = HoursToLocalUnits(timeSinceStart);
+	//Simplest way to convert incremental time-series to rate is to assume it constant between intervals, then divide by interval duration.
+	//e.g., for a ts of (0, 0.0), (5, 10.0), (10, 15.0), (15, 5.0), the rate in first interval is (10 / (5 - 0)) = 2 mm/hr.
+	//TODO Research better ways to address this.
 
-	if (timeSinceStart > series[size - 1].first || timeSinceStart < 0.0)
+	//convert timeSinceStart (in hours) to TS units
+	double adjustedTimeSinceStart = HoursToLocalUnits(timeSinceStart);
+
+	if (adjustedTimeSinceStart > series[size - 1].first || timeSinceStart < 0.0)
 		return 0.0;
 
 	size_t upperBound = size - 1;
 	for (size_t i = 1; i < size; i++)
 	{
-		if (series[i].first >= timeSinceStart)
+		if (series[i].first >= adjustedTimeSinceStart)
 		{
 			upperBound = i;
 			break;
 		}
 	}
 
-	double relativePosition = (timeSinceStart - series[upperBound - 1].first) / (series[upperBound].first - series[upperBound - 1].first);
+	return HoursToLocalUnits(1.0) * series[upperBound].second / static_cast<double>(series[upperBound].first - series[upperBound - 1].first);
 
-	switch (interpolationType)	
-	{
-	case InterpolationType::nearest:
-		return relativePosition < 0.5 ? 0.0 : series[upperBound].second;
-	case InterpolationType::linear:
-	{
-		double bounds[2];
-		bounds[0] = 0.0;
-		bounds[1] = series[upperBound].second;
-		return LinearInterpolationNormalized(relativePosition, bounds);
-	}
-	case InterpolationType::cubic:
-	{
-		double bounds[4];
-		bounds[0] = bounds[1] = 0.0;
-		bounds[2] = series[upperBound].second;
-		bounds[3] = upperBound == size - 1 ? series[upperBound].second : series[upperBound + 1].second;
-		return CubicInterpolationNormalized(relativePosition, bounds);
-	}
-	default: //shouldn't happen
-		return 0.0;
-	}
+	//double relativePosition = (timeSinceStart - series[upperBound - 1].first) / (series[upperBound].first - series[upperBound - 1].first);
+	//
+	//switch (interpolationType)	
+	//{
+	//case InterpolationType::nearest:
+	//	return relativePosition < 0.5 ? 0.0 : series[upperBound].second;
+	//case InterpolationType::linear:
+	//{
+	//	double bounds[2];
+	//	bounds[0] = 0.0;
+	//	bounds[1] = series[upperBound].second;
+	//	return LinearInterpolationNormalized(relativePosition, bounds);
+	//}
+	//case InterpolationType::cubic:
+	//{
+	//	double bounds[4];
+	//	bounds[0] = bounds[1] = 0.0;
+	//	bounds[2] = series[upperBound].second;
+	//	bounds[3] = upperBound == size - 1 ? series[upperBound].second : series[upperBound + 1].second;
+	//	return CubicInterpolationNormalized(relativePosition, bounds);
+	//}
+	//default: //shouldn't happen
+	//	return 0.0;
+	//}
 }
 
 #pragma endregion

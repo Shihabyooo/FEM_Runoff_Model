@@ -155,7 +155,7 @@ int selectedPrecipInput = 0;
 int selectedPrecipTempoInterp = 1;
 int selectedPrecipSpaceInterp = 1;
 int selectedTopoInterp = 1;
-int selectedTimeUnit = 2;
+int selectedTimeUnit = 1;
 int selectedSolver = 0;
 
 char solverResidual[12] = "0.001";

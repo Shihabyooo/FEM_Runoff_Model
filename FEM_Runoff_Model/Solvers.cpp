@@ -95,7 +95,7 @@ bool Gaussian(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64
 
 bool SolverJacobi(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double weight,  double threshold, size_t maxIterations)
 {
-	LogMan::Log("Using Jacobi solver.");
+	//LogMan::Log("Using Jacobi solver.");
 
 	if (!CheckSystem(aMatrix, bVector))
 		return false;
@@ -127,7 +127,7 @@ bool SolverJacobi(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector
 		ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
 		if (outResiduals.Magnitude() <= threshold)
 		{
-			LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
+			//LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
 			return true;
 		}
 		tempX = outXVector;
@@ -139,7 +139,7 @@ bool SolverJacobi(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector
 
 bool SolverSOR(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double weight, double threshold, size_t maxIterations)
 {
-	LogMan::Log("Using Succesive Over-Relaxation solver.");
+	//LogMan::Log("Using Succesive Over-Relaxation solver.");
 
 	if (!CheckSystem(aMatrix, bVector))
 		return false;
@@ -171,7 +171,7 @@ bool SolverSOR(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f6
 		ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
 		if (outResiduals.Magnitude() <= threshold)
 		{
-			LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
+			//LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
 			return true;
 		}
 	}

@@ -1,125 +1,59 @@
 #include "Main.hpp"
 #include "LogManager.hpp"
 
-#include "Solvers.hpp" //only needed for testing
-#include <chrono> //ditto
+#include "ModelInterface.hpp" //for testing only
 
-#define NOW std::chrono::high_resolution_clock::now()
-#define TIME std::chrono::high_resolution_clock::time_point
-#define DURATION_SINCE(x) std::chrono::duration_cast<std::chrono::milliseconds>(NOW - x).count()
-
-//Ax = b
-Matrix_f64 testA;
-Vector_f64 testB;
-Vector_f64 testR, testX;
-int size = 100;
-int modulus = 100;
-
-void GenerateTestSystem(bool isSymmetric, bool isDiagDominant)
+ModelParameters ModelTestParams()
 {
-	testA = Matrix_f64(size, size);
-	testB = Vector_f64(size);
-	//testR and testX are set by solver.
-	srand(time(0));
-	double tempVal1;
-	
-	tempVal1 = testA[0][1] = rand() % modulus;
-	testA[0][0] = testA[0][1] + 1;
-	/*testA[0][0] = 2.5f;
-	testA[0][1] = 1.0f;*/
+	ModelParameters params;
 
-	testB[0] = rand() % modulus;
-	
-	for (int i = 1; i < size - 1; i++)
-	{
-		testB[i] = rand() % modulus;
+	params.demPath = "";
+	params.slopesPath = "Test_Data\\Slope_Percent.tif";
+	params.fdrPath = "Test_Data\\FDR.tif";
+	params.topographySamplingMethod = InterpolationType::linear;
 
-		if (isSymmetric)
-			testA[i][i - 1] = tempVal1;
-		else
-			//testA[i][i - 1] = rand() % modulus;
-			testA[i][i - 1] = 1.6f;
-		
-		//tempVal1 = testA[i][i + 1] = rand() % modulus;
-		tempVal1 = testA[i][i + 1] = 10.0f;
+	params.variablePrecipitation = false;
+	params.unitTimeSeries;
+	LoadTimeSeries("Test_Data\\Test_Timeseries.csv", params.unitTimeSeries);
+	params.unitTimeSeries.timeUnit = TimeUnit::minute;
+	params.precipitationTemporalInterpolationType = InterpolationType::linear;
+	params.precipitationSpatialInterpolationType = InterpolationType::nearest;
 
-		if (isDiagDominant)
-			testA[i][i] = testA[i][i - 1] + testA[i][i + 1] + rand() % modulus;
-		else
-			testA[i][i] = rand() % modulus;
+	params.variableManningCoefficients = false;
+	params.fixedManningCoeffient = 0.002; //must be positive value > 0.0
+	params.manningCoefficientRasterPath = "";
+	params.timeStep = 0.5; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
+	params.startTime = 0.0; //should be left at 0.0
+	params.endTime = 15.0f; //hours after startTime to end simulation.
 
-	
-		/*testA[i][i - 1] = 1.0f;
-		testA[i][i] = 2.5f;
-		testA[i][i + 1] = 1.0f;*/
-	}
+	params.useLumpedForm = true;
+	params.femOmega = 0.5;
+	params.solverType = Solver::Auto;
+	params.residualThreshold = 0.00001;
+	params.weight = 1.0;
+	params.maxIterations = 1000;
+	params.internalResidualTreshold = 0.0001;
+	params.maxInternalIterations = 100;
 
-	testA[size - 1][size - 2] = tempVal1;
-	testA[size - 1][size - 1] = rand() % modulus;
-	/*testA[size - 1][size - 2] = 1.0f;
-	testA[size - 1][size - 1] = 2.5f;*/
-	
-	testB[size - 1] = rand() % modulus;
-
-	//testA.DisplayArrayInCLI(1);
-	//testB.DisplayArrayInCLI(1);
-}
-
-void SolverTest()
-{
-	TIME start;
-	long time;
-
-	for (int i = 0; i < 10; i++)
-	{
-		std::cout << "\n================================================\n";
-		std::cout << "Test iteration: " << i << std::endl;
-		std::cout << "\================================================\n";
-		GenerateTestSystem(true, true);
-
-		//start = NOW;
-		//SolverSimple(testA, testB, testX, testR);
-		/*time = DURATION_SINCE(start);
-		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;*/
-
-		/*start = NOW;
-		SolverJacobi(testA, testB, testX, testR);
-		time = DURATION_SINCE(start);
-		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
-
-		start = NOW;
-		SolverSOR(testA, testB, testX, testR);
-		time = DURATION_SINCE(start);
-		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;*/
-
-		start = NOW;
-		SolverPCG(testA, testB, testX, testR);
-		time = DURATION_SINCE(start);
-		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
-
-		start = NOW;
-		SolverBiCG(testA, testB, testX, testR);
-		time = DURATION_SINCE(start);
-		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
-
-		start = NOW;
-		SolverCGS(testA, testB, testX, testR);
-		time = DURATION_SINCE(start);
-		std::cout << "Residual: " << testR.Magnitude() << "\tDuration: " << time << "ms" << std::endl << std::endl;
-	}
+	return params;
 }
 
 int main(int argc, char ** argv)
 {
 	LogMan::Init(true);
 	LogMan::Log("Startup.");
-	int returnVal = StartUI(1280, 720);
 	
-	//SolverTest();
+	int returnVal = 0;
+	//TODO uncomment this after testing is done.
+	//returnVal = StartUI(1280, 720);
+	
+	GenerateMesh("Test_Data\\Grid_Nodes.csv", 1.0);
+	Simulate(ModelTestParams());
 
 	LogMan::Terminate();
-	//std::cin.sync(); //TODO remove
-	//std::cin.get(); //TODO remove
+
+	std::cin.sync(); //TODO remove
+	std::cin.get(); //TODO remove
 
 	return returnVal;
 }

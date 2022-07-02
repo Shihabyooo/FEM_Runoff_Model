@@ -4,7 +4,7 @@
 
 #define DEFAULT_MAX_ITERATION 10000
 #define DEFAULT_CONVERGENCE_THRESHOLD -1.0
-#define MIN_CONVERGENCE_THRESHOLD 0.001
+#define MIN_CONVERGENCE_THRESHOLD 0.00001
 #define INITIAL_X_VALUE 1.0 //Note! If initial value = 0.0, some solvers may break
 //TODO remove the f from INITIAL_X_VALUE after switching vectors and matrices to double precision.
 
