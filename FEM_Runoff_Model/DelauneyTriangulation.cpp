@@ -165,12 +165,12 @@ void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList
 		failedPoints.push_back(vertexID);
 }
 
-std::vector<int> * RemoveExteriorTriangles(std::unordered_map<int, Triangle> * trianglesList) //returns a list of exterior nodes within the mesh
+void RemoveExteriorTriangles(std::unordered_map<int, Triangle> * trianglesList, std::vector<int> * outBoundaryNodes) //returns a list of exterior nodes within the mesh
 {
 	int initialCount = trianglesList->size();
 	LogMan::Log("Cleaning exterior triangles.");
 
-	std::vector<int> * outerNodes = new std::vector<int>();
+	//std::vector<int> * outerNodes = new std::vector<int>();
 	std::unordered_set<int> tempOuterNodes;
 
 	//loop over triangles, for triangles that test positive for external, add internal nodes (i.e. at mesh edge) to tempOuterNodes, then delete triangle.
@@ -189,11 +189,9 @@ std::vector<int> * RemoveExteriorTriangles(std::unordered_map<int, Triangle> * t
 
 	//copy tempOuterNodes to outerNodes
 	for (auto it = tempOuterNodes.begin(); it != tempOuterNodes.end(); ++it)
-		outerNodes->push_back(*it);
+		outBoundaryNodes->push_back(*it);
 
 	LogMan::Log("Removed" + std::to_string(initialCount - trianglesList->size()) + " triangles.");
-
-	return outerNodes;
 }
 
 void OptimizeAll(std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * triangles)
@@ -261,7 +259,7 @@ bool Triangulate(std::vector<Vector2D> nodesList, double superTrianglePadding, s
 	}
 	
 	OptimizeAll(nodesList, outTrianglesList);
-	outBoundaryNodes = RemoveExteriorTriangles(outTrianglesList);
+	RemoveExteriorTriangles(outTrianglesList, outBoundaryNodes);
 
 	LogMan::Log("Finished triangulation!", LOG_SUCCESS);
 	return true;
