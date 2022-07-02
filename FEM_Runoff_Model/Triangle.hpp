@@ -39,14 +39,10 @@ public:
 	Vector2D nodes[3];
 	double area;
 	int id;
-	//TODO the values bellow are better stored in a some object in ModelInterface. Leaving them here until I fix the element ID ordering to\
+	
+	//TODO the value bellow is better stored in a some object in ModelInterface. Leaving it here until I fix the element ID ordering to\
 	be sequential starting from 0.
-	double elementPrecipitation = 0.0; //in mm. The precipitation at last pass.
-	double manningCoef = 0.0; 
-	double slopeX = 0.0;
-	double slopeY = 0.0;
-	double qX = 0.0; //in m3/hr. X-Discharge of last pass;
-	double qY = 0.0; //in m3/hr. Y-Discharge of last pass;
+	double elementPrecipitation = 0.0; //in m/hr. The precipitation at last pass.
 
 private:
 	

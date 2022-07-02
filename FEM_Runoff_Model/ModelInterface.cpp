@@ -16,6 +16,7 @@ size_t exitNode = 0; //Assume first node to be exit node
 
 //Matrices and Vectors
 Matrix_f64 globalC, globalPsiX, globalPsiY;
+Vector_f64 nodeSlopeX, nodeSlopeY, nodeManning;
 Vector_f64 heads;
 
 Matrix_f64 const * dem = NULL, * manningRaster = NULL, * slopes = NULL, * fdr = NULL;
@@ -149,71 +150,6 @@ bool CheckParameters(ModelParameters const & params)
 
 //Model-specific functions
 
-//void ConstructGlobalConductanceMatrices(double deltaT)
-//{
-//	//Psi-X and Psi-Y (for each element) are 3x3 matrices.
-//	//[Psi-X_e] = 1/6 * delta T *	|	yj-yk	yk-yi	yi-yj	|
-//	//								|	yj-yk	yk-yi	yi-yj	|
-//	//								|	yj-yk	yk-yi	yi-yj	|
-//
-//	//[Psi-Y_e] = 1/6 * delta T *	|	xk-xj	xi-xk	xj-xi	|
-//	//								|	xk-xj	xi-xk	xj-xi	|
-//	//								|	xk-xj	xi-xk	xj-xi	|
-//	//Where x(i/j/k) and y(i/j/k) are the x, y coord of the i/j/kth node.
-//
-//	//Create global  Psi-X and Psi-y of size (node x nodes), zero initial value.
-//	//loop over each triangle in mesh
-//		//loop over permutations of vertIDs (3 verts per triangle = 9 permutations)
-//			//Psi-X[permutation] += Psi-X_e[localized permutation], e.g. if triangle is verts 3, 5, 8  (i, j, k)\
-//			Psi-x[3][3] += Psi-x_e[0][0] = 1/6 * dT * (yj-yk), and\
-//			Psi-x[5][8] += Psi-x_e[1][2] = 1/6 * dT * (yK-yI), etc
-//			//Ditto for Psi-Y
-//	
-//	globalPsiX = Matrix_f64(nodes.size(), nodes.size());
-//	globalPsiY = Matrix_f64(nodes.size(), nodes.size());
-//
-//	double multiplier = deltaT / 6.0;
-//
-//	for (auto it = triangles.begin(); it != triangles.end(); ++it)
-//	{
-//		int const * vert = it->second.vertIDs; //to simplify lines bellow.
-//
-//		//Since all values in a column (for each element matrix) have the same value, we compute them first hand then increment global matrix.
-//		double valX1 = multiplier * (it->second.nodes[1].y - it->second.nodes[2].y); //1/6 * deltaT * (yj - yk)
-//		double valX2 = multiplier * (it->second.nodes[2].y - it->second.nodes[0].y); //1/6 * deltaT * (yk - yi)
-//		double valX3 = multiplier * (it->second.nodes[0].y - it->second.nodes[1].y); //1/6 * deltaT * (yi - yj)
-//
-//		double valY1 = multiplier * (it->second.nodes[2].x - it->second.nodes[1].x); //1/6 * deltaT * (xk - xj)
-//		double valY2 = multiplier * (it->second.nodes[0].x - it->second.nodes[2].x); //1/6 * deltaT * (xi - xk)
-//		double valY3 = multiplier * (it->second.nodes[2].x - it->second.nodes[0].x); //1/6 * deltaT * (xk - xi)
-//
-//		//Increment global matrix at position define by node IDs (3^2 = 9 positions)
-//		globalPsiX[vert[0]][vert[0]] += valX1;
-//		globalPsiX[vert[0]][vert[1]] += valX2;
-//		globalPsiX[vert[0]][vert[2]] += valX3;
-//
-//		globalPsiX[vert[1]][vert[0]] += valX1;
-//		globalPsiX[vert[1]][vert[1]] += valX2;
-//		globalPsiX[vert[1]][vert[2]] += valX3;
-//
-//		globalPsiX[vert[2]][vert[0]] += valX1;
-//		globalPsiX[vert[2]][vert[1]] += valX2;
-//		globalPsiX[vert[2]][vert[2]] += valX3;
-//		
-//		globalPsiY[vert[0]][vert[0]] += valY1;
-//		globalPsiY[vert[0]][vert[1]] += valY2;
-//		globalPsiY[vert[0]][vert[2]] += valY3;
-//
-//		globalPsiY[vert[1]][vert[0]] += valY1;
-//		globalPsiY[vert[1]][vert[1]] += valY2;
-//		globalPsiY[vert[1]][vert[2]] += valY3;
-//
-//		globalPsiY[vert[2]][vert[0]] += valY1;
-//		globalPsiY[vert[2]][vert[1]] += valY2;
-//		globalPsiY[vert[2]][vert[2]] += valY3;
-//	}
-//}
-
 bool LoadInputRasters(ModelParameters const & params)
 {
 	LogMan::Log("Loading rasters");
@@ -342,72 +278,10 @@ void ConstructGlobalPsiMatrices(double timeStep)
 	}
 }
 
-//double SampleRegionAveragedValue(Triangle const & element, Matrix_f64 const * raster, int rasterID) //get the average value of pixels in raster covered by element
-//{
-//	//This is a rasterization/coverage test problem. But for now, we'll do it a very crude way, i.e. test if centre of pixel lies within triangle.
-//	//TODO improve this
-//
-//	double ** tiePoints = NULL;
-//	double * pixelScale = NULL;
-//	bool isUTM;
-//
-//	if (!FileIO::GetRasterMappingParameters(rasterID, isUTM, tiePoints, pixelScale))
-//	{
-//		//Error already logged in GetRasterMappingParameters();
-//		//LogMan::Log("ERROR! At loading raster mapping parameters", LOG_ERROR);
-//
-//		return 0.0;
-//	}
-//
-//	std::vector<double> pixelValues;
-//
-//	for (size_t i = 0; i < raster->Rows(); i++)
-//		for (size_t j = 0; j < raster->Columns(); j++)
-//		{
-//			Vector2D pixelPos(	tiePoints[1][0] + j * pixelScale[0],
-//								tiePoints[1][1] - i * pixelScale[1]);
-//
-//			if (element.ContainsPoint(pixelPos))
-//				pixelValues.push_back(raster->GetValue(i, j));
-//		}
-//	
-//	//There could be a case where element is small that it fits inside a pixel but not cover it's centre.
-//	if (pixelValues.size() < 1)
-//	{
-//		//In this case, simply compute the centroid (average of ndoes), and find pixel that contains centroid, return its value
-//		Vector2D centroid = element.Centroid();
-//		size_t row, column;
-//		double minDist = DBL_MAX;
-//		
-//		for (size_t i = 0; i < raster->Rows(); i++)
-//			for (size_t j = 0; j < raster->Columns(); j++)
-//			{
-//				Vector2D pixelPos(tiePoints[1][0] + j * pixelScale[0],
-//					tiePoints[1][1] - i * pixelScale[1]);
-//
-//				double distanceToCentroid = pixelPos.DistanceTo(centroid);
-//				if (distanceToCentroid < minDist)
-//				{
-//					row = i;
-//					column = j;
-//				}
-//			}
-//
-//		return raster->GetValue(row, column);
-//	}
-//
-//	double sum = 0.0;
-//	for (auto it = pixelValues.begin(); it != pixelValues.end(); ++it)
-//		sum += *it;
-//	
-//	return sum / static_cast<double>(pixelValues.size());
-//}
-
-std::vector<std::pair<Vector2Int, double>> * SampleCoveredPixels(Triangle const & element, Matrix_f64 const * raster, int rasterID)
+//returns negative valued VectorInt if error
+std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 const * raster, int rasterID)
 {
-	//This is a rasterization/coverage test problem. But for now, we'll do it a very crude way, i.e. test if centre of pixel lies within triangle.
-	//TODO improve this
-
+	//TODO  cache rastermapping params
 	double ** tiePoints = NULL;
 	double * pixelScale = NULL;
 	bool isUTM;
@@ -417,12 +291,11 @@ std::vector<std::pair<Vector2Int, double>> * SampleCoveredPixels(Triangle const 
 	if (!FileIO::GetRasterMappingParameters(rasterID, dimensions, samples, isUTM, &tiePoints, &pixelScale))
 	{
 		//Error already logged in GetRasterMappingParameters();
-		//LogMan::Log("ERROR! At loading raster mapping parameters", LOG_ERROR);
-
-		return NULL;
+		return std::pair<Vector2Int, double>(Vector2Int(-1, -1), 0.0);
 	}
 
-	std::vector<std::pair<Vector2Int, double>> * pixelValues = new std::vector<std::pair<Vector2Int, double>>();
+	size_t _row, _column;
+	double minDist = DBL_MAX;
 
 	for (size_t row = 0; row < raster->Rows(); row++)
 		for (size_t column = 0; column < raster->Columns(); column++)
@@ -430,138 +303,88 @@ std::vector<std::pair<Vector2Int, double>> * SampleCoveredPixels(Triangle const 
 			Vector2D pixelPos(tiePoints[1][0] + column * pixelScale[0],
 				tiePoints[1][1] - row * pixelScale[1]);
 
-			if (element.ContainsPoint(pixelPos) && !isnan(raster->GetValue(row, column)))
-				pixelValues->push_back(std::pair< Vector2Int, double >(Vector2Int(column, row), raster->GetValue(row, column)));
+			double distanceToCentroid = pixelPos.DistanceTo(position);
+
+			if (distanceToCentroid < minDist)
+			{
+				_row = row;
+				_column = column;
+				minDist = distanceToCentroid;
+			}
 		}
 
-	//There could be a case where element is small that it fits inside a pixel but not cover it's centre.
-	if (pixelValues->size() < 1)
-	{
-		//In this case, simply compute the centroid (average of ndoes), and find pixel that contains centroid, return its value
-		Vector2D centroid = element.Centroid();
-		size_t _row, _column;
-		double minDist = DBL_MAX;
+	if (isnan(raster->GetValue(_row, _column)))
+		return std::pair<Vector2Int, double>(Vector2Int(-1, -1), 0.0);
 
-		for (size_t row = 0; row < raster->Rows(); row++)
-			for (size_t column = 0; column < raster->Columns(); column++)
-			{
-				Vector2D pixelPos(tiePoints[1][0] + column * pixelScale[0],
-					tiePoints[1][1] - row * pixelScale[1]);
+	std::pair< Vector2Int, double > result(Vector2Int(_column, _row), raster->GetValue(_row, _column));
 
-				double distanceToCentroid = pixelPos.DistanceTo(centroid);
-				if (distanceToCentroid < minDist)
-				{
-					_row = row;
-					_column = column;
-				}
-			}
-		
-		if (isnan(raster->GetValue(_row, _column)))
-			return NULL;
+	//cleanup memory
+	delete[] pixelScale;
+	delete[] tiePoints[0];
+	delete[] tiePoints[1];
+	delete[] tiePoints;
 
-		pixelValues->push_back(std::pair< Vector2Int, double >(Vector2Int(_column, _row), raster->GetValue(_row, _column)));
-	}
-
-	return pixelValues;
-
-}
-
-double SampleRegionAveragedValue(Triangle const & element, Matrix_f64 const * raster, int rasterID) //get the average value of pixels in raster covered by element
-{
-	std::vector<std::pair<Vector2Int, double>> * values = SampleCoveredPixels(element, raster, rasterID);
-
-	if (values == NULL)
-		return 0.0;
-
-	double sum = 0.0;
-
-	for (auto it = values->begin(); it != values->end(); ++it)
-		sum += it->second;
-
-	delete values;
-	return sum / static_cast<double>(values->size());
+	return result;
 }
 
 bool CacheManningCoefficients(ModelParameters const & params)
 {
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	nodeManning = Vector_f64(nodes.size());
+
+	size_t counter = 0;
+	for (auto it = nodes.begin(); it != nodes.end(); ++it)
 	{
 		if (!params.variableManningCoefficients)
 		{
-			it->second.manningCoef = params.fixedManningCoeffient;
+			nodeManning[counter] = params.fixedManningCoeffient;
 		}
 		else
 		{
-			double manningCoeffElem = SampleRegionAveragedValue(it->second, manningRaster, manningRasterID);
-			if (manningCoeffElem == 0.0)
-			{
-				LogMan::Log("ERROR reading Manning coefficient value for element: " + std::to_string(it->second.id), LOG_ERROR);
-				return false;
-			}
-			it->second.manningCoef = manningCoeffElem;
+			LogMan::Log("ERROR! Variable manning input not yet implemented.", LOG_ERROR);
+			return false;
 		}
+		
+		counter++;
 	}
+
 	return true;
 }
 
 bool CacheSlopes(ModelParameters const & params)
 {
 	//agnps fdr format: 1 = north, 2 = NE, 3 = East, 4 = SE, 5 = South, 6 = SW, 7 = West, 8 = NW
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	
+	//TODO revise this method so it creates a polygon connecting the centroids for each triangle that contains each tested vertex,\
+	then sampling for pixels covered by this polygon and averaging the results (after factoring). Same for manning sampling.
+
+	nodeSlopeX = Vector_f64(nodes.size());
+	nodeSlopeY = Vector_f64(nodes.size());
+
+	size_t counter = 0;
+	for (auto it = nodes.begin(); it != nodes.end(); ++it)
 	{
-		std::vector<std::pair<Vector2Int, double>> * fdrPixels = SampleCoveredPixels(it->second, fdr, fdrID);
-		std::vector<std::pair<Vector2Int, double>> * slopePixels = SampleCoveredPixels(it->second, slopes, slopesID);
+		std::pair<Vector2Int, double> nodeSlopePixel = SampleNearestPixel(*it, slopes, slopesID);
+		if (nodeSlopePixel.first.x < 0)
+			LogMan::Log("Warning! No slopes sampled for node: " + std::to_string(counter), LOG_WARN);
 
-		if (fdrPixels == NULL || slopePixels == NULL)
+		std::pair<Vector2Int, double> nodeFDRPixel = SampleNearestPixel(*it, fdr, fdrID);
+		if (nodeFDRPixel.first.x < 0)
+			LogMan::Log("Warning! No slopes sampled for node: " + std::to_string(counter), LOG_WARN);
+
+		int dir = lround(nodeFDRPixel.second);
+
+		if (dir == 1 || dir == 5)
+			nodeSlopeY[counter] = nodeSlopePixel.second / 100.0;
+		else if (dir == 3 || dir == 7)
+			nodeSlopeX[counter] = nodeSlopePixel.second / 100.0;
+		else
 		{
-			LogMan::Log("ERROR reading slopes or fdr values for triangle " + std::to_string(it->second.id), LOG_ERROR);
-
-			if (fdrPixels != NULL)
-				delete fdrPixels;
-			if (slopePixels != NULL)
-				delete slopePixels;
-
-			return false;
+			double component = nodeSlopePixel.second * 0.7071067811865475244 / 100.0; //adjacent = hypotenuse * cos(45)
+			nodeSlopeX[counter] = component;
+			nodeSlopeY[counter] = component;
 		}
 
-		//compute x and y components for each value in slopePixels, and average them.
-
-		double sumX = 0.0, sumY = 0.0;
-		
-		//TODO rework this implemention so it doesn't not assume fdr and slopes map are exactly alike in gridding.
-		if (fdrPixels->size() != slopePixels->size())
-			LogMan::Log("Warning! Mismatching fdr and slope sampling for element: " + std::to_string(it->second.id), LOG_WARN);
-
-		for (auto slp = slopePixels->begin(); slp != slopePixels->end(); ++slp)
-		{	
-			//find fdr of slope
-			int dir = 2;
-			for (auto fdir = fdrPixels->begin(); fdir != fdrPixels->end(); ++fdir)
-			{
-				if (fdir->first == slp->first)
-				{
-					dir = lround(fdir->second);
-					break;
-				}
-			}
-
-			if (dir == 1 || dir == 5)
-				sumY += slp->second;
-			else if (dir == 3 || dir == 7)
-				sumX += slp->second;
-			else
-			{
-				double component = slp->second * 0.7071067811865475244; //adjacent = hypotenuse * cos(45)
-				sumX += component;
-				sumY += component;
-			}
-		}
-
-		it->second.slopeX = sumX / static_cast<double>(slopePixels->size()) / 100.0;
-		it->second.slopeY = sumY / static_cast<double>(slopePixels->size()) / 100.0;
-		
-		delete fdrPixels;
-		delete slopePixels;
+		counter++;
 	}
 
 	return true;
@@ -622,14 +445,18 @@ void ComputeDischargeVectors(ModelParameters const & params, Vector_f64 const & 
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
 		int const * vert = it->second.vertIDs; //to simplify lines bellow.
-		//TODO multX and multY are tempoarlly invariant. It would be better to cache them instead of manning and slope.
-		double multX = sqrt(it->second.slopeX) / it->second.manningCoef;
-		double multY = sqrt(it->second.slopeY) / it->second.manningCoef;
-
+		
+											   ////TODO multX and multY are tempoarlly invariant. It would be better to cache them instead of manning and slope.
+		/*double multX = sqrt(it->second.slopeX) / it->second.manningCoef;
+		double multY = sqrt(it->second.slopeY) / it->second.manningCoef;*/
+		
 		for (int i = 0; i < 3; i++)
 		{
-			outVectorX[vert[i]] += multX * pow(heads[vert[i]], 5.0 / 3.0);
-			outVectorY[vert[i]] += multY * pow(heads[vert[i]], 5.0 / 3.0);
+			/*outVectorX[vert[i]] += multX * pow(heads[vert[i]], 5.0 / 3.0);
+			outVectorY[vert[i]] += multY * pow(heads[vert[i]], 5.0 / 3.0);*/
+
+			outVectorX[vert[i]] += sqrt(nodeSlopeX[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
+			outVectorY[vert[i]] += sqrt(nodeSlopeY[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
 		}
 	}
 }
@@ -650,11 +477,16 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 			+ ComputePreciptationVector(time, params);
 			
 	//test
-	/*Vector_f64 chold = globalC * oldHeads;
+	Vector_f64 chold = globalC * oldHeads;
 	Vector_f64 precipContrib = ComputePreciptationVector(time, params);
-	std::cout << "\noldH | newH ||| [C]{h0} | qx_old | qx_new | qy_old | qy_new | precip | RHS" << std::endl;
+	std::cout << "\n id | oldH  |  newH  ||| [C]{h0}|  qx_0  |  qx_1 |  qy_0  |  qy_1  | precip | RHS" << std::endl;
 	for (size_t i = 0; i < oldHeads.Rows(); i++)
-		std::cout << std::setprecision(2) << oldHeads[i] << " | " << newHeads[i] << " ||| " << chold[i] << " | " << q_x_old[i] << " | " << q_x_new[i] << " | " << q_y_old[i] << " | " << q_y_new[i] << " | " << precipContrib[i] << " | " << outRHS[i]<< std::endl;*/
+		std::cout << std::fixed << std::setw(3) << i << " | " \
+		<< std::setw(3) << std::setprecision(3) << oldHeads[i] << " | " << std::setw(6) << newHeads[i] << " ||| " \
+		<< std::setw(6) << std::setprecision(1) << chold[i] << " | " \
+		<< std::setw(6) << std::setprecision(3) << q_x_old[i] << " | " << std::setw(3) << q_x_new[i] << " | " \
+		<< std::setw(6) << q_y_old[i] << " | " << std::setw(6) << q_y_new[i] << " | " \
+		<< std::setw(6) << std::setprecision(1) << precipContrib[i] << " | " << outRHS[i]<< std::endl;
 }
 
 bool Simulate(ModelParameters const & params)
@@ -705,16 +537,21 @@ bool Simulate(ModelParameters const & params)
 	std::cout << "Triangle data";
 	std::cout << "\n===================================================\n";
 	
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
-	{
-		std::cout << it->second.id << " -- area: " << it->second.area << ", slopeX: " << it->second.slopeX << ", slopeY: " << it->second.slopeY << std::endl;
-	}
-	
 	std::cout << "\n===================================================\n";
 	std::cout << "Boundery Nodes";
 	std::cout << "\n===================================================\n";
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 		std::cout << *it << std::endl;*/
+	
+	/*std::cout << "\n===================================================\n";
+	std::cout << "Slopes and Manning roughness coef";
+	std::cout << "\n===================================================\n";
+
+	std::cout << "node |  n  |  Sx  |  Sy\n";
+	for (size_t i = 0; i < nodeSlopeX.Rows(); i++)
+		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << std::endl;*/
+		
+	//return false;
 	//end test
 
 	//Set initial heads to zero (Dry conditions).
@@ -726,8 +563,10 @@ bool Simulate(ModelParameters const & params)
 	
 	while (time <= params.endTime)
 	{
+		std::cout << "\n\n===================================================\n";
 		LogMan::Log("At T= " + std::to_string(time));
-
+		std::cout << "===================================================\n";
+		
 		Vector_f64 newHeads = heads * 1.1;
 
 		//Capacitance matrix adjusted for boundary conditions
