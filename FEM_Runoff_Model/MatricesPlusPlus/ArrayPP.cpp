@@ -463,7 +463,7 @@ Array2D<T> Array2D<T>::StackArrays(const Array2D<T> &arr1, const Array2D<T> &arr
 }
 
 template <typename T>
-void Array2D<T>::DisplayOnCLI(unsigned int displayPrecision)
+void Array2D<T>::DisplayOnCLI(unsigned int displayPrecision) const
 {
 	if (content == NULL)
 	{

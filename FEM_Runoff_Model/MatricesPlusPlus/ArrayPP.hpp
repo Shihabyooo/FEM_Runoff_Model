@@ -76,7 +76,7 @@ public:
 	bool IsEmpty() const;
 
 	//debugging aid
-	void DisplayOnCLI(unsigned int displayPrecision = 2);
+	void DisplayOnCLI(unsigned int displayPrecision = 2) const;
 
 	//Static methods
 	static bool AreOfSameSize(const Array2D<T> &arr1, const Array2D<T> &arr2);	//for m1*n1 and m2*n2 matrices, tests that m1 == m2 and n1 == n2.
