@@ -7,6 +7,7 @@
 
 std::vector<LogEntry> logHistory;
 bool canLogToDisk = false;
+bool isNewLogAdded = false;
 
 void DrawLogEntry(LogEntry const * entry)
 {
@@ -59,6 +60,12 @@ void DrawLogPane()
 	for (auto it = logHistory.begin(); it != logHistory.end(); ++it)
 		DrawLogEntry(&(*it));
 
+	if (isNewLogAdded)
+	{
+		ImGui::SetScrollHereY(1.0);
+		isNewLogAdded = false;
+	}
+
 	ImGui::End();
 }
 
@@ -92,6 +99,8 @@ void LogMan::Log(std::string const & content, LogEntryType type)
 	
 	if(canLogToDisk)
 		FileIO::WriteToLog(logHistory.back());
+
+	isNewLogAdded = true;
 
 #ifdef LOG_TO_CLI
 	std::cout << content.c_str() << std::endl;
