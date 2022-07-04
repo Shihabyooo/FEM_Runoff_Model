@@ -61,8 +61,20 @@ bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding)
 		if (!it->second.Validate())
 			LogMan::Log("Warning! Invalid Triangle " + std::to_string(it->second.id) + ". Area: " + std::to_string(it->second.area), LOG_WARN);
 
-	LogMan::Log("Succesfully generated mesh!", LOG_SUCCESS);
+	LogMan::Log("Succesfully generated mesh of " + std::to_string(triangles.size()) + " triangles!", LOG_SUCCESS);
 	return true;
+}
+
+Triangle const * GetElementContainingPoint(Vector2D const & pos)
+{
+	if (triangles.size() < 1)
+		return NULL;
+
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+		if (it->second.ContainsPoint(pos))
+			return &it->second;
+
+	return NULL;
 }
 
 bool LoadTimeSeries(std::string const & path, TimeSeries & ts)
@@ -293,15 +305,16 @@ std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 c
 		//Error already logged in GetRasterMappingParameters();
 		return std::pair<Vector2Int, double>(Vector2Int(-1, -1), 0.0);
 	}
-
+	
 	size_t _row, _column;
 	double minDist = DBL_MAX;
 
+	Vector2D ancrhoNE(tiePoints[1][0] + (pixelScale[0] / 2.0), tiePoints[1][1] - (pixelScale[1] / 2.0));
 	for (size_t row = 0; row < raster->Rows(); row++)
 		for (size_t column = 0; column < raster->Columns(); column++)
 		{
-			Vector2D pixelPos(tiePoints[1][0] + column * pixelScale[0],
-				tiePoints[1][1] - row * pixelScale[1]);
+			Vector2D pixelPos(	ancrhoNE.x + column * pixelScale[0],
+								ancrhoNE.y - row * pixelScale[1]);
 
 			double distanceToCentroid = pixelPos.DistanceTo(position);
 
@@ -314,7 +327,10 @@ std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 c
 		}
 
 	if (isnan(raster->GetValue(_row, _column)))
+	{
+		LogMan::Log("Warning! Caught noValue pixel sampling for node ", LOG_WARN);
 		return std::pair<Vector2Int, double>(Vector2Int(-1, -1), 0.0);
+	}
 
 	std::pair< Vector2Int, double > result(Vector2Int(_column, _row), raster->GetValue(_row, _column));
 
@@ -459,7 +475,30 @@ void ComputeDischargeVectors(ModelParameters const & params, Vector_f64 const & 
 			outVectorY[vert[i]] += sqrt(nodeSlopeY[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
 		}
 	}
+
+	//test force q at bounderies to zero
+	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
+	{
+		outVectorX[*it] = 0.0;
+		outVectorY[*it] = 0.0;
+	}
 }
+
+//test
+Vector_f64 _oldHeads, _newHeads, _q_x_old, _q_x_new, _q_y_old, _q_y_new, _precipContrib, _RHS;
+void TestShowInternalRHSVectors()
+{
+	Vector_f64 chold = globalC * _oldHeads;
+	std::cout << "\n id | oldH  |  newH  ||| [C]{h0}|  qx_0  |  qx_1 |  qy_0  |  qy_1  | precip | RHS" << std::endl;
+	for (size_t i = 0; i < _oldHeads.Rows(); i++)
+		std::cout << std::fixed << std::setw(3) << i << " | " \
+		<< std::setw(3) << std::setprecision(3) << _oldHeads[i] << " | " << std::setw(6) << _newHeads[i] << " ||| " \
+		<< std::setw(6) << std::setprecision(1) << chold[i] << " | " \
+		<< std::setw(6) << std::setprecision(3) << _q_x_old[i] << " | " << std::setw(3) << _q_x_new[i] << " | " \
+		<< std::setw(6) << _q_y_old[i] << " | " << std::setw(6) << _q_y_new[i] << " | " \
+		<< std::setw(6) << std::setprecision(1) << _precipContrib[i] << " | " << _RHS[i] << std::endl;
+}
+//endtest
 
 void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 const & oldHeads, Vector_f64 const & newHeads, Vector_f64 & outRHS)
 {
@@ -471,22 +510,22 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 	ComputeDischargeVectors(params, oldHeads, q_x_old, q_y_old);
 	ComputeDischargeVectors(params, newHeads, q_x_new, q_y_new);
 
+	//PsiX and PsiY already have dT multiplied with them.
 	outRHS = globalC * oldHeads
-			- ((globalPsiX * params.timeStep) * ((q_x_old * (1 - params.femOmega)) + (q_x_new * params.femOmega)))
-			- ((globalPsiY * params.timeStep) * ((q_y_old * (1 - params.femOmega)) + (q_y_new * params.femOmega)))
+			- ((globalPsiX) * ((q_x_old * (1 - params.femOmega)) + (q_x_new * params.femOmega)))
+			- ((globalPsiY) * ((q_y_old * (1 - params.femOmega)) + (q_y_new * params.femOmega)))
 			+ ComputePreciptationVector(time, params);
 			
 	//test
-	Vector_f64 chold = globalC * oldHeads;
-	Vector_f64 precipContrib = ComputePreciptationVector(time, params);
-	std::cout << "\n id | oldH  |  newH  ||| [C]{h0}|  qx_0  |  qx_1 |  qy_0  |  qy_1  | precip | RHS" << std::endl;
-	for (size_t i = 0; i < oldHeads.Rows(); i++)
-		std::cout << std::fixed << std::setw(3) << i << " | " \
-		<< std::setw(3) << std::setprecision(3) << oldHeads[i] << " | " << std::setw(6) << newHeads[i] << " ||| " \
-		<< std::setw(6) << std::setprecision(1) << chold[i] << " | " \
-		<< std::setw(6) << std::setprecision(3) << q_x_old[i] << " | " << std::setw(3) << q_x_new[i] << " | " \
-		<< std::setw(6) << q_y_old[i] << " | " << std::setw(6) << q_y_new[i] << " | " \
-		<< std::setw(6) << std::setprecision(1) << precipContrib[i] << " | " << outRHS[i]<< std::endl;
+	//cache so we can display once after end of internal loop.
+	_oldHeads = oldHeads;
+	_newHeads = newHeads;
+	_q_x_old = q_x_old;
+	_q_x_new = q_x_new;
+	_q_y_old = q_y_old;
+	_q_y_new = q_y_new;
+	_precipContrib = ComputePreciptationVector(time, params);
+	_RHS = outRHS;
 }
 
 bool Simulate(ModelParameters const & params)
@@ -518,44 +557,66 @@ bool Simulate(ModelParameters const & params)
 		return false;
 
 	//test
-	/*std::cout << "\n===================================================\n";
+	std::cout << "\n===================================================\n";
 	std::cout << "Global Capacitance";
 	std::cout << "\n===================================================\n";
-	globalC.DisplayOnCLI();
+	globalC.DisplayOnCLI(0);
 
 	std::cout << "\n===================================================\n";
 	std::cout << "Global Psi-x";
 	std::cout << "\n===================================================\n";
-	globalPsiX.DisplayOnCLI();
+	globalPsiX.DisplayOnCLI(0);
 
 	std::cout << "\n===================================================\n";
-	std::cout << "Global Psi-x";
+	std::cout << "Global Psi-y";
 	std::cout << "\n===================================================\n";
-	globalPsiY.DisplayOnCLI();
-	
-	std::cout << "\n===================================================\n";
-	std::cout << "Triangle data";
-	std::cout << "\n===================================================\n";
+	globalPsiY.DisplayOnCLI(0);
 	
 	std::cout << "\n===================================================\n";
 	std::cout << "Boundery Nodes";
 	std::cout << "\n===================================================\n";
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-		std::cout << *it << std::endl;*/
+		std::cout << *it << std::endl;
 	
-	/*std::cout << "\n===================================================\n";
+	std::cout << "\n===================================================\n";
 	std::cout << "Slopes and Manning roughness coef";
 	std::cout << "\n===================================================\n";
 
 	std::cout << "node |  n  |  Sx  |  Sy\n";
 	for (size_t i = 0; i < nodeSlopeX.Rows(); i++)
-		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << std::endl;*/
+		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << std::endl;
 		
+	/*slopes->DisplayOnCLI();
+	fdr->DisplayOnCLI();*/
+
 	//return false;
 	//end test
 
 	//Set initial heads to zero (Dry conditions).
 	heads = Vector_f64(nodes.size());
+
+	//Capacitance matrix adjusted for boundary conditions
+		//TODO do this when constructing this matrix.
+	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
+	{
+		//https://finite-element.github.io/7_boundary_conditions.html
+		for (size_t i = 0; i < globalC.Columns(); i++)
+		{
+			globalC[*it][i] = 0.0;
+			/*globalPsiX[*it][i] = 0.0;
+			globalPsiY[*it][i] = 0.0;*/
+		}
+
+		globalC[*it][*it] = 1.0;
+		/*globalPsiX[*it][*it] = 1.0;
+		globalPsiY[*it][*it] = 1.0;*/
+	}
+
+	//test
+	/*for (size_t i = 0; i < globalC.Columns(); i++)
+		globalC[exitNode][i] = 0.0;
+	globalC[exitNode][exitNode] = 1.0;*/
+
 
 	//Loop from start time to end time
 	double time = params.startTime;
@@ -568,17 +629,6 @@ bool Simulate(ModelParameters const & params)
 		std::cout << "===================================================\n";
 		
 		Vector_f64 newHeads = heads * 1.1;
-
-		//Capacitance matrix adjusted for boundary conditions
-		//TODO do this when constructing this matrix.
-		for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-		{
-			//https://finite-element.github.io/7_boundary_conditions.html
-			for (size_t i = 0; i < globalC.Columns(); i++)
-				globalC[*it][i] = 0.0;
-
-			globalC[*it][*it] = 1.0;
-		}
 
 		//internal loop
 		for (size_t i = 0; i <= params.maxInternalIterations; i++)
@@ -593,6 +643,7 @@ bool Simulate(ModelParameters const & params)
 			//https://finite-element.github.io/7_boundary_conditions.html
 			for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 				RHS[*it] = 0.0; //this, plus the adjustment to globalC above, ensures resulting h for this node always = 0
+			//RHS[exitNode] = 0.0;
 			
 			if (!Solve(globalC, RHS, fixedNewH, residuals, params))
 			{
@@ -616,6 +667,8 @@ bool Simulate(ModelParameters const & params)
 		}
 
 		//test
+		TestShowInternalRHSVectors();
+
 		Vector_f64 qx, qy;
 		ComputeDischargeVectors(params, heads, qx, qy);
 		/*for (size_t i = 0; i < heads.Rows(); i++)

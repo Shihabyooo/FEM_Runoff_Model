@@ -47,5 +47,7 @@ extern Vector2D nodesSW, nodesNE;
 extern size_t exitNode;
 
 bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding);
+Triangle const * GetElementContainingPoint(Vector2D const & pos);
+
 bool LoadTimeSeries(std::string const & path, TimeSeries & ts);
 bool Simulate(ModelParameters const & params);
