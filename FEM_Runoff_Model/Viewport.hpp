@@ -64,6 +64,7 @@ void UpdateViewBounds();
 void SetViewBounds(Vector2D swCorner, Vector2D nwCorner);
 void UpdateCoordinateProjectionParameters();
 Vector2D NormalizeCoordinates(Vector2D & point); //converts from world space to viewport space
+Vector2D ScreenToWorldSpace(Vector2D screenCoordinates);
 void PanView(Vector2D posDelta);
 
 

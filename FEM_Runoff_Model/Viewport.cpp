@@ -24,6 +24,13 @@ Vector2D currenViewportHoverPos;
 Vector2D currenViewportHoverPosPixels; //in local pixel screenspace of viewport
 bool isHoveringViewport = false;
 
+bool showElementView = false;
+Triangle const * selectedElement = NULL;
+//Cached strings of element's details, to avoid creating strings every loop.
+std::string elementViewName = "";
+std::string elementViewVerts = "";
+std::string elementViewArea = "";
+
 //Create vertex buffer (VBO), vertex array object (VAO) and vertex array element object, store id in targetGLData struct. \
 if verticesCount is greater than or equal to 3, UpdateMesh() is called.
 void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount)
@@ -189,6 +196,8 @@ void HandleMouseZoom()
 	{
 		scale += scroll * scaleChangeTicks;
 		
+		//TODO add a limit to prevent viewBounds[0] to be greater than viewBounds[1] (nor equal)
+
 		viewBounds[0].x = currenViewportHoverPos.x - currenViewportHoverPosPixels.x * scale;
 		viewBounds[0].y = currenViewportHoverPos.y - (viewportDimensions.height - currenViewportHoverPosPixels.y) * scale * screenAspectRatio / worldAspectRatio;
 
@@ -200,20 +209,41 @@ void HandleMouseZoom()
 	}
 }
 
+void HandleMouseLeftClick()
+{
+	//check that we're clicking on
+	if (isHoveringViewport && ImGui::IsMouseClicked(0))
+	{
+		//TODO a switch statement goes here to route to appropriate function based on whether we are trying to inspect an element\
+		or a node.
+
+		selectedElement = GetElementContainingPoint(currenViewportHoverPos);
+		if (selectedElement != NULL)
+		{
+			showElementView = true;
+			ImGui::OpenPopup("elementView");
+			elementViewName = std::move(std::string("Element: " + std::to_string(selectedElement->id)).c_str());
+			elementViewVerts = std::move(std::string("Vertices: " + std::to_string(selectedElement->vertIDs[0]) + ", "
+				+ std::to_string(selectedElement->vertIDs[1]) + ", "
+				+ std::to_string(selectedElement->vertIDs[2])).c_str());
+			elementViewArea = std::move(std::string("Area: " + std::to_string(selectedElement->area)).c_str());
+		}
+		else
+			showElementView = false;
+	}
+}
+
 //MUST BE CALLED BEFORE HandleMouseZoom() \
 Only updates when position when mouse is over viewport, otherwise isHoveringViewport set to false.
-void UpdateMouseHoverPosition() //TODO fix
+void UpdateMouseHoverPosition()
 {
 	ImGuiIO& io = ImGui::GetIO();
 	ImVec2 mousePos = io.MousePos;
+	
 	if (isHoveringViewport = viewportDimensions.Contains(mousePos))
 	{
 		currenViewportHoverPosPixels = viewportDimensions.LocalPosFromGlobal(mousePos);
-		Vector2D worldspaceDelta(currenViewportHoverPosPixels.x * scale,
-								(viewportDimensions.height - currenViewportHoverPosPixels.y) * scale * screenAspectRatio / worldAspectRatio);
-
-		currenViewportHoverPos = Vector2D(	viewBounds[0].x + worldspaceDelta.x,
-											viewBounds[0].y + worldspaceDelta.y);
+		currenViewportHoverPos = ScreenToWorldSpace(currenViewportHoverPosPixels);
 	}
 	else
 		isHoveringViewport = false;
@@ -272,17 +302,18 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 be painted in the viewport window.
 void DrawViewport()
 {
-	UpdateMouseHoverPosition();
-	HandleMousePan();
-	HandleMouseZoom();
-
-	RenderViewport();
-
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 	ImGui::SetNextWindowPos(ImVec2(viewportDimensions.positionX, viewportDimensions.positionY), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(viewportDimensions.width, viewportDimensions.height), ImGuiCond_Always);
 
 	ImGui::Begin("Viewport", NULL, windowFlags);
+	
+	UpdateMouseHoverPosition();
+	HandleMousePan();
+	HandleMouseZoom();
+	HandleMouseLeftClick();
+
+	RenderViewport();
 
 	ImVec2 pos = ImGui::GetCursorScreenPos();
 
@@ -291,6 +322,17 @@ void DrawViewport()
 		ImVec2(viewportDimensions.positionX, viewportDimensions.positionY), //NW Corner
 		ImVec2(viewportDimensions.positionX + viewportDimensions.width, viewportDimensions.positionY + viewportDimensions.height), //SE corner
 		ImVec2(0, 1), ImVec2(1, 0)); //UVs
+
+	if (showElementView) //redundant?
+	{
+		if (ImGui::BeginPopup("elementView"))
+		{
+			ImGui::Text(elementViewName.c_str());
+			ImGui::Text(elementViewVerts.c_str());
+			ImGui::Text(elementViewArea.c_str());
+			ImGui::EndPopup();
+		}
+	}
 
 	ImGui::End();
 }
@@ -393,7 +435,6 @@ void UpdateTriangles()
 	}
 }
 
-
 //To be called whenever viewport is resized. Recomputes the NE corner based on the delta of the new position (assumed to be updated in \
 viewportDimensions) and the previous viewport (Assumed stored in lastViewportSize). SW corner does not change. Recomputes screenAspectRatio. \
 Imples UpdateCoordinateProjectionParameters()
@@ -442,15 +483,16 @@ void UpdateCoordinateProjectionParameters()
 //returns normalized coordinates (-1.0f to 1.0f) for a supplied point depending on the current projection parameters 
 Vector2D NormalizeCoordinates(Vector2D & point)
 {
-	/*Vector2D normPos((2.0f - 2.0f * margin) * (point.x - viewBounds[0].x) / (delta.x) - 1.0f + margin,
-					(2.0f - 2.0f * margin) * (point.y - viewBounds[06].y) / (delta.y) - 1.0f + margin);*/
-	/*Vector2D normPos(2.0f * (point.x - viewBounds[0].x) / (delta.x) - 1.0f,
-					2.0f * (point.y - viewBounds[0].y) / (delta.y) - 1.0f);*/
 	Vector2D normPos(2.0f * ((point.x - viewBounds[0].x) / scale) / viewportDimensions.width  - 1.0f,
 					2.0f * ((point.y - viewBounds[0].y) / scale) / viewportDimensions.height - 1.0f);
 	
-	normPos = normPos;
 	return normPos;
+}
+
+Vector2D ScreenToWorldSpace(Vector2D screenCoordinates)
+{
+	return Vector2D(viewBounds[0].x + (screenCoordinates.x * scale),
+					viewBounds[1].y - (screenCoordinates.y * scale *  screenAspectRatio / worldAspectRatio));
 }
 
 //Shifts the viewBounds by posDelta. Calls UpdateContent before returning.
