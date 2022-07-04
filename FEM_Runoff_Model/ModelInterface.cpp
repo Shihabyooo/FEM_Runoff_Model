@@ -56,11 +56,6 @@ bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding)
 	ComputeBoundingBox();
 	Triangulate(nodes, superTrianglePadding, &triangles, &boundaryNodes, superTriangles);
 
-	//Validate Triangles
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		if (!it->second.Validate())
-			LogMan::Log("Warning! Invalid Triangle " + std::to_string(it->second.id) + ". Area: " + std::to_string(it->second.area), LOG_WARN);
-
 	LogMan::Log("Succesfully generated mesh of " + std::to_string(triangles.size()) + " triangles!", LOG_SUCCESS);
 	return true;
 }

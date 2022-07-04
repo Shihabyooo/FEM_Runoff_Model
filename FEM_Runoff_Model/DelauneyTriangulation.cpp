@@ -159,10 +159,27 @@ void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList
 			return;
 		}
 	}
-	LogMan::Log("Could not fit point " + std::to_string(vertexID) + " in a mesh. Colinear point?", LOG_WARN);
 	
 	if (firstPass)
 		failedPoints.push_back(vertexID);
+	else
+		LogMan::Log("Could not fit point " + std::to_string(vertexID) + " in the mesh.", LOG_WARN); 
+}
+
+void OptimizeAll(std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * triangles)
+{
+	LogMan::Log("Global Optimization run");
+
+	for (int i = 0; i < nodesList.size() - 4; i++)
+	{
+		std::vector<Triangle *> toOptimize;
+		for (auto it = triangles->begin(); it != triangles->end(); ++it)
+		{
+			if (it->second.ContainsVertex(i))
+				toOptimize.push_back(&(it->second));
+		}
+		OptimizeTriangulation(i, nodesList, toOptimize, triangles);
+	}
 }
 
 void RemoveExteriorTriangles(std::unordered_map<int, Triangle> * trianglesList, std::vector<int> * outBoundaryNodes) //returns a list of exterior nodes within the mesh
@@ -194,23 +211,41 @@ void RemoveExteriorTriangles(std::unordered_map<int, Triangle> * trianglesList, 
 	LogMan::Log("Removed" + std::to_string(initialCount - trianglesList->size()) + " triangles.");
 }
 
-void OptimizeAll(std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * triangles)
+void Cleanup(std::vector<Vector2D> const & originalNodesList, std::unordered_map<int, Triangle> * trianglesList)
 {
-	LogMan::Log("Global Optimization run");
+	//Two things to do: Remove invalid tris, and have ID sequentially from 0.
 
-	for (int i = 0; i < nodesList.size() - 4; i++)
+	//Because of the carried out above, we may have created triangles that would, when referenced to the original node, have\
+	an area of zero (because, e.g. all three points are colinear.
+
+	//Note: while the resulting IDs would be sequential, they would not necessarily be ordered in a way that makes sense.
+
+	LogMan::Log("Internal cleanup pass");
+	size_t counter = 0;
+	std::unordered_map<int, Triangle> cleanedTriList;
+
+	for (auto it = trianglesList->begin(); it != trianglesList->end(); ++it)
 	{
-		std::vector<Triangle *> toOptimize;
-		for (auto it = triangles->begin(); it != triangles->end(); ++it)
+		int const * verts = it->second.vertIDs;
+		Vector2D originalNodes[3]{ originalNodesList[verts[0]], originalNodesList[verts[1]], originalNodesList[verts[2]] };
+		it->second.UpdateGeometry(verts, originalNodes);
+		
+		if (!it->second.Validate()) //remove
 		{
-			if (it->second.ContainsVertex(i))
-				toOptimize.push_back(&(it->second));
+			LogMan::Log("Removed invalid triangle: " + std::to_string(it->second.id));
 		}
-		OptimizeTriangulation(i, nodesList, toOptimize, triangles);
+		else //update id and copy to cleaned list
+		{
+			it->second.id = counter; //Adjust in place before copying to cleanedTriList. Ok since old data will be deleted anyway.
+			cleanedTriList.insert({ counter, it->second });
+			counter++;
+		}
 	}
+	
+	*trianglesList = std::move(cleanedTriList);
 }
 
-bool Triangulate(std::vector<Vector2D> nodesList, double superTrianglePadding, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes, Triangle * outSuperTriangles)
+bool Triangulate(std::vector<Vector2D> const & nodesList, double superTrianglePadding, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes, Triangle * outSuperTriangles)
 {
 	//check if nodesList has enough elements, else return false.
 	//compute bounding box
@@ -228,19 +263,21 @@ bool Triangulate(std::vector<Vector2D> nodesList, double superTrianglePadding, s
 		return false;
 	}
 
+	std::vector<Vector2D> tempNodes = nodesList; //make a copy of the nodes that we can modify
+
 	LogMan::Log("Starting triangulation!");
 	lastID = 0;
 	failedPoints.clear();
-	GenerateSuperTriangle(nodesList, superTrianglePadding, outTrianglesList, outSuperTriangles);
+	GenerateSuperTriangle(tempNodes, superTrianglePadding, outTrianglesList, outSuperTriangles);
 
-	int nodeCount = nodesList.size() - 4; //actual count, excluding ghost nodes of superTriangle
+	int nodeCount = tempNodes.size() - 4; //actual count, excluding ghost nodes of superTriangle
 
 	//first pass
 	LogMan::Log("First pass");
 	for (int i = 0; i < nodeCount; i++)
 	{
 		//LogMan::Log("At node: " + std::to_string(i));
-		DelauneyTriangulation(i, nodesList, outTrianglesList);
+		DelauneyTriangulation(i, tempNodes, outTrianglesList);
 	}
 
 	//second pass	
@@ -249,17 +286,17 @@ bool Triangulate(std::vector<Vector2D> nodesList, double superTrianglePadding, s
 	srand(time(0));
 	for (auto it = failedPoints.begin(); it != failedPoints.end(); ++it)
 	{
-		//LogMan::Log("At node: " + std::to_string(*it));
 		//add some jitter to ths point
-		nodesList[*it].x += nodesList[*it].x * static_cast<double>(rand() % 10) * 0.00001 * pow(-1.0, rand() % 2);
-		srand(nodesList[*it].y);
-		nodesList[*it].y += nodesList[*it].y * static_cast<double>(rand() % 10) * 0.00001 * pow(-1.0, rand() % 2);
+		tempNodes[*it].x += tempNodes[*it].x * static_cast<double>(rand() % 10) * 0.00001 * pow(-1.0, rand() % 2);
+		srand(tempNodes[*it].y);
+		tempNodes[*it].y += tempNodes[*it].y * static_cast<double>(rand() % 10) * 0.00001 * pow(-1.0, rand() % 2);
 		//triangulate
-		DelauneyTriangulation(*it, nodesList, outTrianglesList, false);
+		DelauneyTriangulation(*it, tempNodes, outTrianglesList, false);
 	}
 	
-	OptimizeAll(nodesList, outTrianglesList);
+	OptimizeAll(tempNodes, outTrianglesList);
 	RemoveExteriorTriangles(outTrianglesList, outBoundaryNodes);
+	Cleanup(nodesList, outTrianglesList);
 
 	LogMan::Log("Finished triangulation!", LOG_SUCCESS);
 	return true;
