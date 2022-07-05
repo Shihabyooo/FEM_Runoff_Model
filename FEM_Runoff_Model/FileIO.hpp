@@ -7,6 +7,21 @@
 
 #include "Globals.hpp"
 
+//Must be defined in FileIO not in Global because memory freeing requires STB functions
+struct Image
+{
+public:
+	Image();
+	Image(std::string const & path);
+	~Image();
+
+	bool Load(std::string const & path);
+	void Unload();
+
+	unsigned char * bitmap = NULL;
+	int width = 0, height = 0, samples = 0;
+};
+
 namespace FileIO
 {
 	bool FileExists(std::string const & path);
@@ -25,6 +40,8 @@ namespace FileIO
 									double ** outPixelScale);//will allocate double[3] and point this pointer to it.
 		
 	void UnloadRaster(int rasterID);
+
+	Image LoadImage(std::string const & path);
 
 	bool InitLogFile();
 	void CloseLogFile();

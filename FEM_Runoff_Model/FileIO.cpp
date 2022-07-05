@@ -1,4 +1,6 @@
 #include <GeoTIFF_Parser.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 #include "FileIO.hpp"
 #include "LogManager.hpp"
@@ -215,6 +217,12 @@ void FileIO::UnloadRaster(int rasterID)
 	UnloadGeoTIFF(rasterID);
 }
 
+Image FileIO::LoadImage(std::string const & path)
+{
+	Image newImage (path);
+	return newImage;
+}
+
 std::ofstream logFile;
 
 bool FileIO::InitLogFile()
@@ -248,4 +256,45 @@ bool FileIO::WriteToLog(LogEntry const & newEntry)
 	logFile << newEntry.content << std::endl;
 	logFile.flush(); //flush results to disk
 	return true;
+}
+
+Image::Image()
+{
+}
+
+Image::Image(std::string const & path)
+{
+	Load(path);
+}
+
+Image::~Image()
+{
+	Unload();
+}
+
+bool Image::Load(std::string const & path)
+{
+	Unload();
+	bitmap = stbi_load(path.c_str(), &width, &height, &samples, 0);
+
+	if (bitmap == NULL)
+	{
+		std::string errorMsg = "Warning! Could not load image \"" + path + "\". -- " + stbi_failure_reason();
+		LogMan::Log(errorMsg.c_str(), LOG_WARN);
+		return false;
+	}
+
+	return true;
+}
+
+void Image::Unload()
+{
+	if (bitmap != NULL)
+		stbi_image_free(bitmap);
+
+	bitmap == NULL;
+	
+	width = 0;
+	height = 0;
+	samples = 0;
 }
