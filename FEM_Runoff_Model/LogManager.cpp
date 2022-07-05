@@ -47,15 +47,18 @@ void DrawLogEntry(LogEntry const * entry)
 
 void DrawLogPane()
 {
-	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-	ImGui::SetNextWindowPos(ImVec2(logPaneDimensions.positionX, logPaneDimensions.positionY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(logPaneDimensions.width, logPaneDimensions.height), ImGuiCond_Always);
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
 
+	ImGui::SetNextWindowSizeConstraints(ImVec2(-1, minLogPaneHeight), ImVec2(-1, maxLogPaneHeight));
 	ImGui::Begin("Log", NULL, windowFlags);
+	
+	if (logPaneDimensions.UpdateHeight(ImGui::GetWindowSize().y))
+		RecomputeWindowElementsDimensions();
+
+	ImGui::SetWindowPos(ImVec2(logPaneDimensions.positionX, logPaneDimensions.positionY), ImGuiCond_Always);
+	ImGui::SetWindowSize(ImVec2(logPaneDimensions.width, logPaneDimensions.height), ImGuiCond_Always);
 
 	ImGui::PushItemWidth(ImGui::GetFontSize() * -12); //Use fixed width for labels (by passing a negative value), the rest goes to widgets. We choose a width proportional to our font s
-
-	//ImGui::TextWrapped("Log goes here");
 
 	for (auto it = logHistory.begin(); it != logHistory.end(); ++it)
 		DrawLogEntry(&(*it));

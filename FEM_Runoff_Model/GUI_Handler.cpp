@@ -14,10 +14,15 @@ ImVec4 viewportBGColour = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);
 WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimensions;
 WindowDimensions toolbarDimensions, statusBarDimensions;
 
-int fixedLeftPaneWidth = 250;
-int fixedLogPaneHeight = 200;
-int fixedToolBarHeight = 50;
-int fixedStatusBarHeight = 30;
+int minLeftPaneWidth = 250;
+int maxLeftPaneWidth = 1000;
+int minLogPaneHeight = 200;
+int maxLogPaneHeight = 500;
+
+//int fixedLeftPaneWidth = 250;
+//int fixedLogPaneHeight = 200;
+int fixedToolBarHeight = 60;
+int fixedStatusBarHeight = 35;
 
 Icon iconNodeMove, iconNodeView, iconElemView;
 
@@ -30,7 +35,6 @@ void OnMainWindowSizeChange(GLFWwindow * window, int width, int height)
 {
 	mainWinWidth = width;
 	mainWinHeight = height;
-
 	RecomputeWindowElementsDimensions();// width, height);
 }
 
@@ -53,8 +57,7 @@ void InitializeDearIMGUI(const char * glslVersion) //code copied directly from o
 
 	ImVec4 mainBGColour = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-	//disable saving of window pos (don't need it).
-	io.IniFilename = NULL;
+	io.IniFilename = "gui_conf.ini";
 }
 
 bool InitializeMainWindow() //implies InitializeDearIMGUI()
@@ -108,6 +111,10 @@ void TerminateMainWindow()
 
 void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHeight)
 {
+	//When minimized, width and height are zero. This can cause issue with viewport renderer. So we simply skip updating dimensions
+	if (mainWinHeight == 0 || mainWinWidth == 0) 
+		return;	
+
 	//Set fixed width for left pane.
 	//Set fixed height for log pane.
 	//left pane height = mainWindow height.
@@ -115,13 +122,16 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 	//viewport takes remainin area.
 	
 	statusBarDimensions = WindowDimensions(0, mainWinHeight - fixedStatusBarHeight, mainWinWidth, fixedStatusBarHeight);
-	leftPaneDimensions = WindowDimensions(0, 0, fixedLeftPaneWidth, mainWinHeight - fixedStatusBarHeight);
-	logPaneDimensions = WindowDimensions(leftPaneDimensions.width, mainWinHeight - fixedLogPaneHeight - fixedStatusBarHeight, mainWinWidth - fixedLeftPaneWidth, fixedLogPaneHeight);
-	toolbarDimensions = WindowDimensions(fixedLeftPaneWidth, 0, mainWinWidth - fixedLeftPaneWidth, fixedToolBarHeight);
-	//lastViewportSize must be set before we update viewportDimensions.
+	leftPaneDimensions = WindowDimensions(0, 0, leftPaneDimensions.width, mainWinHeight - fixedStatusBarHeight);
+	logPaneDimensions = WindowDimensions(leftPaneDimensions.width, mainWinHeight - logPaneDimensions.height - fixedStatusBarHeight, mainWinWidth - leftPaneDimensions.width, logPaneDimensions.height);
+	toolbarDimensions = WindowDimensions(leftPaneDimensions.width, 0, mainWinWidth - leftPaneDimensions.width, fixedToolBarHeight);
+	
 	lastViewportSize.x = viewportDimensions.width;
 	lastViewportSize.y = viewportDimensions.height;
-	viewportDimensions = WindowDimensions(leftPaneDimensions.width, fixedToolBarHeight, mainWinWidth - fixedLeftPaneWidth, mainWinHeight - fixedLogPaneHeight - fixedStatusBarHeight - fixedToolBarHeight);
+	viewportDimensions = WindowDimensions(leftPaneDimensions.width,
+		fixedToolBarHeight,
+		mainWinWidth - leftPaneDimensions.width,
+		mainWinHeight - logPaneDimensions.height - fixedStatusBarHeight - fixedToolBarHeight);
 
 	//update viewport renderer to use new dimensions.
 	UpdateViewport();
@@ -214,11 +224,18 @@ void FillParametersStruct(ModelParameters & params)
 
 void DrawLeftPane()
 {
-	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-	ImGui::SetNextWindowPos(ImVec2(leftPaneDimensions.positionX, leftPaneDimensions.positionY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(leftPaneDimensions.width, leftPaneDimensions.height), ImGuiCond_Always);
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
+	
+	ImGui::SetNextWindowSizeConstraints(ImVec2(minLeftPaneWidth, -1), ImVec2(maxLeftPaneWidth, -1));
 
 	ImGui::Begin("Input", NULL, windowFlags);
+
+	if (leftPaneDimensions.UpdateWidth(ImGui::GetWindowSize().x))
+		RecomputeWindowElementsDimensions();
+
+	ImGui::SetWindowPos(ImVec2(leftPaneDimensions.positionX, leftPaneDimensions.positionY), ImGuiCond_Always);
+	ImGui::SetWindowSize(ImVec2(leftPaneDimensions.width, leftPaneDimensions.height), ImGuiCond_Always);
+
 	ImGui::PushItemWidth(ImGui::GetFontSize() * -12); //Use fixed width for labels (by passing a negative value), the rest goes to widgets. We choose a width proportional to our font size.
 	
 	if (ImGui::BeginMenuBar())
@@ -328,7 +345,7 @@ void DrawLeftPane()
 			{
 				inputTS.AdjustSize(timeSeriesSize); //will do nothing if size is same
 			
-				ImGui::BeginTable("##timeSeriesTable", 3, ImGuiTableFlags_Resizable, ImVec2(fixedLeftPaneWidth - 10, 100));
+				ImGui::BeginTable("##timeSeriesTable", 3, ImGuiTableFlags_Resizable, ImVec2(leftPaneDimensions.width - 10, 100));
 				
 				ImGui::TableNextColumn();
 				ImGui::Text(" ");
@@ -486,11 +503,11 @@ void DrawButton(Icon const & icon, ToolMode toolMode)
 void DrawToolbar()
 {
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
-	ImGui::SetNextWindowPos(ImVec2(toolbarDimensions.positionX, toolbarDimensions.positionY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(toolbarDimensions.width, toolbarDimensions.height), ImGuiCond_Always);
-
+	
 	ImGui::Begin("Toolbar", NULL, windowFlags);
 	
+	ImGui::SetWindowPos(ImVec2(toolbarDimensions.positionX, toolbarDimensions.positionY), ImGuiCond_Always);
+	ImGui::SetWindowSize(ImVec2(toolbarDimensions.width, toolbarDimensions.height), ImGuiCond_Always);
 	
 	//move nodes
 	DrawButton(iconNodeMove, ToolMode::MoveNode);

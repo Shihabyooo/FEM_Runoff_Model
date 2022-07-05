@@ -340,9 +340,7 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 be painted in the viewport window.
 void DrawViewport()
 {
-	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-	ImGui::SetNextWindowPos(ImVec2(viewportDimensions.positionX, viewportDimensions.positionY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(viewportDimensions.width, viewportDimensions.height), ImGuiCond_Always);
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 
 	ImGui::Begin("Viewport", NULL, windowFlags);
 	
@@ -357,6 +355,9 @@ void DrawViewport()
 	RenderViewport();
 
 	ImVec2 pos = ImGui::GetCursorScreenPos();
+	
+	ImGui::SetWindowPos(ImVec2(viewportDimensions.positionX, viewportDimensions.positionY), ImGuiCond_Always);
+	ImGui::SetWindowSize(ImVec2(viewportDimensions.width, viewportDimensions.height), ImGuiCond_Always);
 
 	ImGui::GetWindowDrawList()->AddImage(
 		(void*)viewportBuffer.texture, //texture to render (from an offscreen buffer)

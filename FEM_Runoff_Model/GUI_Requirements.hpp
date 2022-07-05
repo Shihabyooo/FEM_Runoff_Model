@@ -65,10 +65,32 @@ public:
 		height = _height;
 	};
 
-	void SetDimensions(Vector2Int const & dimension)
+	bool UpdateDimensions(int _width, int _height) //returns true if anything changed, otherwise.
 	{
-		width = dimension.x;
-		height = dimension.y;
+		if (_width == width && _height == height)
+			return false;
+		
+		width = _width;
+		height = _height;
+		return true;
+	}
+
+	bool UpdateWidth(int _width)
+	{
+		if (_width == width)
+			return false;
+		
+		width = _width;
+		return true;
+	}
+
+	bool UpdateHeight(int _height)
+	{
+		if (_height == height)
+			return false;
+
+		height = _height;
+		return true;
 	}
 
 	Vector2 Dimension()
@@ -165,6 +187,16 @@ extern WindowDimensions toolbarDimensions, statusBarDimensions;
 extern Vector2D lastViewportSize;
 
 extern ToolMode activeTool;
+
+extern int mainWinWidth;
+extern int mainWinHeight;
+extern int minLeftPaneWidth;
+extern int maxLeftPaneWidth;
+extern int minLogPaneHeight;
+extern int maxLogPaneHeight;
+extern int fixedToolBarHeight;
+extern int fixedStatusBarHeight;
+
 
 namespace PointShader //TODO fix this
 {

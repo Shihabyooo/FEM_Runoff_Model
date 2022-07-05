@@ -50,7 +50,6 @@ void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY); //re
 
 //void RenderViewport(); //Renders viewport content to an offscreen buffer.
 void DrawViewport(); //IMGUI painting commands for viewport window
-
 bool InitViewport();
 
 void UpdateViewport();
