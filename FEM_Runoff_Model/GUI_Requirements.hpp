@@ -11,10 +11,19 @@
 #include <iostream> //todo remove iostream and couts after implementing a decent logging functionality
 
 #include "ModelInterface.hpp"
+#include "FileIO.hpp"
 
 #define MIN_VIEWPORT_DELTA 1.0
 
 #define CLEAR_ARRAY(x) if (x != NULL) { delete[] x; } x = NULL;
+
+enum ToolMode
+{
+	None = 0,
+	ViewNode = 1,
+	ViewElement = 2,
+	MoveNode = 3
+};
 
 struct Shader
 {
@@ -86,6 +95,58 @@ public:
 	int height;
 };
 
+struct Icon
+{
+public:
+	Icon()
+	{
+
+	}
+
+	Icon(Image const & image)
+	{
+		glGenTextures(1, &texPtr);
+		glBindTexture(GL_TEXTURE_2D, texPtr);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		if (image.bitmap == NULL)
+			return;
+		
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.bitmap);
+		width = image.width;
+		height = image.height;
+		isInit = true;
+	}
+
+	~Icon()
+	{
+		if (isInit)
+			glDeleteTextures(0, &texPtr);
+	}
+
+	void operator= (Icon && icon2)
+	{
+		if (isInit)
+			glDeleteTextures(0, &texPtr);
+
+
+		texPtr = icon2.texPtr;
+		width = icon2.width;
+		height = icon2.height;
+
+		isInit = icon2.isInit;
+		icon2.isInit = false;
+	}
+
+	GLuint texPtr;
+	int width = 0, height = 0;
+	bool isInit = false;
+};
+
 void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY);
 void RecomputeWindowElementsDimensions();// int newMainWinWidth, int newMainWinHeight);
 void GLErrorCheck();
@@ -102,6 +163,8 @@ extern ImVec4 viewportBGColour;
 extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimensions;
 extern WindowDimensions toolbarDimensions, statusBarDimensions;
 extern Vector2D lastViewportSize;
+
+extern ToolMode activeTool;
 
 namespace PointShader //TODO fix this
 {
@@ -143,29 +206,5 @@ namespace PolygonShader
 		"out vec4 frag_colour;"
 		"void main() {"
 		"  frag_colour = diffuseCol;"
-		"}";
-}
-
-//For testing only:
-namespace TestTriangle
-{
-	static float vertices[] = {
-	0.0f,  0.5f,  0.0f,
-	0.5f, -0.5f,  0.0f,
-	-0.5f, -0.5f,  0.0f
-	};
-
-	static const char* vertex_shader_text =
-		"#version 330\n"
-		"in vec3 vp;"
-		"void main() {"
-		"  gl_Position = vec4(vp, 1.0);"
-		"}";
-
-	static const char* fragment_shader_text =
-		"#version 330\n"
-		"out vec4 frag_colour;"
-		"void main() {"
-		"  frag_colour = vec4(0.5, 0.0, 0.5, 1.0);"
 		"}";
 }

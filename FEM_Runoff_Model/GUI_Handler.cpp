@@ -19,6 +19,8 @@ int fixedLogPaneHeight = 200;
 int fixedToolBarHeight = 50;
 int fixedStatusBarHeight = 30;
 
+Icon iconNodeMove, iconNodeView, iconElemView;
+
 void OnGLFWError(int error, const char* description) //Callback
 {
 	fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -87,6 +89,15 @@ bool InitializeMainWindow() //implies InitializeDearIMGUI()
 	glfwSetWindowSizeCallback(mainWindow, OnMainWindowSizeChange);
 	
 	return true;
+}
+
+bool LoadIcons()
+{
+	iconNodeMove = std::move(Icon(FileIO::LoadImage("Icons\\Icon_moveNode.png")));
+	iconNodeView = std::move(Icon(FileIO::LoadImage("Icons\\Icon_viewNode.png")));
+	iconElemView = std::move(Icon(FileIO::LoadImage("Icons\\Icon_viewElement.png")));
+
+	return iconNodeMove.isInit && iconNodeView.isInit && iconElemView.isInit;
 }
 
 void TerminateMainWindow()
@@ -453,6 +464,25 @@ void DrawLeftPane()
 	ImGui::End();
 }
 
+ImVec2 buttonSize(32, 32);
+ImVec4 buttonBGColour(1.0, 1.0f, 1.0f, 0.0f);
+ImVec4 buttonTintColour(1.0f, 1.0f, 1.0f, 1.0f);
+ImVec4 activeButtonTintColour(0.45f, 0.75f, 1.0f, 1.0f);
+
+void DrawButton(Icon const & icon, ToolMode toolMode)
+{
+	if (ImGui::ImageButton((void*)icon.texPtr,
+							buttonSize,
+							ImVec2(0, 0),
+							ImVec2(1, 1),
+							-1,
+							buttonBGColour,
+							activeTool == toolMode ? activeButtonTintColour : buttonTintColour))
+	{
+		activeTool = toolMode;
+	}
+}
+
 void DrawToolbar()
 {
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
@@ -460,32 +490,24 @@ void DrawToolbar()
 	ImGui::SetNextWindowSize(ImVec2(toolbarDimensions.width, toolbarDimensions.height), ImGuiCond_Always);
 
 	ImGui::Begin("Toolbar", NULL, windowFlags);
-	ImVec2 buttonSize(32, 32);
-	ImVec4 buttongBGColour(1.0, 1.0f, 1.0f, 1.0f);
-	ImVec4 buttonTintColour(1.0f, 0.0f, 0.0f, 1.0f);
 	
-	ImGuiIO& io = ImGui::GetIO(); //test
-	ImTextureID my_tex_id = io.Fonts->TexID; //test
-
-	if (ImGui::ImageButton(my_tex_id, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttongBGColour, buttonTintColour))
-	{
-
-	}
+	
+	//move nodes
+	DrawButton(iconNodeMove, ToolMode::MoveNode);
+	
+	//view nodes
 	ImGui::SameLine();
-	if (ImGui::ImageButton(my_tex_id, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttongBGColour, buttonTintColour))
-	{
-
-	}
+	DrawButton(iconNodeView, ToolMode::ViewNode);
+	
+	//view elements
 	ImGui::SameLine();
-	if (ImGui::ImageButton(my_tex_id, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttongBGColour, buttonTintColour))
-	{
+	DrawButton(iconElemView, ToolMode::ViewElement);
+	
+	//ImGui::SameLine();
+	//if (ImGui::ImageButton(NULL, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttonBGColour, buttonTintColour))
+	//{
 
-	}
-	ImGui::SameLine();
-	if (ImGui::ImageButton(my_tex_id, buttonSize, ImVec2(0, 0), ImVec2(1, 1), -1, buttongBGColour, buttonTintColour))
-	{
-
-	}
+	//}
 
 	ImGui::End();
 }
@@ -509,7 +531,6 @@ void DrawStatusBar()
 	ImGui::SameLine();
 	ImGui::Text("Screen Aspect: %.4g", screenAspectRatio);
 	ImGui::SameLine();
-	ImGui::Text("World Aspect: %.4g", worldAspectRatio);
 	ImGui::End();
 }
 
@@ -588,6 +609,9 @@ int StartUI(unsigned int const startResX, unsigned int const startResY)
 	RecomputeWindowElementsDimensions();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); //restore default framebuffer
+	
+	if (!LoadIcons())
+		LogMan::Log("Warning! There was an issue loading icons.", LOG_WARN);
 	
 	LogMan::Log("GUI startup success!", LOG_SUCCESS);
 	return MainUILoop();
