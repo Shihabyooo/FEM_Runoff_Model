@@ -40,7 +40,6 @@ extern Vector2D currenViewportHoverPosPixels; //in local pixel screenspace of vi
 extern bool isHoveringViewport;
 extern double scale;
 extern double screenAspectRatio;
-extern double worldAspectRatio;
 extern Vector2D viewBounds[2];
 
 void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount); //test test

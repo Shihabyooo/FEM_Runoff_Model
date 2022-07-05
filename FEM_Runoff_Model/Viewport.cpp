@@ -5,7 +5,6 @@ OffScreenBuffer viewportBuffer;
 Vector2D delta;
 double scale = 0.5f;
 double screenAspectRatio = 1.0f;
-double worldAspectRatio = 1.0f;
 float scaleChangeTicks = 0.01f; //TODO make this value dynamically set based on current bounds.
 //float margin = 0.05f;
 float * nodesMeshVerts = NULL;
@@ -15,7 +14,6 @@ int renderTrisIndicesCount = 0;
 
 std::unordered_map <int, Layer>  layers;
 Shader triangleShader, pointShader, lineShader;
-//Shader testSuperTriShader;
 float superTriMeshVerts[18];
 
 Vector2D lastViewportSize;
@@ -30,6 +28,8 @@ Triangle const * selectedElement = NULL;
 std::string elementViewName = "";
 std::string elementViewVerts = "";
 std::string elementViewArea = "";
+
+ToolMode activeTool = ToolMode::None;
 
 //Create vertex buffer (VBO), vertex array object (VAO) and vertex array element object, store id in targetGLData struct. \
 if verticesCount is greater than or equal to 3, UpdateMesh() is called.
@@ -192,48 +192,86 @@ void HandleMouseZoom()
 {
 	ImGuiIO& io = ImGui::GetIO();
 	float scroll = io.MouseWheel * -1.0f;
-	if (isHoveringViewport && scroll != 0.0f)
+	if (scroll != 0.0f)
 	{
 		scale += scroll * scaleChangeTicks;
 		
 		//TODO add a limit to prevent viewBounds[0] to be greater than viewBounds[1] (nor equal)
 
 		viewBounds[0].x = currenViewportHoverPos.x - currenViewportHoverPosPixels.x * scale;
-		viewBounds[0].y = currenViewportHoverPos.y - (viewportDimensions.height - currenViewportHoverPosPixels.y) * scale * screenAspectRatio / worldAspectRatio;
+		viewBounds[0].y = currenViewportHoverPos.y - (viewportDimensions.height - currenViewportHoverPosPixels.y) * scale;
 
 		viewBounds[1].x = currenViewportHoverPos.x + (viewportDimensions.width - currenViewportHoverPosPixels.x) * scale;
-		viewBounds[1].y = currenViewportHoverPos.y + currenViewportHoverPosPixels.y * scale * screenAspectRatio / worldAspectRatio;
+		viewBounds[1].y = currenViewportHoverPos.y + currenViewportHoverPosPixels.y * scale;
 		
 		UpdateCoordinateProjectionParameters();
 		UpdateContent();
 	}
 }
 
-void HandleMouseLeftClick()
+bool PickHoveredElement()
 {
-	//check that we're clicking on
-	if (isHoveringViewport && ImGui::IsMouseClicked(0))
+	selectedElement = GetElementContainingPoint(currenViewportHoverPos);
+	
+	if (selectedElement != NULL)
 	{
-		//TODO a switch statement goes here to route to appropriate function based on whether we are trying to inspect an element\
-		or a node.
-
-		selectedElement = GetElementContainingPoint(currenViewportHoverPos);
-		if (selectedElement != NULL)
-		{
-			showElementView = true;
-			ImGui::OpenPopup("elementView");
-			elementViewName = std::move(std::string("Element: " + std::to_string(selectedElement->id)).c_str());
-			elementViewVerts = std::move(std::string("Vertices: " + std::to_string(selectedElement->vertIDs[0]) + ", "
-				+ std::to_string(selectedElement->vertIDs[1]) + ", "
-				+ std::to_string(selectedElement->vertIDs[2])).c_str());
-			elementViewArea = std::move(std::string("Area: " + std::to_string(selectedElement->area)).c_str());
-		}
-		else
-			showElementView = false;
+		elementViewName = std::move(std::string("Element: " + std::to_string(selectedElement->id)).c_str());
+		elementViewVerts = std::move(std::string("Vertices: " + std::to_string(selectedElement->vertIDs[0]) + ", "
+			+ std::to_string(selectedElement->vertIDs[1]) + ", "
+			+ std::to_string(selectedElement->vertIDs[2])).c_str());
+		elementViewArea = std::move(std::string("Area: " + std::to_string(selectedElement->area)).c_str());
+		return true;	
+	}
+	else
+	{
+		elementViewName = "";
+		elementViewVerts = "";
+		elementViewArea = "";
+		return false;
 	}
 }
 
-//MUST BE CALLED BEFORE HandleMouseZoom() \
+void HandleMouseLeftClick()
+{
+	//check that we're clicking on
+	if (ImGui::IsMouseClicked(0))
+	{
+		switch (activeTool)
+		{
+			case None:
+			{
+				return;
+			}
+			case ViewNode:
+			{
+				LogMan::Log("Viewing nodes not implemented yet.", LOG_WARN);
+				return;
+			}
+			case ViewElement:
+			{
+				if (PickHoveredElement())
+				{
+					ImGui::OpenPopup("elementView");
+					showElementView = true;
+				}
+				else
+					showElementView = false;
+				return;
+			}
+			case MoveNode:
+			{
+				LogMan::Log("Moving nodes not implemented yet.", LOG_WARN);
+				return;
+			}
+			default:
+			{
+				return;
+			}
+		}
+	}
+}
+
+//MUST BE CALLED BEFORE Viewport input handling. \
 Only updates when position when mouse is over viewport, otherwise isHoveringViewport set to false.
 void UpdateMouseHoverPosition()
 {
@@ -309,9 +347,12 @@ void DrawViewport()
 	ImGui::Begin("Viewport", NULL, windowFlags);
 	
 	UpdateMouseHoverPosition();
-	HandleMousePan();
-	HandleMouseZoom();
-	HandleMouseLeftClick();
+	if (isHoveringViewport)
+	{
+		HandleMousePan();
+		HandleMouseZoom();
+		HandleMouseLeftClick();
+	}
 
 	RenderViewport();
 
@@ -467,7 +508,6 @@ void SetViewBounds(Vector2D swCorner, Vector2D nwCorner)
 	viewBounds[1] = viewBounds[0] + delta;
 
 	scale = delta.x / static_cast<double>(viewportDimensions.width);
-	worldAspectRatio = static_cast<double>(delta.x) / static_cast<double>(delta.y);
 
 	scaleChangeTicks = 0.1 * scale;
 }
@@ -475,7 +515,6 @@ void SetViewBounds(Vector2D swCorner, Vector2D nwCorner)
 void UpdateCoordinateProjectionParameters()
 {
 	delta = viewBounds[1] - viewBounds[0];
-	worldAspectRatio = static_cast<double>(delta.x) / static_cast<double>(delta.y);
 	screenAspectRatio = static_cast<double>(viewportDimensions.width) / static_cast<double>(viewportDimensions.height);
 	scale = delta.x / static_cast<double>(viewportDimensions.width);
 }
@@ -492,7 +531,7 @@ Vector2D NormalizeCoordinates(Vector2D & point)
 Vector2D ScreenToWorldSpace(Vector2D screenCoordinates)
 {
 	return Vector2D(viewBounds[0].x + (screenCoordinates.x * scale),
-					viewBounds[1].y - (screenCoordinates.y * scale *  screenAspectRatio / worldAspectRatio));
+					viewBounds[1].y - (screenCoordinates.y * scale));
 }
 
 //Shifts the viewBounds by posDelta. Calls UpdateContent before returning.
