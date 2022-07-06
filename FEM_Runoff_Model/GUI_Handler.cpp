@@ -179,9 +179,11 @@ int selectedTopoInterp = 1;
 int selectedTimeUnit = 1;
 int selectedSolver = 0;
 
-char solverResidual[12] = "0.001";
+char solverResidual[12] = "0.0001";
 char solverWeight[12] = "1.0";
 int solverMaxIteration = 1000;
+char internalResidual[12] = "0.0001";
+int internalMaxIteration = 100;
 
 
 void FillParametersStruct(ModelParameters & params)
@@ -215,6 +217,8 @@ void FillParametersStruct(ModelParameters & params)
 	params.residualThreshold = atof(solverResidual);
 	params.weight = atof(solverWeight);
 	params.maxIterations = solverMaxIteration < 0 ? 0 : solverMaxIteration;
+	params.internalResidualTreshold = atof(internalResidual);
+	params.maxInternalIterations = internalMaxIteration;
 
 	params.unitTimeSeries = inputTS;
 	params.unitTimeSeries.timeUnit = static_cast<TimeUnit>(selectedTimeUnit);
@@ -253,25 +257,22 @@ void DrawLeftPane()
 	ImGui::Text(PROGRAM_NAME);
 	ImGui::Separator();
 	ImGui::NewLine();
-
+	
 	if (ImGui::CollapsingHeader("Topography and Geometry"))
 	{
 		//Geometry data
 		ImGui::Text("Mesh Nodes");
 		ImGui::PushItemWidth(-1);
 		ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
-		ImGui::PopItemWidth();
-		if (ImGui::Button("Browse for geometry directory"))
+
+		if (ImGui::Button("Browse##nodes"))
 		{
 			//TODO spawn file browser here
 		}
 		
-		//ImGui::NewLine();
-		ImGui::PushItemWidth(-1);
 		ImGui::Text("SuperTriangle padding");
 		ImGui::SameLine();
 		ImGui::InputText("##superTriPad", superTriPadding, 24, ImGuiInputTextFlags_CharsDecimal);
-		ImGui::PopItemWidth();
 
 		if (ImGui::Button("Generate Mesh", ImVec2(100, 50)))
 		{
@@ -279,37 +280,28 @@ void DrawLeftPane()
 			SetViewBounds(nodesSW, nodesNE);
 			UpdateViewport();
 		}
-
-		/*DrawFileBrowser();
-		DrawFileList(geometryFilePath, &geometryNames, &selectedGeometry, DataType::geometry, false, GEOMETRY_LIST_ID);
-		ImGui::NewLine();*/
-
+		
 		ImGui::Text("DEM");
-		ImGui::PushItemWidth(-1);
 		ImGui::InputText("##demFilePath", demFilePath, IM_ARRAYSIZE(demFilePath));
-		ImGui::PopItemWidth();
-
-		if (ImGui::Button("Browse for DEM file"))
+		
+		if (ImGui::Button("Browse##dem"))
 			LogMan::Log("Not yet impltemented!", LOG_WARN);
 
 		ImGui::Text("Slopes");
-		ImGui::PushItemWidth(-1);
 		ImGui::InputText("##slopesFilePath", slopeFilePath, IM_ARRAYSIZE(slopeFilePath));
-		ImGui::PopItemWidth();
 
-		if (ImGui::Button("Browse for Slopes file"))
+		if (ImGui::Button("Browse##slopes"))
 			LogMan::Log("Not yet impltemented!", LOG_WARN);
 
 		ImGui::Text("Flow Direction");
-		ImGui::PushItemWidth(-1);
 		ImGui::InputText("##fdrFilePath", fdrFilePath, IM_ARRAYSIZE(fdrFilePath));
-		ImGui::PopItemWidth();
 
-		if (ImGui::Button("Browse for Flow Direction map file"))
+		if (ImGui::Button("Browse##fdr"))
 			LogMan::Log("Not yet impltemented!", LOG_WARN);
 
 		ImGui::Text("Spatial interpolation method");
 		ImGui::Combo("##InterpT2D", &selectedTopoInterp, interpMethods2D, IM_ARRAYSIZE(interpMethods2D));
+		ImGui::PopItemWidth();
 	}
 
 	ImGui::NewLine();
@@ -317,23 +309,22 @@ void DrawLeftPane()
 
 	if (ImGui::CollapsingHeader("Precipitation"))
 	{
-		ImGui::Text("Precipitation input method"); //TODO text warpping
+		ImGui::PushItemWidth(-1);
+		ImGui::Text("Precipitation input method");		
 		ImGui::Combo("##precipInput", &selectedPrecipInput, precipitationInput, IM_ARRAYSIZE(precipitationInput));
 
 		if (selectedPrecipInput == 0)
 		{
 			ImGui::InputInt("Series length", &timeSeriesSize);
 			timeSeriesSize = Max(timeSeriesSize, 2);
-			ImGui::Text("Time-series temporal interpolation method"); //TODO text warpping
+			ImGui::Text("Time-series temporal interpolation method");
 			ImGui::Combo("##InterpP1D", &selectedPrecipTempoInterp, interpMethods1D, IM_ARRAYSIZE(interpMethods1D));
 
-			ImGui::Text("Time-series time units"); //TODO text warpping
+			ImGui::Text("Time-series time units");
 			ImGui::Combo("##tsTimeUnits", &selectedTimeUnit, timeUnits, IM_ARRAYSIZE(timeUnits));
 
 			ImGui::Text("Time-series file path");
-			ImGui::PushItemWidth(-1);
-			ImGui::InputText("##tsFilePath", percipTSPath, IM_ARRAYSIZE(percipTSPath));
-			ImGui::PopItemWidth();
+			ImGui::InputText("##tsFilePath", percipTSPath, IM_ARRAYSIZE(percipTSPath));			
 	
 			if (ImGui::Button("Load Time-Series"))
 			{
@@ -350,7 +341,8 @@ void DrawLeftPane()
 				ImGui::TableNextColumn();
 				ImGui::Text(" ");
 				ImGui::TableNextColumn();
-				ImGui::Text("Time");
+				std::string timeColumnHeader = "Time (" + std::string(timeUnits[selectedTimeUnit]) + ")";
+				ImGui::Text(timeColumnHeader.c_str());
 				ImGui::TableNextColumn();
 				ImGui::Text("Precipitation (mm)");
 
@@ -368,18 +360,15 @@ void DrawLeftPane()
 
 					ImGui::TableNextColumn();
 
-					std::pair<size_t, double> * currEntry = &inputTS.series[i];
-					int tempInt = currEntry->first;
-					ImGui::PushItemWidth(-1);
-					ImGui::InputInt("##precipTime" + i, &tempInt, 0);
-					ImGui::PopItemWidth();
+					std::pair<int, double> tempPair(inputTS.series[i].first, inputTS.series[i].second); //to force input to positive values.
 
+					ImGui::InputInt(std::string("##precipTime" + std::to_string(i)).c_str(), &tempPair.first, 0);
 					ImGui::TableNextColumn();
-					ImGui::PushItemWidth(-1);
-					ImGui::InputDouble("##precipVal" + i, &currEntry->second);
-					ImGui::PopItemWidth();
+					ImGui::InputDouble(std::string("##precipVal" + std::to_string(i)).c_str(), &tempPair.second);
 					
-					currEntry->first = Max(tempInt, 0);
+					//force input to positive values
+					inputTS.series[i].first = Max(tempPair.first, 0);
+					inputTS.series[i].second = Max(tempPair.second, 0.0);
 				}
 				ImGui::EndTable();
 			}
@@ -387,15 +376,14 @@ void DrawLeftPane()
 		else if (selectedPrecipInput == 1)
 		{
 			ImGui::Text("Precipitation rasters directories");
-			ImGui::PushItemWidth(-1);
 			ImGui::InputText("##precipRasDir", precipRasterDir, IM_ARRAYSIZE(precipRasterDir));
-			ImGui::PopItemWidth();
-			ImGui::Text("Time-series temporal interpolation method"); //TODO text warpping
+			ImGui::Text("Time-series temporal interpolation method");
 			ImGui::Combo("##InterpP1D", &selectedPrecipTempoInterp, interpMethods1D, IM_ARRAYSIZE(interpMethods1D));
 
-			ImGui::Text("Precipitation spatial interpolation method"); //TODO text warpping
+			ImGui::Text("Precipitation spatial interpolation method");
 			ImGui::Combo("##InterpP2D", &selectedPrecipSpaceInterp, interpMethods2D, IM_ARRAYSIZE(interpMethods2D));
 		}
+		ImGui::PopItemWidth();
 	}
 
 	ImGui::NewLine();
@@ -403,22 +391,20 @@ void DrawLeftPane()
 
 	if (ImGui::CollapsingHeader("Hydraulics"))
 	{
+		ImGui::PushItemWidth(-1);
 		ImGui::Checkbox("Use Fixed Manning Coefficient", &useFixedManning);
 		if (useFixedManning)
 		{
-			ImGui::PushItemWidth(-1);
-			ImGui::Text("Manning Coefficient");
+			ImGui::Text("Manning Coefficient:");
 			ImGui::SameLine();
 			ImGui::InputText("##fixedManningCoef", fixedManningCoef, 12, ImGuiInputTextFlags_CharsDecimal);
-			ImGui::PopItemWidth();
 		}
 		else
 		{
 			ImGui::Text("Manning Coefficients Raster");
-			ImGui::PushItemWidth(-1);
 			ImGui::InputText("##ManningRaster", manningFilePath, IM_ARRAYSIZE(manningFilePath));
-			ImGui::PopItemWidth();
 		}
+		ImGui::PopItemWidth();
 	}
 
 	ImGui::NewLine();
@@ -427,40 +413,45 @@ void DrawLeftPane()
 	if (ImGui::CollapsingHeader("Simulation Run Parameters"))
 	{
 		ImGui::PushItemWidth(-1);
-		ImGui::Text("Start time");
+		ImGui::Text("Start time:");
 		ImGui::SameLine();
 		ImGui::InputText("##startTime", startTime, 24, ImGuiInputTextFlags_CharsDecimal);
-		ImGui::Text("End time");
+		ImGui::Text("End time:");
 		ImGui::SameLine();
 		ImGui::InputText("##endTime", endTime, 24, ImGuiInputTextFlags_CharsDecimal);
-		ImGui::Text("Time step");
+		ImGui::Text("Time step:");
 		ImGui::SameLine();
 		ImGui::InputText("##deltaTime", deltaTime, 24, ImGuiInputTextFlags_CharsDecimal);
 		ImGui::NewLine();
 		
 		ImGui::Checkbox("Use Lumped formulation", &useLumped);
-		ImGui::Text("Time difference scheme (Omega value)");
+		ImGui::Text("Omega:");
 		ImGui::SameLine();
 		ImGui::InputText("##femOmega", femOmega, 12, ImGuiInputTextFlags_CharsDecimal);
-
-		ImGui::PopItemWidth();
 		
 		ImGui::NewLine();
-		ImGui::Text("Solver");
+		ImGui::Text("Solver:");
 		ImGui::Combo("##Solver", &selectedSolver, solvers, IM_ARRAYSIZE(solvers));
 
-		ImGui::PushItemWidth(-1);
-		ImGui::Text("Max residual");
+		ImGui::Text("Max residual:");
 		ImGui::SameLine();
 		ImGui::InputText("##residual", solverResidual, 12, ImGuiInputTextFlags_CharsDecimal);
-		ImGui::Text("Iterations");
+		ImGui::Text("Max iterations:");
 		ImGui::SameLine();
 		ImGui::InputInt("##iterations", &solverMaxIteration);
-		
+	
+		ImGui::Text("Max residual (Internal):");
+		ImGui::SameLine();
+		ImGui::InputText("##residualInternal", internalResidual, 12, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::Text("Max iterations (Internal):");
+		ImGui::SameLine();
+		ImGui::InputInt("##iterationsInteral", &internalMaxIteration);
 
-		if (selectedSolver == 3 || selectedSolver == 4)
+
+
+		if (selectedSolver == 0 || selectedSolver == 3 || selectedSolver == 4)
 		{
-			ImGui::Text("Weight");
+			ImGui::Text("Weight:");
 			ImGui::SameLine();
 			ImGui::InputText("##weight", solverWeight, 12, ImGuiInputTextFlags_CharsDecimal);
 		}

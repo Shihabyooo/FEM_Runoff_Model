@@ -8,7 +8,6 @@
 #include <vector>
 #include <string>>
 #include <wchar.h>
-#include <iostream> //todo remove iostream and couts after implementing a decent logging functionality
 
 #include "ModelInterface.hpp"
 #include "FileIO.hpp"
@@ -65,7 +64,7 @@ public:
 		height = _height;
 	};
 
-	bool UpdateDimensions(int _width, int _height) //returns true if anything changed, otherwise.
+	bool UpdateDimensions(int _width, int _height) //returns true if anything changed.
 	{
 		if (_width == width && _height == height)
 			return false;
@@ -75,7 +74,7 @@ public:
 		return true;
 	}
 
-	bool UpdateWidth(int _width)
+	bool UpdateWidth(int _width)  //returns true if width changed.
 	{
 		if (_width == width)
 			return false;
@@ -84,7 +83,7 @@ public:
 		return true;
 	}
 
-	bool UpdateHeight(int _height)
+	bool UpdateHeight(int _height) //returns true if height changed.
 	{
 		if (_height == height)
 			return false;
@@ -170,12 +169,10 @@ public:
 };
 
 void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY);
-void RecomputeWindowElementsDimensions();// int newMainWinWidth, int newMainWinHeight);
+void RecomputeWindowElementsDimensions();
 void GLErrorCheck();
 
-static const int minMainWinWidth = 1024, minMainWinHeight = 768; //todo convert to Vector2Int
-//static const int minViewportWidth = 800, minViewportHeight = 600; //todo convert to Vector2Int
-//extern int mainWinWidth, mainWinHeight; //todo convert to Vector2Int
+static const int minMainWinWidth = 1024, minMainWinHeight = 768;
 
 extern GLFWwindow * mainWindow;
 
@@ -197,8 +194,7 @@ extern int maxLogPaneHeight;
 extern int fixedToolBarHeight;
 extern int fixedStatusBarHeight;
 
-
-namespace PointShader //TODO fix this
+namespace PointShader
 {
 	static const char* vertex_shader_text =
 		"#version 330\n"

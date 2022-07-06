@@ -4,8 +4,6 @@
 
 //TODO add a cleanup method to clear the allocated memory (superTriangles, rasters) when program closes.
 
-//std::unordered_map<int, Triangle> triangles;
-//std::vector<Vector2> nodes;
 std::unordered_map<int, Triangle> triangles;
 Triangle superTriangles[2];
 std::vector<Vector2D> nodes;
@@ -16,7 +14,7 @@ size_t exitNode = 0; //Assume first node to be exit node
 
 //Matrices and Vectors
 Matrix_f64 globalC, globalPsiX, globalPsiY;
-Vector_f64 nodeSlopeX, nodeSlopeY, nodeManning;
+Vector_f64 nodeSlopeX, nodeSlopeY, nodeManning; //TODO consider pre-computing sqrt(slope-x)/manning and sqrt(slope-y)/manning and caching them instead
 Vector_f64 heads;
 
 Matrix_f64 const * dem = NULL, * manningRaster = NULL, * slopes = NULL, * fdr = NULL;
@@ -109,11 +107,6 @@ bool CheckParameters(ModelParameters const & params)
 		status = false;
 	}
 
-	//if (params.variablePrecipitation && ) //TODO check for time series rasters also goes here
-	//{
-	//	LogMan::Log("ERROR! Invalid Time-series.", LOG_ERROR);
-	//	status = false;
-	//}
 	if (!params.variablePrecipitation && !params.unitTimeSeries.IsValid())
 	{
 		LogMan::Log("ERROR! Must provide a valid Time-series", LOG_ERROR);
@@ -187,6 +180,25 @@ bool LoadInputRasters(ModelParameters const & params)
 	}
 
 	return status;
+}
+
+void UnloadAllRasters()
+{
+	if (dem != NULL)
+		FileIO::UnloadRaster(demID);
+	dem = NULL;
+
+	if (manningRaster != NULL)
+		FileIO::UnloadRaster(manningRasterID);
+	manningRaster = NULL;
+
+	if (slopes != NULL)
+		FileIO::UnloadRaster(slopesID);
+	slopes = NULL;
+
+	if (fdr != NULL)
+		FileIO::UnloadRaster(fdrID);
+	fdr = NULL;
 }
 
 void ConstructGlobalCapacitanceMatrix(bool isLumped)
@@ -457,15 +469,8 @@ void ComputeDischargeVectors(ModelParameters const & params, Vector_f64 const & 
 	{
 		int const * vert = it->second.vertIDs; //to simplify lines bellow.
 		
-											   ////TODO multX and multY are tempoarlly invariant. It would be better to cache them instead of manning and slope.
-		/*double multX = sqrt(it->second.slopeX) / it->second.manningCoef;
-		double multY = sqrt(it->second.slopeY) / it->second.manningCoef;*/
-		
 		for (int i = 0; i < 3; i++)
 		{
-			/*outVectorX[vert[i]] += multX * pow(heads[vert[i]], 5.0 / 3.0);
-			outVectorY[vert[i]] += multY * pow(heads[vert[i]], 5.0 / 3.0);*/
-
 			outVectorX[vert[i]] += sqrt(nodeSlopeX[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
 			outVectorY[vert[i]] += sqrt(nodeSlopeY[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
 		}
@@ -526,10 +531,11 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 bool Simulate(ModelParameters const & params)
 {
 	LogMan::Log("Starting a simulation run");
-	//TODO before simulating, unload all loaded rasters
+
 	if (!CheckParameters(params))
 		return false;
 	
+	UnloadAllRasters();
 	if (!LoadInputRasters(params))
 		return false;
 

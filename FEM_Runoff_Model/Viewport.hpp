@@ -42,29 +42,8 @@ extern double scale;
 extern double screenAspectRatio;
 extern Vector2D viewBounds[2];
 
-void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount); //test test
-void UpdateMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
-bool SetupShaders(Shader * targetGLData, char const * vertexShaderSource, char const * fragmentShaderSource);
-bool SetupOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY); //resets active buffer to main buffer when done.
-void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY); //resets active buffer to main buffer when done.
-
-//void RenderViewport(); //Renders viewport content to an offscreen buffer.
 void DrawViewport(); //IMGUI painting commands for viewport window
 bool InitViewport();
 
 void UpdateViewport();
-void UpdateContent();
-
-void UpdateNodes();
-void UpdateTriangles();
-
-void UpdateViewBounds();
 void SetViewBounds(Vector2D swCorner, Vector2D nwCorner);
-void UpdateCoordinateProjectionParameters();
-Vector2D NormalizeCoordinates(Vector2D & point); //converts from world space to viewport space
-Vector2D ScreenToWorldSpace(Vector2D screenCoordinates);
-void PanView(Vector2D posDelta);
-
-
-void TestSetupSuperTriangleRender();
-void TestUpdateSuperTriangle();

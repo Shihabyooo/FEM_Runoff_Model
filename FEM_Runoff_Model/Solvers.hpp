@@ -6,9 +6,6 @@
 #define DEFAULT_CONVERGENCE_THRESHOLD -1.0
 #define MIN_CONVERGENCE_THRESHOLD 0.00001
 #define INITIAL_X_VALUE 1.0 //Note! If initial value = 0.0, some solvers may break
-//TODO remove the f from INITIAL_X_VALUE after switching vectors and matrices to double precision.
-
-//TODO in Vector_f64, add a method to compute (for a vector x) double = x_transpose * x
 
 //These functions assume the system is in the form Ax = b
 

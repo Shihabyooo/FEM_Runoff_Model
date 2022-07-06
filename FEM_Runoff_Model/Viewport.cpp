@@ -5,8 +5,7 @@ OffScreenBuffer viewportBuffer;
 Vector2D delta;
 double scale = 0.5f;
 double screenAspectRatio = 1.0f;
-float scaleChangeTicks = 0.01f; //TODO make this value dynamically set based on current bounds.
-//float margin = 0.05f;
+float scaleChangeTicks = 0.01f;
 float * nodesMeshVerts = NULL;
 unsigned int * trianglesIndices = NULL;
 int renderVertsCount = 0;
@@ -30,6 +29,26 @@ std::string elementViewVerts = "";
 std::string elementViewArea = "";
 
 ToolMode activeTool = ToolMode::None;
+
+#pragma region Forward declarations
+//Several (if not most) don't really need to be declared here, but it was easier to copy and paste them from the header (where they were initially).
+void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
+void UpdateMesh(MeshData * targetGLData, float const * mesh, unsigned int verticesCount, unsigned int const * indices, unsigned int indexCount);
+bool SetupShaders(Shader * targetGLData, char const * vertexShaderSource, char const * fragmentShaderSource);
+bool SetupOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY);
+void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY);
+void RenderViewport();
+void UpdateContent();
+void UpdateNodes();
+void UpdateTriangles();
+void UpdateViewBounds();
+void UpdateCoordinateProjectionParameters();
+Vector2D NormalizeCoordinates(Vector2D & point);
+Vector2D ScreenToWorldSpace(Vector2D screenCoordinates);
+void PanView(Vector2D posDelta);
+void TestSetupSuperTriangleRender();
+void TestUpdateSuperTriangle();
+#pragma endregion
 
 //Create vertex buffer (VBO), vertex array object (VAO) and vertex array element object, store id in targetGLData struct. \
 if verticesCount is greater than or equal to 3, UpdateMesh() is called.
@@ -194,16 +213,22 @@ void HandleMouseZoom()
 	float scroll = io.MouseWheel * -1.0f;
 	if (scroll != 0.0f)
 	{
-		scale += scroll * scaleChangeTicks;
-		
-		//TODO add a limit to prevent viewBounds[0] to be greater than viewBounds[1] (nor equal)
+		//Compute a temporary scale and bounds to test.
+		double newScale = scale + scroll * scaleChangeTicks;
+		Vector2D newBounds[2] = {	Vector2D(	currenViewportHoverPos.x - currenViewportHoverPosPixels.x * newScale,
+												currenViewportHoverPos.y - (viewportDimensions.height - currenViewportHoverPosPixels.y) * newScale),
+									Vector2D(	currenViewportHoverPos.x + (viewportDimensions.width - currenViewportHoverPosPixels.x) * newScale,
+												currenViewportHoverPos.y + currenViewportHoverPosPixels.y * newScale) };
 
-		viewBounds[0].x = currenViewportHoverPos.x - currenViewportHoverPosPixels.x * scale;
-		viewBounds[0].y = currenViewportHoverPos.y - (viewportDimensions.height - currenViewportHoverPosPixels.y) * scale;
+		//Test is that if span in either axes of the new bounds is less than MIN_VIEWPORT_DELTA, we don't zoom.
+		Vector2D diff = newBounds[1] - newBounds[0];
+		if (diff.x < MIN_VIEWPORT_DELTA || diff.y < MIN_VIEWPORT_DELTA)
+			return;
 
-		viewBounds[1].x = currenViewportHoverPos.x + (viewportDimensions.width - currenViewportHoverPosPixels.x) * scale;
-		viewBounds[1].y = currenViewportHoverPos.y + currenViewportHoverPosPixels.y * scale;
-		
+		viewBounds[0] = newBounds[0];
+		viewBounds[1] = newBounds[1];
+		scale = newScale;
+
 		UpdateCoordinateProjectionParameters();
 		UpdateContent();
 	}
@@ -541,21 +566,6 @@ void PanView(Vector2D posDelta)
 	SetViewBounds(viewBounds[0] + posDelta, viewBounds[1] + posDelta);
 	UpdateContent();
 }
-
-//Stuff for debug display of the supertriangle.
-//static const char* vertex_shader_text =
-//		"#version 330\n"
-//		"layout(location = 0) in vec4 pos;\
-//		void main(void)\
-//		{\
-//			gl_Position = pos;\
-//		}";
-//
-//static const char* fragment_shader_text =
-//"void main(void)\
-//		{\
-//			gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);\
-//		}";
 
 void TestSetupSuperTriangleRender()
 {

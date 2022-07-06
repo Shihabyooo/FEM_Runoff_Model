@@ -570,7 +570,7 @@ void TimeSeries::AdjustSize(size_t newSize)
 {
 	if (newSize == size) //nothing to do
 		return;
-
+	
 	newSize = Max(newSize, static_cast<size_t>(2));
 
 	//create a temporary holder for current data
@@ -582,7 +582,9 @@ void TimeSeries::AdjustSize(size_t newSize)
 		tempHolder[i] = series[i];
 	
 	delete[] series;
+	
 	series = tempHolder;
+	size = newSize;
 }
 
 double TimeSeries::HoursToLocalUnits(double time) const

@@ -146,10 +146,10 @@ bool Triangle::IsInsideCircumcircle(Vector2D pos) const
 	//https://stackoverflow.com/questions/39984709/how-can-i-check-wether-a-point-is-inside-the-circumcircle-of-3-points
 
 	Matrix_f32 matrix(3, 3);
-	//TODO a, b, and c are remnants from a previou implementationi. Remove them and directly access nodes[] in the lines bellow.
-	Vector2D a = nodes[0];
-	Vector2D b = nodes[1];
-	Vector2D c = nodes[2];
+
+	Vector2D const & a = nodes[0];
+	Vector2D const & b = nodes[1];
+	Vector2D const & c = nodes[2];
 
 	matrix[0][0] = a.x - pos.x;
 	matrix[0][1] = a.y - pos.y;
