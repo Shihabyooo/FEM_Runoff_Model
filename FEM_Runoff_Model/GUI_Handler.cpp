@@ -485,9 +485,9 @@ void DrawButton(Icon const & icon, ToolMode toolMode)
 							ImVec2(1, 1),
 							-1,
 							buttonBGColour,
-							activeTool == toolMode ? activeButtonTintColour : buttonTintColour))
+							GetActiveTool() == toolMode ? activeButtonTintColour : buttonTintColour))
 	{
-		activeTool = toolMode;
+		SwitchActiveTool(toolMode);
 	}
 }
 

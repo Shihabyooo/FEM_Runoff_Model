@@ -47,3 +47,6 @@ bool InitViewport();
 
 void UpdateViewport();
 void SetViewBounds(Vector2D swCorner, Vector2D nwCorner);
+
+ToolMode GetActiveTool();
+void SwitchActiveTool(ToolMode newTool);

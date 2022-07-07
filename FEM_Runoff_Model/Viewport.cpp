@@ -29,6 +29,10 @@ std::string elementViewVerts = "";
 std::string elementViewArea = "";
 
 ToolMode activeTool = ToolMode::None;
+bool isGrabbingNode = false;
+size_t activeNode = 0;
+
+float currentPointSize = 10.0f; //TODO the shader uses "float" for point size, but the gl_PointSize is actually in pixels, which should be integer. Check this.
 
 #pragma region Forward declarations
 //Several (if not most) don't really need to be declared here, but it was easier to copy and paste them from the header (where they were initially).
@@ -184,6 +188,15 @@ void SetActiveShaderDiffuse(Colour const & colour)
 	glUniform4fv(diffuseColLoc, 1, colour.Array());
 }
 
+//Note: Switches active program to pointShader.program. Does not reset to existing program before calling.
+void SetPointSize(float size)
+{
+	glUseProgram(pointShader.program);
+	GLuint pointSizeLoc = glGetUniformLocation(pointShader.program, "pointSize");
+	glUniform1f(pointSizeLoc, size);
+	currentPointSize = size;
+}
+
 //Changes the dimensions of the texture assigned to the fbo to sizeX * sizeY. Resets active buffer to main buffer when done.
 void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY)
 {
@@ -194,6 +207,17 @@ void UpdateOffScreenBuffer(OffScreenBuffer * buffer, int sizeX, int sizeY)
 	glBindRenderbuffer(GL_RENDERBUFFER, buffer->rbo);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sizeX, sizeY);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+ToolMode GetActiveTool()
+{
+	return activeTool;
+}
+
+void SwitchActiveTool(ToolMode newTool)
+{
+	isGrabbingNode = false;
+	activeTool = newTool;
 }
 
 void HandleMousePan()
@@ -234,7 +258,7 @@ void HandleMouseZoom()
 	}
 }
 
-bool PickHoveredElement()
+bool SelectHoveredElement()
 {
 	selectedElement = GetElementContainingPoint(currenViewportHoverPos);
 	
@@ -274,7 +298,7 @@ void HandleMouseLeftClick()
 			}
 			case ViewElement:
 			{
-				if (PickHoveredElement())
+				if (SelectHoveredElement())
 				{
 					ImGui::OpenPopup("elementView");
 					showElementView = true;
@@ -285,7 +309,29 @@ void HandleMouseLeftClick()
 			}
 			case MoveNode:
 			{
-				LogMan::Log("Moving nodes not implemented yet.", LOG_WARN);
+				if (isGrabbingNode)
+				{
+					//place node
+					//LogMan::Log("Placing node: " + std::to_string(activeNode) + " at " + std::to_string(currenViewportHoverPos.x) + ", " + std::to_string(currenViewportHoverPos.y)); //test
+					UpdateNode(activeNode, currenViewportHoverPos);
+					isGrabbingNode = false;
+				}
+				else
+				{
+					for (int i = 0; i < nodes.size(); i++)
+					{
+						//check of within range of node
+						//our range is a circle of centre = node's position and radius = currentPointSize.
+						if (currenViewportHoverPos.WithinCircle(nodes[i], currentPointSize * scale))
+						{
+							//grab node
+							//LogMan::Log("Grabbed node: " + std::to_string(activeNode)); //test
+							isGrabbingNode = true;
+							activeNode = i;
+							break;
+						}
+					}
+				}
 				return;
 			}
 			default:
@@ -310,6 +356,21 @@ void UpdateMouseHoverPosition()
 	}
 	else
 		isHoveringViewport = false;
+}
+
+void UpdateGrabbedNode()
+{
+	if (!isGrabbingNode)
+		return;
+	
+	//recompute the screenspace position of the grabbed node.
+	//Note that this won't affect the original position stored in nodes vector...
+	Vector2D relativePos = NormalizeCoordinates(currenViewportHoverPos);
+
+	nodesMeshVerts[activeNode * 3] = relativePos.x;
+	nodesMeshVerts[(activeNode * 3) + 1] = relativePos.y;
+	nodesMeshVerts[(activeNode * 3) + 2] = 0.0f;
+	UpdateMesh(&(layers[1].meshData), nodesMeshVerts, renderVertsCount, trianglesIndices, renderTrisIndicesCount);
 }
 
 //Renders the viewport content to the offscreen buffer.
@@ -376,6 +437,7 @@ void DrawViewport()
 		HandleMouseZoom();
 		HandleMouseLeftClick();
 	}
+	UpdateGrabbedNode();
 
 	RenderViewport();
 
@@ -430,6 +492,9 @@ bool InitViewport()
 		//the entire program just for this. Although more graceful handling of the issue should be implemented.
 		//return false;
 	}
+
+	//Set initial point render size for point shader
+	SetPointSize(currentPointSize);
 
 	//Check and push any errors that may have resulted thus far to the log.
 	GLErrorCheck();

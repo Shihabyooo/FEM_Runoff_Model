@@ -183,7 +183,7 @@ extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimension
 extern WindowDimensions toolbarDimensions, statusBarDimensions;
 extern Vector2D lastViewportSize;
 
-extern ToolMode activeTool;
+//extern ToolMode activeTool;
 
 extern int mainWinWidth;
 extern int mainWinHeight;
@@ -198,10 +198,11 @@ namespace PointShader
 {
 	static const char* vertex_shader_text =
 		"#version 330\n"
-		"layout(location = 0) in vec4 pos;\
-		void main(void)\
+		"layout(location = 0) in vec4 pos;"
+		"uniform float pointSize;"
+		"void main(void)\
 		{\
-			gl_PointSize = 10.0;\
+			gl_PointSize = pointSize;\
 			gl_Position = pos;\
 		}";
 
