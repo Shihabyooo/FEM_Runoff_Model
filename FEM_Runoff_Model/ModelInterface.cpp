@@ -70,6 +70,29 @@ Triangle const * GetElementContainingPoint(Vector2D const & pos)
 	return NULL;
 }
 
+bool UpdateNode(size_t id, Vector2D const & newPos)
+{
+	if (id >= nodes.size())
+		return false;
+
+	nodes[id] = newPos;
+
+	//look for triangles using this node and update their areas, while logging warning if the change made it invalid
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		if (it->second.ContainsVertex(id))
+		{
+			for (int i = 0; i < 3; i++)
+				it->second.nodes[i] = nodes[it->second.vertIDs[i]];
+
+			if (!it->second.Validate())
+				LogMan::Log("Warning! Updated triangle " + std::to_string(it->second.id) + " is invalid (Area: " + std::to_string(it->second.area) + ").", LOG_WARN);
+		}
+	}
+
+	return true;
+}
+
 bool LoadTimeSeries(std::string const & path, TimeSeries & ts)
 {
 	return FileIO::LoadTimeSeries(path, ts);

@@ -67,6 +67,16 @@ Vector2 Vector2::Normalize(Vector2 const & min, Vector2 const & max) const
 					(y - min.y) / delta.y);
 }
 
+float Vector2::DistanceTo(Vector2 const & vec2) const
+{
+	return sqrt(pow(x - vec2.x, 2) + pow(y - vec2.y, 2));
+}
+
+bool Vector2::WithinCircle(Vector2 const & centre, float radius) const
+{
+	return ((x - centre.x) * (x - centre.x) + (y - centre.y) * (y - centre.y)) < (radius * radius);
+}
+
 #pragma endregion
 
 #pragma region Vector2 Defintions
@@ -195,6 +205,11 @@ Vector2D Vector2D::Normalize(Vector2D const & min, Vector2D const & max) const
 double Vector2D::DistanceTo(Vector2D const & vec2) const
 {
 	return sqrt(pow(x - vec2.x , 2) + pow( y - vec2.y , 2));
+}
+
+bool Vector2D::WithinCircle(Vector2D const & centre, double radius) const
+{
+	return ((x - centre.x) * (x - centre.x) + (y - centre.y) * (y - centre.y)) < (radius * radius);
 }
 
 #pragma endregion

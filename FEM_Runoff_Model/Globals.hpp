@@ -103,6 +103,8 @@ public:
 	Vector2 & operator= (Vector2 const & vec2);
 
 	Vector2 Normalize(Vector2 const & min, Vector2 const & max) const; //Returns normalized axes relative to min and max, result is between 0.0 to 1.0 if point is inside range min-max.
+	float DistanceTo(Vector2 const & vec2) const;
+	bool WithinCircle(Vector2 const & centre, float radius) const;
 
 	float x;
 	float y;
@@ -144,6 +146,7 @@ public:
 
 	Vector2D Normalize(Vector2D const & min, Vector2D const & max) const; //Returns normalized axes relative to min and max, result is between 0.0F to 1.0F if point is inside range min-max.
 	double DistanceTo(Vector2D const & vec2) const;
+	bool WithinCircle(Vector2D const & centre, double radius) const;
 
 	double x;
 	double y;

@@ -46,6 +46,7 @@ extern size_t exitNode;
 
 bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding);
 Triangle const * GetElementContainingPoint(Vector2D const & pos);
+bool UpdateNode(size_t id, Vector2D const & newPos);
 
 bool LoadTimeSeries(std::string const & path, TimeSeries & ts);
 bool Simulate(ModelParameters const & params);
