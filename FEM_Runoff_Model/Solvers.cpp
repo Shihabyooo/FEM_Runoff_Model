@@ -34,7 +34,8 @@ bool Solve(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & 
 	switch (params.solverType)
 	{
 	case Solver::Auto: //TODO implement automatic solver selection here
-		return SolverJacobi(aMatrix, bVector, outXVector, outResiduals, params.weight, params.residualThreshold, params.maxIterations);
+		//return SolverJacobi(aMatrix, bVector, outXVector, outResiduals, params.weight, params.residualThreshold, params.maxIterations);
+		return SolverSOR(aMatrix, bVector, outXVector, outResiduals, params.weight, params.residualThreshold, params.maxIterations);
 	case Solver::BiCG:
 		return false;
 	case Solver::CGS:
@@ -48,7 +49,7 @@ bool Solve(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & 
 	case Solver::Simple:
 		return false;
 	case Solver::SOR:
-		return false;
+		return SolverSOR(aMatrix, bVector, outXVector, outResiduals, params.weight, params.residualThreshold, params.maxIterations);
 	
 	default:
 		return false;

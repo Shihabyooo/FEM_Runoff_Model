@@ -158,10 +158,10 @@ int timeSeriesSize = 3;
 TimeSeries inputTS;
 
 bool useFixedManning = true;
-char fixedManningCoef[12] = "0.022";
+char fixedManningCoef[12] = "0.002";
 
 char startTime[24] = "0.0";
-char endTime[24] = "10";
+char endTime[24] = "15";
 char deltaTime[24] = "0.5";
 
 char femOmega[12] = "0.5";
@@ -180,7 +180,7 @@ int selectedTimeUnit = 1;
 int selectedSolver = 0;
 
 char solverResidual[12] = "0.0001";
-char solverWeight[12] = "1.0";
+char solverWeight[12] = "0.5";
 int solverMaxIteration = 1000;
 char internalResidual[12] = "0.0001";
 int internalMaxIteration = 100;

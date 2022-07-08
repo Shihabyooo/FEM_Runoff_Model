@@ -15,6 +15,8 @@ size_t exitNode = 0; //Assume first node to be exit node
 //Matrices and Vectors
 Matrix_f64 globalC, globalPsiX, globalPsiY;
 Vector_f64 nodeSlopeX, nodeSlopeY, nodeManning; //TODO consider pre-computing sqrt(slope-x)/manning and sqrt(slope-y)/manning and caching them instead
+Vector_f64 nodeFDR; //test
+Vector_f64 nodeElevation;
 Vector_f64 heads;
 
 Matrix_f64 const * dem = NULL, * manningRaster = NULL, * slopes = NULL, * fdr = NULL;
@@ -112,11 +114,11 @@ bool CheckParameters(ModelParameters const & params)
 		status = false;
 	}
 
-	/*if (!FileIO::FileExists(params.demPath))
+	if (!FileIO::FileExists(params.demPath))
 	{
 		LogMan::Log("ERROR! Must supply a terrain DEM for the region.", LOG_ERROR);
 		status = false;
-	}*/
+	}
 
 	if (!FileIO::FileExists(params.slopesPath))
 	{
@@ -187,7 +189,7 @@ bool LoadInputRasters(ModelParameters const & params)
 	
 	bool status = true;
 
-	//status = status && FileIO::LoadRaster(params.demPath, &demID, dem);
+	status = status && FileIO::LoadRaster(params.demPath, &demID, (void const **) &dem);
 	status = status && FileIO::LoadRaster(params.slopesPath, &slopesID, (void const **) &slopes);
 	status = status && FileIO::LoadRaster(params.fdrPath, &fdrID, (void const **) &fdr);
 
@@ -318,6 +320,24 @@ void ConstructGlobalPsiMatrices(double timeStep)
 			globalPsiY[verts[i]][verts[2]] += contribY3;
 		}
 	}
+	//test
+	for (int i = 0; i < nodes.size(); i++)
+	{
+		std::string prefix = "internal";
+		for (int j = 0; j < boundaryNodes.size(); j++)
+			if (i == boundaryNodes[j])
+				prefix = "external";
+		
+		std::cout << prefix.c_str() << std::fixed << " - " << i << " : " << std::setprecision(2) << globalPsiX[i][i] << " | " << std::setprecision(2) << globalPsiY[i][i] << std::endl;
+	}
+	
+	//for (size_t i = 0; i < globalPsiX.Rows(); i++)
+	//	for (size_t j = 0; j < globalPsiX.Columns(); j++)
+	//	{
+	//		globalPsiX[i][j] = abs(globalPsiX[i][j]);
+	//		globalPsiY[i][j] = abs(globalPsiY[i][j]);
+	//	}
+	//endtest
 }
 
 //returns negative valued VectorInt if error
@@ -405,17 +425,25 @@ bool CacheSlopes(ModelParameters const & params)
 
 	nodeSlopeX = Vector_f64(nodes.size());
 	nodeSlopeY = Vector_f64(nodes.size());
+	nodeFDR = Vector_f64(nodes.size());
 
 	size_t counter = 0;
 	for (auto it = nodes.begin(); it != nodes.end(); ++it)
 	{
 		std::pair<Vector2Int, double> nodeSlopePixel = SampleNearestPixel(*it, slopes, slopesID);
 		if (nodeSlopePixel.first.x < 0)
-			LogMan::Log("Warning! No slopes sampled for node: " + std::to_string(counter), LOG_WARN);
+		{
+			LogMan::Log("ERROR! No slopes sampled for node: " + std::to_string(counter), LOG_ERROR);
+			return false;
+		}
 
 		std::pair<Vector2Int, double> nodeFDRPixel = SampleNearestPixel(*it, fdr, fdrID);
 		if (nodeFDRPixel.first.x < 0)
-			LogMan::Log("Warning! No slopes sampled for node: " + std::to_string(counter), LOG_WARN);
+		{
+			LogMan::Log("ERROR! No slopes sampled for node: " + std::to_string(counter), LOG_ERROR);
+			return false;
+		}
+
 
 		int dir = lround(nodeFDRPixel.second);
 
@@ -430,6 +458,28 @@ bool CacheSlopes(ModelParameters const & params)
 			nodeSlopeY[counter] = component;
 		}
 
+		nodeFDR[counter] = dir;
+		counter++;
+	}
+
+	return true;
+}
+
+bool CacheElevations()
+{
+	//TODO similar to CacheSlopes()
+
+	nodeElevation = Vector_f64(nodes.size());
+	size_t counter = 0;
+	for (auto it = nodes.begin(); it != nodes.end(); ++it)
+	{
+		std::pair<Vector2Int, double> nearestPixel = SampleNearestPixel(*it, dem, demID);
+		if (nearestPixel.first.x < 0)
+		{
+			LogMan::Log("ERROR! No elevation sampled for node: " + std::to_string(counter), LOG_ERROR);
+			return false;
+		}
+		nodeElevation[counter] = nearestPixel.second;
 		counter++;
 	}
 
@@ -472,10 +522,28 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 		elementContrib *= params.timeStep;
 		it->second.elementPrecipitation = newPrecipitation;
 
+		//test
+		/*if (!it->second.ContainsVertex(17) && !it->second.ContainsVertex(18) && !it->second.ContainsVertex(23) &&
+			!it->second.ContainsVertex(24) && !it->second.ContainsVertex(28) && !it->second.ContainsVertex(29) &&
+			!it->second.ContainsVertex(30) && !it->second.ContainsVertex(31) && !it->second.ContainsVertex(32) &&
+			!it->second.ContainsVertex(33) )*/
+		if (!it->second.ContainsVertex(47) && !it->second.ContainsVertex(48) && !it->second.ContainsVertex(49) &&
+			!it->second.ContainsVertex(56) && !it->second.ContainsVertex(57) && !it->second.ContainsVertex(58) &&
+			!it->second.ContainsVertex(59) && !it->second.ContainsVertex(60) && !it->second.ContainsVertex(68) &&
+			!it->second.ContainsVertex(69) && !it->second.ContainsVertex(70) && !it->second.ContainsVertex(71) &&
+			!it->second.ContainsVertex(77) && !it->second.ContainsVertex(78) && !it->second.ContainsVertex(79) && 
+			!it->second.ContainsVertex(80) && !it->second.ContainsVertex(81) && !it->second.ContainsVertex(82) &&
+			!it->second.ContainsVertex(83) && !it->second.ContainsVertex(84) && !it->second.ContainsVertex(85) &&
+			!it->second.ContainsVertex(86))
+			elementContrib = 0.0;
+		//end test
+
+
 		result[vert[0]] += elementContrib;
 		result[vert[1]] += elementContrib;
 		result[vert[2]] += elementContrib;
 	}
+
 	return result;
 }
 
@@ -494,34 +562,126 @@ void ComputeDischargeVectors(ModelParameters const & params, Vector_f64 const & 
 		
 		for (int i = 0; i < 3; i++)
 		{
-			outVectorX[vert[i]] += sqrt(nodeSlopeX[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
-			outVectorY[vert[i]] += sqrt(nodeSlopeY[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
+			/*double xContrib = sqrt(nodeSlopeX[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
+			double yContrib = sqrt(nodeSlopeY[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]]; */
+			double xContrib = sqrt(nodeSlopeX[vert[i]]) * pow(heads[vert[i]] - nodeElevation[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
+			double yContrib = sqrt(nodeSlopeY[vert[i]]) * pow(heads[vert[i]] - nodeElevation[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
+
+			outVectorX[vert[i]] += xContrib;
+			outVectorY[vert[i]] += yContrib;
+
+			//test
+			/*int dir = lround(nodeFDR[vert[i]]);
+			double signX = (dir == 2 || dir == 3 || dir == 4) ? 1.0 : -1.0;
+			double signY = (dir == 1 || dir == 2 || dir == 8) ? 1.0 : -1.0;
+			outVectorX[vert[i]] += signX * xContrib;
+			outVectorY[vert[i]] += signY * yContrib;*/
+			//end test
+
 		}
 	}
 
-	//test force q at bounderies to zero
-	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
+	/*for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 	{
 		outVectorX[*it] = 0.0;
 		outVectorY[*it] = 0.0;
-	}
+	}*/
 }
 
-//test
+#pragma region Test
 Vector_f64 _oldHeads, _newHeads, _q_x_old, _q_x_new, _q_y_old, _q_y_new, _precipContrib, _RHS;
+std::vector<std::pair<double, double>> outletQs;
+bool IsBoundaryNode(int id)
+{
+	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
+		if (*it == id)
+			return true;	
+	return false;
+}
+
 void TestShowInternalRHSVectors()
 {
 	Vector_f64 chold = globalC * _oldHeads;
-	std::cout << "\n id | oldH  |  newH  ||| [C]{h0}|  qx_0  |  qx_1 |  qy_0  |  qy_1  | precip | RHS" << std::endl;
+	std::cout << "\n id   | oldH  |  newH  |||Diff||| [C]{h0}|  qx_0  |  qx_1 |  qy_0  |  qy_1  | precip | RHS" << std::endl;
 	for (size_t i = 0; i < _oldHeads.Rows(); i++)
-		std::cout << std::fixed << std::setw(3) << i << " | " \
+		std::cout << std::fixed << std::setw(3) << i \
+		<< ( IsBoundaryNode(i) ? " B" : "  ") << " | "\
 		<< std::setw(3) << std::setprecision(3) << _oldHeads[i] << " | " << std::setw(6) << _newHeads[i] << " ||| " \
+		<< (_newHeads[i] > _oldHeads[i] ? "UP" : (_newHeads[i] == _oldHeads[i] ? "--" :  "DN")) << " ||| " \
 		<< std::setw(6) << std::setprecision(1) << chold[i] << " | " \
 		<< std::setw(6) << std::setprecision(3) << _q_x_old[i] << " | " << std::setw(3) << _q_x_new[i] << " | " \
 		<< std::setw(6) << _q_y_old[i] << " | " << std::setw(6) << _q_y_new[i] << " | " \
 		<< std::setw(6) << std::setprecision(1) << _precipContrib[i] << " | " << _RHS[i] << std::endl;
 }
-//endtest
+#pragma endregion
+
+#pragma region Per Element RHS
+Matrix_f64 PsiX(Triangle const & element, double timeStep) //3x3
+{
+	Matrix_f64 psiX(3, 3);
+	const Vector2D &i = element.nodes[0];
+	const Vector2D &j = element.nodes[1];
+	const Vector2D &k = element.nodes[2];
+
+	double contrib1 = (timeStep / 6.0) * (j.y - k.y);
+	double contrib2 = (timeStep / 6.0) * (k.y - i.y);
+	double contrib3 = (timeStep / 6.0) * (i.y - j.y);
+
+	psiX[0][0] = contrib1;
+	psiX[0][1] = contrib2;
+	psiX[0][2] = contrib3;
+
+	psiX[1][0] = contrib1;
+	psiX[1][1] = contrib2;
+	psiX[1][2] = contrib3;
+
+	psiX[2][0] = contrib1;
+	psiX[2][1] = contrib2;
+	psiX[2][2] = contrib3;
+
+	return psiX;
+}
+
+Matrix_f64 PsiY(Triangle const & element, double timeStep) //3x3
+{
+	Matrix_f64 psiY(3, 3);
+	const Vector2D &i = element.nodes[0];
+	const Vector2D &j = element.nodes[1];
+	const Vector2D &k = element.nodes[2];
+
+	double contrib1 = (timeStep / 6.0) * (k.x - j.x);
+	double contrib2 = (timeStep / 6.0) * (i.x - k.x);
+	double contrib3 = (timeStep / 6.0) * (j.x - i.x);
+
+	psiY[0][0] = contrib1;
+	psiY[0][1] = contrib2;
+	psiY[0][2] = contrib3;
+
+	psiY[1][0] = contrib1;
+	psiY[1][1] = contrib2;
+	psiY[1][2] = contrib3;
+
+	psiY[2][0] = contrib1;
+	psiY[2][1] = contrib2;
+	psiY[2][2] = contrib3;
+
+	return psiY;
+}
+
+Vector_f64 ElementQ(Triangle const & element, Vector_f64 const & h, bool isX)
+{
+	Vector_f64 q(3);
+	for (int i = 0; i < 3; i++)
+		q[i] = sqrt(isX? nodeSlopeX[element.vertIDs[i]] : nodeSlopeY[element.vertIDs[i]])
+				* pow(h.GetValue(element.vertIDs[i]) - nodeElevation[element.vertIDs[i]], 5.0 / 3.0) / nodeManning[element.vertIDs[i]];
+
+	return q;
+}
+#pragma endregion
+
+
+Vector_f64 q_x_old, q_y_old;
+Vector_f64 last_q_x_new, last_q_y_new;
 
 void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 const & oldHeads, Vector_f64 const & newHeads, Vector_f64 & outRHS)
 {
@@ -529,16 +689,43 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 	//		- dT [Psi-Y] ((1-omega) * q_y_old + omega * q_y_new)
 	//		+ PrecipitationVector
 
-	Vector_f64 q_x_old, q_x_new, q_y_old, q_y_new;
-	ComputeDischargeVectors(params, oldHeads, q_x_old, q_y_old);
+	Vector_f64 q_x_new, q_y_new;
 	ComputeDischargeVectors(params, newHeads, q_x_new, q_y_new);
 
 	//PsiX and PsiY already have dT multiplied with them.
-	outRHS = globalC * oldHeads
-			- ((globalPsiX) * ((q_x_old * (1 - params.femOmega)) + (q_x_new * params.femOmega)))
-			- ((globalPsiY) * ((q_y_old * (1 - params.femOmega)) + (q_y_new * params.femOmega)))
-			+ ComputePreciptationVector(time, params);
-			
+	//TODO [C]{h0} and {P} don't change from (internal) iteration to the next. Should refactor this function to have one called\
+	every time loop (external loop), and the other every internal loop, which add results of external loop to {q} vectors.
+	//outRHS = globalC * oldHeads
+	//		- ((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega)))
+	//		- ((globalPsiY) * ((q_y_old * (1.0 - params.femOmega)) + (q_y_new * params.femOmega)))
+	//		+ ComputePreciptationVector(time, params);
+
+	outRHS = Vector_f32(nodes.size());
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		Triangle const & element = it->second;
+		Vector_f64 xComp, yComp;
+		xComp = PsiX(element, params.timeStep) * ((ElementQ(element, oldHeads, true) * (1.0 - params.femOmega)) + (ElementQ(element, newHeads, true) * params.femOmega));
+		yComp = PsiY(element, params.timeStep) * ((ElementQ(element, oldHeads, false) * (1.0 - params.femOmega)) + (ElementQ(element, newHeads, false) * params.femOmega));
+
+		for (int i = 0; i < 3; i++)
+			outRHS[element.vertIDs[i]] -= (xComp[i] + yComp[i]);
+	}
+
+	Vector_f64 oldRHS = outRHS;//test
+
+	outRHS += (globalC * oldHeads) + ComputePreciptationVector(time, params);
+
+	//test
+	std::cout << "--------------\n";
+	for (size_t i = 0; i < outRHS.Rows(); i++)
+		std::cout << oldRHS[i] << " | " <<  outRHS[i] << std::endl;
+	//endtest
+
+	/*std::cout << "---------\n";
+	q_x_old.DisplayOnCLI();
+	q_x_new.DisplayOnCLI();
+	((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega))).DisplayOnCLI();*/
 	//test
 	//cache so we can display once after end of internal loop.
 	_oldHeads = oldHeads;
@@ -549,18 +736,27 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 	_q_y_new = q_y_new;
 	_precipContrib = ComputePreciptationVector(time, params);
 	_RHS = outRHS;
+	//end test
+
+	//cache the newly computed qs for use in next step.
+	last_q_x_new = std::move(q_x_new);
+	last_q_y_new = std::move(q_y_new);
 }
 
 bool Simulate(ModelParameters const & params)
 {
 	LogMan::Log("Starting a simulation run");
 
+#pragma region Init
 	if (!CheckParameters(params))
 		return false;
 	
 	UnloadAllRasters();
+
 	if (!LoadInputRasters(params))
 		return false;
+
+	//boundaryNodes.push_back(39); //test
 
 	//Special consideration. Since the boundary node listing includes our exit node, we have to manually remove it.
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
@@ -580,7 +776,11 @@ bool Simulate(ModelParameters const & params)
 	if (!CacheSlopes(params))
 		return false;
 
-	//test
+	if (!CacheElevations())
+		return false;
+#pragma endregion
+
+#pragma region Test
 	std::cout << "\n===================================================\n";
 	std::cout << "Global Capacitance";
 	std::cout << "\n===================================================\n";
@@ -597,50 +797,47 @@ bool Simulate(ModelParameters const & params)
 	globalPsiY.DisplayOnCLI(0);
 	
 	std::cout << "\n===================================================\n";
+	std::cout << "Time series";
+	std::cout << "\n===================================================\n";
+	for (int i = 0; i < params.unitTimeSeries.size; i++)
+		std::cout << params.unitTimeSeries.series[i].first << " - " << params.unitTimeSeries.series[i].second << std::endl;
+
+	std::cout << "\n===================================================\n";
 	std::cout << "Boundery Nodes";
 	std::cout << "\n===================================================\n";
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 		std::cout << *it << std::endl;
 	
 	std::cout << "\n===================================================\n";
-	std::cout << "Slopes and Manning roughness coef";
+	std::cout << "Elevations, Slopes, Manning roughness coef";
 	std::cout << "\n===================================================\n";
 
-	std::cout << "node |  n  |  Sx  |  Sy\n";
+	std::cout << "node | Elev  |   n  |  Sx  |  Sy\n";
 	for (size_t i = 0; i < nodeSlopeX.Rows(); i++)
-		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << std::endl;
-		
-	/*slopes->DisplayOnCLI();
-	fdr->DisplayOnCLI();*/
-
+		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | "  << nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << std::endl;
 	//return false;
-	//end test
+#pragma endregion
 
 	//Set initial heads to zero (Dry conditions).
-	heads = Vector_f64(nodes.size());
+	//heads = Vector_f64(nodes.size());
+	
+	nodeElevation = Vector_f64(nodes.size()); //test .
+
+	heads = nodeElevation;
+	//init cached old qs (not directly. value of last_q_x_new will be moved to q_x_old at begining of every time step.
+	last_q_x_new = Vector_f64(nodes.size());
+	last_q_y_new = Vector_f64(nodes.size());
 
 	//Capacitance matrix adjusted for boundary conditions
-		//TODO do this when constructing this matrix.
+	Matrix_f64 adjustedC = globalC;
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 	{
 		//https://finite-element.github.io/7_boundary_conditions.html
 		for (size_t i = 0; i < globalC.Columns(); i++)
-		{
-			globalC[*it][i] = 0.0;
-			/*globalPsiX[*it][i] = 0.0;
-			globalPsiY[*it][i] = 0.0;*/
-		}
+			adjustedC[*it][i] = 0.0;
 
-		globalC[*it][*it] = 1.0;
-		/*globalPsiX[*it][*it] = 1.0;
-		globalPsiY[*it][*it] = 1.0;*/
+		adjustedC[*it][*it] = 1.0;
 	}
-
-	//test
-	/*for (size_t i = 0; i < globalC.Columns(); i++)
-		globalC[exitNode][i] = 0.0;
-	globalC[exitNode][exitNode] = 1.0;*/
-
 
 	//Loop from start time to end time
 	double time = params.startTime;
@@ -652,7 +849,9 @@ bool Simulate(ModelParameters const & params)
 		LogMan::Log("At T= " + std::to_string(time));
 		std::cout << "===================================================\n";
 		
-		Vector_f64 newHeads = heads * 1.1;
+		Vector_f64 newHeads = heads + Vector_f64(nodes.size(), 0.05);
+		q_x_old = std::move(last_q_x_new);
+		q_y_old = std::move(last_q_y_new);
 
 		//internal loop
 		for (size_t i = 0; i <= params.maxInternalIterations; i++)
@@ -667,49 +866,95 @@ bool Simulate(ModelParameters const & params)
 			//https://finite-element.github.io/7_boundary_conditions.html
 			for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 				RHS[*it] = 0.0; //this, plus the adjustment to globalC above, ensures resulting h for this node always = 0
-			//RHS[exitNode] = 0.0;
-			
-			if (!Solve(globalC, RHS, fixedNewH, residuals, params))
+
+			//Test
+			{
+				//double area = 0.0;
+				double widthX = 0.0, widthY = 0.0;
+				for (auto it = triangles.begin(); it != triangles.end(); ++it)
+					if (it->second.ContainsVertex(exitNode))
+					{
+						//area = it->second.area;
+						int const * verts = it->second.vertIDs;
+						int otherVerts[2];
+						otherVerts[0] = verts[0] == exitNode ? verts[1] : verts[0];
+						otherVerts[1] = verts[1] == exitNode ? verts[2] : (verts[1] == otherVerts[0] ? verts[2] : verts[1]);
+						
+						widthX = abs(nodes[otherVerts[0]].y - nodes[otherVerts[1]].y);
+						widthY = abs(nodes[otherVerts[0]].x - nodes[otherVerts[1]].x);
+						break;
+					}
+				//RHS[exitNode] -= ((q_x_old[exitNode] + last_q_x_new[exitNode]) / 2.0 + (q_y_old[exitNode] + last_q_y_new[exitNode])/ 2.0) * sqrt(area) * params.timeStep;
+				double Qx = q_x_old[exitNode] * widthX * params.timeStep / 6.0;
+				double Qy = q_y_old[exitNode] * widthY * params.timeStep / 6.0;
+				RHS[exitNode] -= (Qx + Qy);
+			}
+			//end test
+
+			if (!Solve(adjustedC, RHS, fixedNewH, residuals, params))
 			{
 				LogMan::Log("ERROR! Internal solver error.", LOG_ERROR);
 				return false;
 			}
+			//test
+		/*	fixedNewH = Vector_f64(nodes.size());
+			for (size_t i = 0; i < RHS.Rows(); i++)
+				fixedNewH[i] = RHS[i] / adjustedC[i][i];*/
+			//end test
 
+			fixedNewH.DisplayOnCLI();
 			//force computed newHeads to be positive (not sure about this)
-			for (size_t i = 0; i < fixedNewH.Rows(); i++)
-				fixedNewH[i] = Max(fixedNewH[i], 0.0);
+			/*for (size_t i = 0; i < fixedNewH.Rows(); i++)
+				fixedNewH[i] = Max(fixedNewH[i], nodeElevation[i]);*/
 
 			if ((newHeads - fixedNewH).Magnitude() <= params.internalResidualTreshold)
 			{
 				newHeads = fixedNewH;
 				break;
 			}
-			else if (i >= params.maxInternalIterations) //test
-				std::cout << "reached maxInternalIterations without reaching appropriate h\n";
+			else if (i >= params.maxInternalIterations)
+				LogMan::Log("Reached maxInternalIterations without reaching appropriate h", LOG_WARN);
 			
 			newHeads = fixedNewH;
 		}
 
 		//test
 		TestShowInternalRHSVectors();
-
-		Vector_f64 qx, qy;
-		ComputeDischargeVectors(params, heads, qx, qy);
-		/*for (size_t i = 0; i < heads.Rows(); i++)
-			std::cout << qx[i] << "\t" << qy[i] << std::endl;*/
 		double area = 0.0;
+		double widthX = 0.0, widthY = 0.0;
 		for (auto it = triangles.begin(); it != triangles.end(); ++it)
 			if (it->second.ContainsVertex(exitNode))
 			{
-				area = it->second.area;
+				//area = it->second.area;
+				int const * verts = it->second.vertIDs;
+				int otherVerts[2];
+				otherVerts[0] = verts[0] == exitNode ? verts[1] : verts[0];
+				otherVerts[1] = verts[1] == exitNode ? verts[2] : (verts[1] == otherVerts[0] ? verts[2] : verts[1]);
+
+				widthX = abs(nodes[otherVerts[0]].y - nodes[otherVerts[1]].y);
+				widthY = abs(nodes[otherVerts[0]].x - nodes[otherVerts[1]].x);
 				break;
 			}
-		std::cout << "At time: " << time << "out discharge (x, y) : " << std::setprecision(4) << qx[exitNode] * sqrt(area) << ", " << qy[exitNode] * sqrt(area) << std::endl;
+		//RHS[exitNode] -= ((q_x_old[exitNode] + last_q_x_new[exitNode]) / 2.0 + (q_y_old[exitNode] + last_q_y_new[exitNode])/ 2.0) * sqrt(area) * params.timeStep;
+		double Qx = q_x_old[exitNode] * widthX;
+		double Qy = q_y_old[exitNode] * widthY;
+		//std::cout << "At time: " << time << " out discharge (x, y) : " << std::setprecision(4) << q_x_old[exitNode] * sqrt(area) << ", " << q_y_old[exitNode] * sqrt(area) << std::endl;
+		std::cout << "At time: " << time << " out discharge (x, y) : " << std::setprecision(4) << Qx << ", " << Qy << std::endl;
+		outletQs.push_back(std::pair(Qx, Qy));
 		//end test
 
 		heads = newHeads;
 		time += params.timeStep;
 	}
-	
+
+	std::cout << "Results:\ntime  |  Q_x   |   Q_y  |  Product\n";
+	double t = 0.0;
+	for (auto it = outletQs.begin(); it != outletQs.end(); ++it)
+	{
+		std::cout << std::fixed << std::setw(4) << t << " | "  <<  std::setprecision(2) << it->first << "  |  " << std::setprecision(2) << it->second 
+			<< "  |  " << sqrt(it->first * it->first + it->second * it->second) << std::endl;
+		t += params.timeStep;
+	}
+
 	return true;
 }
