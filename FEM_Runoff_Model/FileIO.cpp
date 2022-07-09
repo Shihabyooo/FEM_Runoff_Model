@@ -258,6 +258,51 @@ bool FileIO::WriteToLog(LogEntry const & newEntry)
 	return true;
 }
 
+std::ofstream outputFile;
+
+bool FileIO::InitOutputFile(std::string const & modelName)
+{
+	std::string outputPath = modelName + "_output.csv";
+	outputFile.open(outputPath.c_str(), std::ios_base::trunc);
+	if (!outputFile.is_open())
+	{
+		LogMan::Log("ERROR!C could not open or create output file " + outputPath, LOG_ERROR);
+		return false;
+	}
+	return true;
+}
+
+void FileIO::CloseOutputFile()
+{
+	if (outputFile.is_open())
+		outputFile.close();
+}
+
+bool FileIO::WriteOutputFrame(double time, void const * heads, void const * qX, void const * qY)
+{
+	if (!outputFile.good() || !outputFile.is_open())
+	{
+		LogMan::Log("ERROR! I/O error.", LOG_ERROR);
+		return false;
+	}
+
+	size_t rows = ((Vector_f64 *)heads)->Rows();
+
+	outputFile << ",,,\n";
+	outputFile << "Time:," << time << ",,\n";
+	outputFile << "NodeID,Head(m),q-x(m2/hr),q-y(m2/hr)\n";
+	for (size_t i = 0; i < rows; i++)
+		outputFile << i << "," <<
+		((Vector_f64 *)heads)->GetValue(i) << "," <<
+		((Vector_f64 *)qX)->GetValue(i) << "," <<
+		((Vector_f64 *)qY)->GetValue(i) << "\n";
+
+	outputFile.flush();
+	return true;
+}
+
+#pragma region Image struct defs
+
 Image::Image()
 {
 }
@@ -298,3 +343,5 @@ void Image::Unload()
 	height = 0;
 	samples = 0;
 }
+
+#pragma endregion

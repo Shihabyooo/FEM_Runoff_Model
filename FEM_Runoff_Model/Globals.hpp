@@ -40,6 +40,7 @@
 #define WGS84_ELIPSOID_FLATTENING (double)(1.0F/298.257223563)
 
 //Misc Defines
+//#define OUT_FILE_PATH "output.csv"
 #define LOG_FILE_PATH "log_file.txt" //in same dir as exe
 #define LOG_TO_CLI //also outputs the logged messages to the CLI (using std::cout)
 
@@ -309,6 +310,8 @@ public:
 	ModelParameters();	
 	~ModelParameters();
 
+	std::string modelName = "untitled_model";
+
 	//Topographic/geogrpahic params
 	std::string demPath = "";
 	std::string slopesPath = "";
@@ -372,6 +375,9 @@ public:
 	double internalResidualTreshold = 0.00001;
 	size_t maxInternalIterations = 1000; //for internal loop.
 	
+	//output
+	int nthDurationToOutput = 1; //as in output every nth simulation frame to disk. >=1 means output all simulated from. 2 means output every other frame, etc.
+	//TODO implement output formating.
 };
 
 //Helper functions

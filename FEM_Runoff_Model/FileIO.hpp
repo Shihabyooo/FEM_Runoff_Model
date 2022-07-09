@@ -46,4 +46,8 @@ namespace FileIO
 	bool InitLogFile();
 	void CloseLogFile();
 	bool WriteToLog(LogEntry const & newEntry);
+
+	bool InitOutputFile(std::string const & modelName);
+	void CloseOutputFile();
+	bool WriteOutputFrame(double time, void const * heads, void const * qX, void const * qY); //void * are Vector_64 *
 }
