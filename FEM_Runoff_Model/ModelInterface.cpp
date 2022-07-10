@@ -308,7 +308,7 @@ void ConstructGlobalPsiMatrices(double timeStep)
 		double contribY1 = (timeStep / 6.0) * (k.x - j.x);
 		double contribY2 = (timeStep / 6.0) * (i.x - k.x);
 		double contribY3 = (timeStep / 6.0) * (j.x - i.x);
-
+			
 		for (int i = 0; i < 3; i++)
 		{
 			globalPsiX[verts[i]][verts[0]] += contribX1;
@@ -337,6 +337,20 @@ void ConstructGlobalPsiMatrices(double timeStep)
 	//		globalPsiX[i][j] = abs(globalPsiX[i][j]);
 	//		globalPsiY[i][j] = abs(globalPsiY[i][j]);
 	//	}
+
+	for (size_t i = 0; i < globalPsiX.Rows(); i++)
+	{
+		double rowSumX = 0.0, columnSumX = 0.0;
+		double rowSumY = 0.0, columnSumY = 0.0;
+		for (size_t j = 0; j < globalPsiX.Rows(); j++)
+		{
+			rowSumX += globalPsiX[i][j];
+			columnSumX += globalPsiX[j][i];
+			rowSumY += globalPsiY[i][j];
+			columnSumY += globalPsiY[j][i];
+		}
+		std::cout << i << ":\t" << rowSumX << "\t" << columnSumX << "\t" << rowSumY << "\t" << columnSumY << "\n";
+	}
 	//endtest
 }
 
@@ -486,6 +500,12 @@ bool CacheElevations()
 	return true;
 }
 
+//void ZeroBoundaryNodes(Vector_f64 & targetVector)
+//{
+//	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
+//		targetVector[*it] = 0.0;
+//}
+
 //Precipitation returned as meters per hour.
 //current impl doesn't need triangle, but later it would.
 double GetCurrentPrecipitation(double time, ModelParameters const & params, Triangle const & triangle)
@@ -523,18 +543,18 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 		it->second.elementPrecipitation = newPrecipitation;
 
 		//test
-		/*if (!it->second.ContainsVertex(17) && !it->second.ContainsVertex(18) && !it->second.ContainsVertex(23) &&
+		if (!it->second.ContainsVertex(17) && !it->second.ContainsVertex(18) && !it->second.ContainsVertex(23) &&
 			!it->second.ContainsVertex(24) && !it->second.ContainsVertex(28) && !it->second.ContainsVertex(29) &&
 			!it->second.ContainsVertex(30) && !it->second.ContainsVertex(31) && !it->second.ContainsVertex(32) &&
-			!it->second.ContainsVertex(33) )*/
-		if (!it->second.ContainsVertex(47) && !it->second.ContainsVertex(48) && !it->second.ContainsVertex(49) &&
+			!it->second.ContainsVertex(33) )
+		/*if (!it->second.ContainsVertex(47) && !it->second.ContainsVertex(48) && !it->second.ContainsVertex(49) &&
 			!it->second.ContainsVertex(56) && !it->second.ContainsVertex(57) && !it->second.ContainsVertex(58) &&
 			!it->second.ContainsVertex(59) && !it->second.ContainsVertex(60) && !it->second.ContainsVertex(68) &&
 			!it->second.ContainsVertex(69) && !it->second.ContainsVertex(70) && !it->second.ContainsVertex(71) &&
 			!it->second.ContainsVertex(77) && !it->second.ContainsVertex(78) && !it->second.ContainsVertex(79) && 
 			!it->second.ContainsVertex(80) && !it->second.ContainsVertex(81) && !it->second.ContainsVertex(82) &&
 			!it->second.ContainsVertex(83) && !it->second.ContainsVertex(84) && !it->second.ContainsVertex(85) &&
-			!it->second.ContainsVertex(86))
+			!it->second.ContainsVertex(86))*/
 			elementContrib = 0.0;
 		//end test
 
@@ -562,10 +582,15 @@ void ComputeDischargeVectors(ModelParameters const & params, Vector_f64 const & 
 		
 		for (int i = 0; i < 3; i++)
 		{
-			/*double xContrib = sqrt(nodeSlopeX[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
-			double yContrib = sqrt(nodeSlopeY[vert[i]]) * pow(heads[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]]; */
-			double xContrib = sqrt(nodeSlopeX[vert[i]]) * pow(heads[vert[i]] - nodeElevation[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
-			double yContrib = sqrt(nodeSlopeY[vert[i]]) * pow(heads[vert[i]] - nodeElevation[vert[i]], 5.0 / 3.0) / nodeManning[vert[i]];
+			//double head = heads[vert[i]];
+			double head = heads[vert[i]] - nodeElevation[vert[i]];
+
+			double xContrib = sqrt(nodeSlopeX[vert[i]]) * pow(head, 5.0 / 3.0) / nodeManning[vert[i]];
+			double yContrib = sqrt(nodeSlopeY[vert[i]]) * pow(head, 5.0 / 3.0) / nodeManning[vert[i]];
+			
+			/*double sign = head < 0 ? -1.0 : 1.0;
+			double xContrib = sign * sqrt(nodeSlopeX[vert[i]]) * pow(abs(head), 5.0 / 3.0) / nodeManning[vert[i]];
+			double yContrib = sign * sqrt(nodeSlopeY[vert[i]]) * pow(abs(head), 5.0 / 3.0) / nodeManning[vert[i]];*/
 
 			outVectorX[vert[i]] += xContrib;
 			outVectorY[vert[i]] += yContrib;
@@ -580,7 +605,8 @@ void ComputeDischargeVectors(ModelParameters const & params, Vector_f64 const & 
 
 		}
 	}
-
+	/*for (auto i = 0; i < outVectorX.Rows(); i++)
+		std::cout << outVectorX[i] << ", " << outVectorY[i] << std::endl;*/
 	/*for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 	{
 		outVectorX[*it] = 0.0;
@@ -615,70 +641,85 @@ void TestShowInternalRHSVectors()
 }
 #pragma endregion
 
-#pragma region Per Element RHS
-Matrix_f64 PsiX(Triangle const & element, double timeStep) //3x3
+#pragma region Decomposed Approach
+bool IsLowestVert(int localVertID, Triangle const & element)
 {
-	Matrix_f64 psiX(3, 3);
-	const Vector2D &i = element.nodes[0];
-	const Vector2D &j = element.nodes[1];
-	const Vector2D &k = element.nodes[2];
-
-	double contrib1 = (timeStep / 6.0) * (j.y - k.y);
-	double contrib2 = (timeStep / 6.0) * (k.y - i.y);
-	double contrib3 = (timeStep / 6.0) * (i.y - j.y);
-
-	psiX[0][0] = contrib1;
-	psiX[0][1] = contrib2;
-	psiX[0][2] = contrib3;
-
-	psiX[1][0] = contrib1;
-	psiX[1][1] = contrib2;
-	psiX[1][2] = contrib3;
-
-	psiX[2][0] = contrib1;
-	psiX[2][1] = contrib2;
-	psiX[2][2] = contrib3;
-
-	return psiX;
-}
-
-Matrix_f64 PsiY(Triangle const & element, double timeStep) //3x3
-{
-	Matrix_f64 psiY(3, 3);
-	const Vector2D &i = element.nodes[0];
-	const Vector2D &j = element.nodes[1];
-	const Vector2D &k = element.nodes[2];
-
-	double contrib1 = (timeStep / 6.0) * (k.x - j.x);
-	double contrib2 = (timeStep / 6.0) * (i.x - k.x);
-	double contrib3 = (timeStep / 6.0) * (j.x - i.x);
-
-	psiY[0][0] = contrib1;
-	psiY[0][1] = contrib2;
-	psiY[0][2] = contrib3;
-
-	psiY[1][0] = contrib1;
-	psiY[1][1] = contrib2;
-	psiY[1][2] = contrib3;
-
-	psiY[2][0] = contrib1;
-	psiY[2][1] = contrib2;
-	psiY[2][2] = contrib3;
-
-	return psiY;
-}
-
-Vector_f64 ElementQ(Triangle const & element, Vector_f64 const & h, bool isX)
-{
-	Vector_f64 q(3);
 	for (int i = 0; i < 3; i++)
-		q[i] = sqrt(isX? nodeSlopeX[element.vertIDs[i]] : nodeSlopeY[element.vertIDs[i]])
-				* pow(h.GetValue(element.vertIDs[i]) - nodeElevation[element.vertIDs[i]], 5.0 / 3.0) / nodeManning[element.vertIDs[i]];
+		if (nodeElevation[element.vertIDs[localVertID]] > nodeElevation[element.vertIDs[i]])
+			return false;
+	return true;
+}
 
-	return q;
+void ComputeUVComponents(ModelParameters const & params, Vector_f64 const & oldHeads, Vector_f64 const & newHeads, Vector_f64 & outVectorX, Vector_f64 & outVectorY)
+{
+	//this approach breaks q_x (in dq_x/dx) to u*h, where u is velocity in x direction. The differential is broken to two term,  u*dh/dx + h*du/dx
+	//the approx solution (for terms relating to q_x) becomes [u][Psi_x]{h} + [h][Psi_X]{u}
+	//											|	ui	0	0	|
+	//Where [u] is a diagonal matrix of form =	|	0	uj	0	|
+	//											|	0	0	uk	|
+	//Same for [h].
+	//Psi matrix is the unchanged.
+	// u itself is computed using manning, u = sqrt(Sx) * h^(2/3) / n
+
+	//outVectorX = Vector_f64(nodes.size());
+	//outVectorY = Vector_f64(nodes.size());
+	
+	Matrix_f64 uMat(nodes.size(), nodes.size());
+	Matrix_f64 vMat(nodes.size(), nodes.size());
+	Matrix_f64 hMat(nodes.size(), nodes.size());
+	Vector_f64 uVec(nodes.size());
+	Vector_f64 vVec(nodes.size());
+	Vector_f64 hVec(nodes.size());
+
+	Matrix_f64 absPsiX = globalPsiX;//test
+	Matrix_f64 absPsiY = globalPsiY;//test
+	/*for (int i = 0; i < nodes.size(); i++)
+	{
+		for (int j = 0; j < nodes.size(); j++)
+		{
+			absPsiX[i][j] = abs(absPsiX[i][j]);
+			absPsiY[i][j] = abs(absPsiY[i][j]);
+		}
+	}*/
+
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		int const * verts = it->second.vertIDs;
+
+		for (int i = 0; i < 3; i++)
+		{
+			int vert = verts[i];
+			double alpha = sqrt(nodeSlopeX[verts[i]]) / nodeManning[verts[i]];
+			double beta = sqrt(nodeSlopeY[verts[i]]) / nodeManning[verts[i]];
+			/*bool isLowest = IsLowestVert(i, it->second);
+			alpha = isLowest ? alpha : -1.0 * alpha;
+			beta = isLowest ? beta : -1.0 * beta;*/
+
+			double centralHeadDiff = (1.0 - params.femOmega) * (oldHeads[vert] - nodeElevation[vert]) + params.femOmega * (newHeads[vert] - nodeElevation[vert]);
+			double centralHeadPoweredDiff = (1.0 - params.femOmega) * pow(oldHeads[vert] - nodeElevation[vert], 2.0 / 3.0) + params.femOmega * pow(newHeads[vert] - nodeElevation[vert], 2.0 / 3.0);
+			uMat[vert][vert] += alpha * centralHeadPoweredDiff;
+			vMat[vert][vert] += beta * centralHeadPoweredDiff;
+			hMat[vert][vert] += centralHeadDiff;
+			uVec[vert] += alpha * centralHeadPoweredDiff;
+			vVec[vert] += beta * centralHeadPoweredDiff;
+			hVec[vert] += centralHeadDiff;
+		}
+	}
+
+	for (int i = 0; i < nodes.size(); i++)
+		std::cout << i << " : " << hVec[i] << " | " << uVec[i] << " | " << hVec[i] << std::endl;
+
+	/*outVectorX = (uMat * globalPsiX * hVec) + (hMat * globalPsiX * uVec);
+	outVectorY = (vMat * globalPsiY * hVec) + (hMat * globalPsiY * vVec);*/
+
+	outVectorX = (uMat * absPsiX * hVec) + (hMat * absPsiX * uVec);
+	outVectorY = (vMat * absPsiY * hVec) + (hMat * absPsiY * vVec);
+	
+	std::cout << "---=-=-=-=-=\n";
+	//outVectorX.DisplayOnCLI();
+	//outVectorY.DisplayOnCLI();
 }
 #pragma endregion
-
 
 Vector_f64 q_x_old, q_y_old;
 Vector_f64 last_q_x_new, last_q_y_new;
@@ -695,37 +736,19 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 	//PsiX and PsiY already have dT multiplied with them.
 	//TODO [C]{h0} and {P} don't change from (internal) iteration to the next. Should refactor this function to have one called\
 	every time loop (external loop), and the other every internal loop, which add results of external loop to {q} vectors.
-	//outRHS = globalC * oldHeads
-	//		- ((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega)))
-	//		- ((globalPsiY) * ((q_y_old * (1.0 - params.femOmega)) + (q_y_new * params.femOmega)))
-	//		+ ComputePreciptationVector(time, params);
+	/*outRHS = globalC * oldHeads
+			- ((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega)))
+			- ((globalPsiY) * ((q_y_old * (1.0 - params.femOmega)) + (q_y_new * params.femOmega)))
+			+ ComputePreciptationVector(time, params);*/
 
-	outRHS = Vector_f32(nodes.size());
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
-	{
-		Triangle const & element = it->second;
-		Vector_f64 xComp, yComp;
-		xComp = PsiX(element, params.timeStep) * ((ElementQ(element, oldHeads, true) * (1.0 - params.femOmega)) + (ElementQ(element, newHeads, true) * params.femOmega));
-		yComp = PsiY(element, params.timeStep) * ((ElementQ(element, oldHeads, false) * (1.0 - params.femOmega)) + (ElementQ(element, newHeads, false) * params.femOmega));
+	//Using UV decomp
+	Vector_f64 uComp, vComp;
+	ComputeUVComponents(params, oldHeads, newHeads, uComp, vComp);
+	outRHS = (globalC * oldHeads)
+		- uComp
+		- vComp
+		+ ComputePreciptationVector(time, params);
 
-		for (int i = 0; i < 3; i++)
-			outRHS[element.vertIDs[i]] -= (xComp[i] + yComp[i]);
-	}
-
-	Vector_f64 oldRHS = outRHS;//test
-
-	outRHS += (globalC * oldHeads) + ComputePreciptationVector(time, params);
-
-	//test
-	std::cout << "--------------\n";
-	for (size_t i = 0; i < outRHS.Rows(); i++)
-		std::cout << oldRHS[i] << " | " <<  outRHS[i] << std::endl;
-	//endtest
-
-	/*std::cout << "---------\n";
-	q_x_old.DisplayOnCLI();
-	q_x_new.DisplayOnCLI();
-	((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega))).DisplayOnCLI();*/
 	//test
 	//cache so we can display once after end of internal loop.
 	_oldHeads = oldHeads;
@@ -736,8 +759,14 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 	_q_y_new = q_y_new;
 	_precipContrib = ComputePreciptationVector(time, params);
 	_RHS = outRHS;
+
+	//Vector_f64 compX1 = ((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega)));
+	//Vector_f64 compY1 = ((globalPsiY) * ((q_y_old * (1.0 - params.femOmega)) + (q_y_new * params.femOmega)));
+	//for (int i = 0; i < nodes.size(); i++)
+	//	std::cout << q_x_new[i] << " - " << q_y_new[i] << " | " << compX1[i] << " - " << compY1[i] << std::endl;
 	//end test
 
+	//TestShowInternalRHSVectors();
 	//cache the newly computed qs for use in next step.
 	last_q_x_new = std::move(q_x_new);
 	last_q_y_new = std::move(q_y_new);
@@ -766,18 +795,19 @@ bool Simulate(ModelParameters const & params)
 			break;
 		}
 
-	LogMan::Log("Constructing global matrices and vectors");
-	ConstructGlobalCapacitanceMatrix(params.useLumpedForm);
-	ConstructGlobalPsiMatrices(params.timeStep);
-
 	if (!CacheManningCoefficients(params))
 		return false;
-	
+
 	if (!CacheSlopes(params))
 		return false;
 
 	if (!CacheElevations())
 		return false;
+
+	LogMan::Log("Constructing global matrices and vectors");
+	ConstructGlobalCapacitanceMatrix(params.useLumpedForm);
+	ConstructGlobalPsiMatrices(params.timeStep);
+
 #pragma endregion
 
 #pragma region Test
@@ -821,8 +851,7 @@ bool Simulate(ModelParameters const & params)
 	//Set initial heads to zero (Dry conditions).
 	//heads = Vector_f64(nodes.size());
 	
-	nodeElevation = Vector_f64(nodes.size()); //test .
-
+	//nodeElevation = Vector_f64(nodes.size()); //test .
 	heads = nodeElevation;
 	//init cached old qs (not directly. value of last_q_x_new will be moved to q_x_old at begining of every time step.
 	last_q_x_new = Vector_f64(nodes.size());
@@ -848,8 +877,9 @@ bool Simulate(ModelParameters const & params)
 		std::cout << "\n\n===================================================\n";
 		LogMan::Log("At T= " + std::to_string(time));
 		std::cout << "===================================================\n";
-		
-		Vector_f64 newHeads = heads + Vector_f64(nodes.size(), 0.05);
+	
+		Vector_f64 newHeads = heads;// +Vector_f64(nodes.size(), 0.05);
+
 		q_x_old = std::move(last_q_x_new);
 		q_y_old = std::move(last_q_y_new);
 
@@ -865,47 +895,48 @@ bool Simulate(ModelParameters const & params)
 			//Adjust heads for boundary cond
 			//https://finite-element.github.io/7_boundary_conditions.html
 			for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-				RHS[*it] = 0.0; //this, plus the adjustment to globalC above, ensures resulting h for this node always = 0
+				RHS[*it] = nodeElevation[*it]; //this, plus the adjustment to globalC above, ensures resulting h for this node always = 0
 
 			//Test
-			{
-				//double area = 0.0;
-				double widthX = 0.0, widthY = 0.0;
-				for (auto it = triangles.begin(); it != triangles.end(); ++it)
-					if (it->second.ContainsVertex(exitNode))
-					{
-						//area = it->second.area;
-						int const * verts = it->second.vertIDs;
-						int otherVerts[2];
-						otherVerts[0] = verts[0] == exitNode ? verts[1] : verts[0];
-						otherVerts[1] = verts[1] == exitNode ? verts[2] : (verts[1] == otherVerts[0] ? verts[2] : verts[1]);
-						
-						widthX = abs(nodes[otherVerts[0]].y - nodes[otherVerts[1]].y);
-						widthY = abs(nodes[otherVerts[0]].x - nodes[otherVerts[1]].x);
-						break;
-					}
-				//RHS[exitNode] -= ((q_x_old[exitNode] + last_q_x_new[exitNode]) / 2.0 + (q_y_old[exitNode] + last_q_y_new[exitNode])/ 2.0) * sqrt(area) * params.timeStep;
-				double Qx = q_x_old[exitNode] * widthX * params.timeStep / 6.0;
-				double Qy = q_y_old[exitNode] * widthY * params.timeStep / 6.0;
-				RHS[exitNode] -= (Qx + Qy);
-			}
+			//{
+			//	//double area = 0.0;
+			//	double widthX = 0.0, widthY = 0.0;
+			//	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+			//		if (it->second.ContainsVertex(exitNode))
+			//		{
+			//			//area = it->second.area;
+			//			int const * verts = it->second.vertIDs;
+			//			int otherVerts[2];
+			//			otherVerts[0] = verts[0] == exitNode ? verts[1] : verts[0];
+			//			otherVerts[1] = verts[1] == exitNode ? verts[2] : (verts[1] == otherVerts[0] ? verts[2] : verts[1]);
+			//			
+			//			widthX = abs(nodes[otherVerts[0]].y - nodes[otherVerts[1]].y);
+			//			widthY = abs(nodes[otherVerts[0]].x - nodes[otherVerts[1]].x);
+			//			break;
+			//		}
+			//	//RHS[exitNode] -= ((q_x_old[exitNode] + last_q_x_new[exitNode]) / 2.0 + (q_y_old[exitNode] + last_q_y_new[exitNode])/ 2.0) * sqrt(area) * params.timeStep;
+			//	double Qx = q_x_old[exitNode] * widthX * params.timeStep / 6.0;
+			//	double Qy = q_y_old[exitNode] * widthY * params.timeStep / 6.0;
+			//	RHS[exitNode] -= (Qx + Qy);
+			//}
 			//end test
 
-			if (!Solve(adjustedC, RHS, fixedNewH, residuals, params))
+			/*if (!Solve(adjustedC, RHS, fixedNewH, residuals, params))
 			{
 				LogMan::Log("ERROR! Internal solver error.", LOG_ERROR);
 				return false;
-			}
+			}*/
 			//test
-		/*	fixedNewH = Vector_f64(nodes.size());
-			for (size_t i = 0; i < RHS.Rows(); i++)
-				fixedNewH[i] = RHS[i] / adjustedC[i][i];*/
+			fixedNewH = Vector_f64(nodes.size());
+			for (size_t j = 0; j < RHS.Rows(); j++)
+				fixedNewH[j] = RHS[j] / adjustedC[j][j];
 			//end test
-
-			fixedNewH.DisplayOnCLI();
+			
+			//(fixedNewH - nodeElevation).DisplayOnCLI(10);
 			//force computed newHeads to be positive (not sure about this)
-			/*for (size_t i = 0; i < fixedNewH.Rows(); i++)
-				fixedNewH[i] = Max(fixedNewH[i], nodeElevation[i]);*/
+			for (size_t j = 0; j < fixedNewH.Rows(); j++)
+				fixedNewH[j] = Max(fixedNewH[j], nodeElevation[j]);
+			
 
 			if ((newHeads - fixedNewH).Magnitude() <= params.internalResidualTreshold)
 			{
@@ -945,6 +976,9 @@ bool Simulate(ModelParameters const & params)
 
 		heads = newHeads;
 		time += params.timeStep;
+
+		//std::cout << "\nTestEnd";//test
+		//return false;
 	}
 
 	std::cout << "Results:\ntime  |  Q_x   |   Q_y  |  Product\n";
