@@ -1,8 +1,7 @@
 #pragma once
-#include <vector>
-
 #include "Globals.hpp"
 
+//TODO rewrite this (and delauney triangluation) to have Triangle inherit from Element.
 class Triangle
 {
 public:
@@ -28,24 +27,21 @@ public:
 	
 	void UpdateGeometry(int const vertixIDs[3], Vector2D const _nodes[3]);
 	void UpdateGeometry(int vertexID1, int vertexID2, int vertexID3, Vector2D const & node1, Vector2D const & node2, Vector2D const & node3);
-
+	
+	double Determinant(Vector2D const &a, Vector2D const &b) const;
+	double ComputeArea(Vector2D node1, Vector2D node2, Vector2D node3) const;
+	
 	Vector2D Centroid() const;
 
 	bool Validate(); //Recomputes area, returns true if area > 0.0, else false.
 	void DebugPrintDetails();
 
-public:
 	int vertIDs[3];
-	Vector2D nodes[3];
+	Vector2D nodes[3]; //TODO It would be much cheaper to store a pointer to (a const)  std::vector<Vector2D> nodes, and reimplement Nodes(int internalVertID) to read the node coord from that vector.
 	double area;
 	int id;
 	
 	//TODO the value bellow is better stored in a some object in ModelInterface. Leaving it here until I fix the element ID ordering to\
 	be sequential starting from 0.
-	double elementPrecipitation = 0.0; //in m/hr. The precipitation at last pass.
-
-private:
-	
-	double Determinant(Vector2D const &a, Vector2D const &b) const;
-	double ComputeArea(Vector2D node1, Vector2D node2, Vector2D node3) const;
+	double elementPrecipitation = 0.0; //in m/hr. The precipitation at last pass.	
 };

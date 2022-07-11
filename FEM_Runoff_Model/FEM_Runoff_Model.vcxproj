@@ -162,19 +162,23 @@
     <ClCompile Include="MatricesPlusPlus\VectorPP_f32.cpp" />
     <ClCompile Include="MatricesPlusPlus\VectorPP_f64.cpp" />
     <ClCompile Include="ModelInterface.cpp" />
+    <ClCompile Include="Rectangle.cpp" />
     <ClCompile Include="Solvers.cpp" />
     <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DelauneyTriangulation.hpp" />
+    <ClInclude Include="FEM_Element.hpp" />
     <ClInclude Include="FileIO.hpp" />
     <ClInclude Include="GeoTIFF-Parser\Decompressor.h" />
     <ClInclude Include="GeoTIFF-Parser\GeoTIFF_Parser.h" />
     <ClInclude Include="GeoTIFF-Parser\GeoTIFF_Parser_Globals.h" />
     <ClInclude Include="Globals.hpp" />
+    <ClInclude Include="GridMesh.hpp" />
     <ClInclude Include="GUI_Handler.hpp" />
     <ClInclude Include="GUI_Requirements.hpp" />
+    <ClInclude Include="Rectangle.hpp" />
     <ClInclude Include="LogManager.hpp" />
     <ClInclude Include="Main.hpp" />
     <ClInclude Include="ModelInterface.hpp" />

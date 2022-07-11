@@ -16,9 +16,6 @@
     <Filter Include="Source Files\dearIMGUI">
       <UniqueIdentifier>{e589cab9-34ad-4661-b747-a88f0293fed5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Triangulation">
-      <UniqueIdentifier>{b64537ab-9650-438b-be28-1ca4c41f798e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\MatricesPP">
       <UniqueIdentifier>{1584a140-f7f2-4231-9914-cba01da4d841}</UniqueIdentifier>
     </Filter>
@@ -28,14 +25,17 @@
     <Filter Include="Source Files\GUI">
       <UniqueIdentifier>{fdbbd0fe-6152-460f-91d4-b25fda6483bf}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Triangulation">
-      <UniqueIdentifier>{623d3125-fe8c-4f5e-9b16-dda5f07c4079}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\GeoTIFF-Parser">
       <UniqueIdentifier>{cc4f322e-a937-4d5c-b109-f6a8ccbce375}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\GeoTIFF-Parser">
       <UniqueIdentifier>{ae18960b-7751-4da6-b6eb-7391031b210c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\MeshGeneration">
+      <UniqueIdentifier>{b64537ab-9650-438b-be28-1ca4c41f798e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MeshGeneration">
+      <UniqueIdentifier>{623d3125-fe8c-4f5e-9b16-dda5f07c4079}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -82,10 +82,10 @@
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
     <ClCompile Include="Triangle.cpp">
-      <Filter>Source Files\Triangulation</Filter>
+      <Filter>Source Files\MeshGeneration</Filter>
     </ClCompile>
     <ClCompile Include="DelauneyTriangulation.cpp">
-      <Filter>Source Files\Triangulation</Filter>
+      <Filter>Source Files\MeshGeneration</Filter>
     </ClCompile>
     <ClCompile Include="LogManager.cpp">
       <Filter>Source Files\GUI</Filter>
@@ -117,16 +117,19 @@
     <ClCompile Include="MatricesPlusPlus\VectorPP_f64.cpp">
       <Filter>Source Files\MatricesPP</Filter>
     </ClCompile>
+    <ClCompile Include="Rectangle.cpp">
+      <Filter>Source Files\MeshGeneration</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Triangle.hpp">
-      <Filter>Header Files\Triangulation</Filter>
+      <Filter>Header Files\MeshGeneration</Filter>
     </ClInclude>
     <ClInclude Include="DelauneyTriangulation.hpp">
-      <Filter>Header Files\Triangulation</Filter>
+      <Filter>Header Files\MeshGeneration</Filter>
     </ClInclude>
     <ClInclude Include="Globals.hpp">
       <Filter>Header Files</Filter>
@@ -160,6 +163,15 @@
     </ClInclude>
     <ClInclude Include="Solvers.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GridMesh.hpp">
+      <Filter>Header Files\MeshGeneration</Filter>
+    </ClInclude>
+    <ClInclude Include="FEM_Element.hpp">
+      <Filter>Header Files\MeshGeneration</Filter>
+    </ClInclude>
+    <ClInclude Include="Rectangle.hpp">
+      <Filter>Header Files\MeshGeneration</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

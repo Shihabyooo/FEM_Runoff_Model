@@ -262,6 +262,11 @@ double Rect::Height() const
 	return maxCorner.y - minCorner.y;
 }
 
+double Rect::Area() const
+{
+	return Width() * Height();
+}
+
 void Rect::Translate(Vector2D delta)
 {
 	minCorner = minCorner + delta;

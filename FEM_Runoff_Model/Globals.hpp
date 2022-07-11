@@ -166,6 +166,7 @@ public:
 
 	double Width() const;
 	double Height() const;
+	double Area() const;
 	void Translate(Vector2D delta);
 	void Translate(Vector2D direction, double magnitude);
 	bool Contains(Vector2D point); //not including edges
