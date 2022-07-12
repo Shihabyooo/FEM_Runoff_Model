@@ -6,7 +6,8 @@
 #include <unordered_map>
 
 #include "Globals.hpp"
-#include "DelauneyTriangulation.hpp"
+#include "MeshGenerator.hpp"
+
 
 //TODO the current time approximation uses a double for the omega variable. While it is mathematically correct, practically, the values\
 should typically either be 0.0, 0.5 or 1.0. In the first and last case, the RHS computation can be significantly sped up by omitting\
@@ -37,13 +38,21 @@ e.g. if mode = 0 (backwards difference), qx, qy and Pe at t+dt are unnecessary, 
 
 //Note: Rainfall is expected in mm, but the spatial units are meters (squared), so divide Pe by 1000 before multiplying with beta.
 
+
+
+//extern ElementsList elements;
+extern std::unordered_map<int, Rectangle> rectangles;
 extern std::unordered_map<int, Triangle> triangles;
 extern Triangle superTriangles[2];
 extern std::vector<Vector2D> nodes;
 extern std::vector<int> boundaryNodes;
 extern Vector2D nodesSW, nodesNE;
+extern Vector2D shedSW, shedNE;
 extern size_t exitNode;
+extern std::vector<Vector2D> shedBoundary;
 
+
+bool LoadWatershedBoundary(std::string const & boundaryPath);
 bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding);
 Triangle const * GetElementContainingPoint(Vector2D const & pos);
 bool UpdateNode(size_t id, Vector2D const & newPos);

@@ -1,16 +1,19 @@
+#pragma once
 #include "ModelInterface.hpp"
 #include "FileIO.hpp"
 #include "Solvers.hpp"
 
 //TODO add a cleanup method to clear the allocated memory (superTriangles, rasters) when program closes.
-
+std::unordered_map<int, Rectangle> rectangles;
 std::unordered_map<int, Triangle> triangles;
 Triangle superTriangles[2];
 std::vector<Vector2D> nodes;
 std::vector<int> boundaryNodes;
 Vector2D nodesSW, nodesNE;
+Vector2D shedSW, shedNE;
 //TODO improve this
 size_t exitNode = 0; //Assume first node to be exit node 
+std::vector<Vector2D> shedBoundary;
 
 //Matrices and Vectors
 Matrix_f64 globalC, globalPsiX, globalPsiY;
@@ -23,23 +26,36 @@ Matrix_f64 const * dem = NULL, * manningRaster = NULL, * slopes = NULL, * fdr = 
 
 int demID, manningRasterID, slopesID, fdrID;
 
-void ComputeBoundingBox()
+void ComputeBoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Vector2D & max)
 {
-	nodesSW = nodes[0];
-	nodesNE = nodes[0];
+	min = points[0];
+	nodesNE = points[0];
 
-	for (auto it = nodes.begin(); it < nodes.end(); it++)
+	for (auto it = points.begin(); it < points.end(); it++)
 	{
 		Print(*it);
-		nodesSW.x = Min(it->x, nodesSW.x);
-		nodesSW.y = Min(it->y, nodesSW.y);
-		nodesNE.x = Max(it->x, nodesNE.x);
-		nodesNE.y = Max(it->y, nodesNE.y);
+		min.x = Min(it->x, min.x);
+		min.y = Min(it->y, min.y);
+		max.x = Max(it->x, max.x);
+		max.y = Max(it->y, max.y);
 	}
 
-	LogMan::Log("Loaded nodes with bounds: "
-				+ std::to_string(nodesSW.x) + ", " + std::to_string(nodesSW.y) + " and "
-				+ std::to_string(nodesNE.x) + ", " + std::to_string(nodesNE.y));
+	LogMan::Log("Loaded data with bounds: "
+				+ std::to_string(min.x) + ", " + std::to_string(min.y) + " and "
+				+ std::to_string(max.x) + ", " + std::to_string(max.y));
+}
+
+bool LoadWatershedBoundary(std::string const & boundaryPath)
+{
+	if (!FileIO::LoadVectorPath(boundaryPath, shedBoundary))
+	{
+		return false;
+	}
+
+	//test
+	ComputeBoundingBox(shedBoundary, shedSW, shedNE);
+
+	return true;
 }
 
 bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding)
@@ -53,7 +69,7 @@ bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding)
 	if (!FileIO::LoadCoordinatePairsCSV(nodesPath, nodes))
 		return false;
 
-	ComputeBoundingBox();
+	ComputeBoundingBox(nodes, nodesSW, nodesNE);
 	Triangulate(nodes, superTrianglePadding, &triangles, &boundaryNodes, superTriangles);
 
 	LogMan::Log("Succesfully generated mesh of " + std::to_string(triangles.size()) + " triangles!", LOG_SUCCESS);
@@ -189,12 +205,12 @@ bool LoadInputRasters(ModelParameters const & params)
 	
 	bool status = true;
 
-	status = status && FileIO::LoadRaster(params.demPath, &demID, (void const **) &dem);
-	status = status && FileIO::LoadRaster(params.slopesPath, &slopesID, (void const **) &slopes);
-	status = status && FileIO::LoadRaster(params.fdrPath, &fdrID, (void const **) &fdr);
+	status = status && FileIO::LoadRaster(params.demPath, &demID, &dem);
+	status = status && FileIO::LoadRaster(params.slopesPath, &slopesID, &slopes);
+	status = status && FileIO::LoadRaster(params.fdrPath, &fdrID, &fdr);
 
 	if (params.variableManningCoefficients)
-		status = status && FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID, (void const **) &manningRaster);
+		status = status && FileIO::LoadRaster(params.manningCoefficientRasterPath, &manningRasterID, &manningRaster);
 
 	if (!status) //error already logged with the function calls above.
 	{
