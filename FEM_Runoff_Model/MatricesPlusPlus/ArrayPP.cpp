@@ -476,7 +476,7 @@ void Array2D<T>::DisplayOnCLI(unsigned int displayPrecision) const
 	{
 		for (_INDEX j = 0; j < columns; j++)
 		{
-			std::cout << std::fixed << std::setw(displayPrecision + 4) << std::setprecision(displayPrecision) << content[i][j] << "\t";
+			std::cout << std::fixed << std::setw(displayPrecision + 4) << std::setprecision(displayPrecision) << content[i][j] << " ";
 		}
 		std::cout << std::endl;
 	}

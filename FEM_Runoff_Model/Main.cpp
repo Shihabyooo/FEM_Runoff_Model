@@ -1,3 +1,4 @@
+#pragma once
 #include "Main.hpp"
 #include "LogManager.hpp"
 
@@ -76,18 +77,18 @@ int main(int argc, char ** argv)
 	
 	int returnVal = 0;
 	//TODO uncomment this after testing is done.
-	//returnVal = StartUI(1280, 720);
+	returnVal = StartUI(1280, 720);
 	
 
-	//testing model on CLI directly
-	GenerateMesh("Test_Data\\Grid_Nodes.csv", 1.0);
-	//TestGenerateSyntheticWatershed();
-	Simulate(ModelTestParams());
+	////testing model on CLI directly
+	////TestGenerateSyntheticWatershed();
+	//GenerateMesh("Test_Data\\Grid_Nodes.csv", 1.0);
+	//Simulate(ModelTestParams());
 
 	LogMan::Terminate();
 
-	std::cin.sync(); //TODO remove
-	std::cin.get(); //TODO remove
+	//std::cin.sync(); //TODO remove
+	//std::cin.get(); //TODO remove
 
 	return returnVal;
 }

@@ -1,7 +1,6 @@
 #pragma once
 #include <fstream>
-
-#include "MatricesPP.hpp"
+#include <MatricesPP.hpp>
 
 //Structs and enums
 enum class BitmapFormat
