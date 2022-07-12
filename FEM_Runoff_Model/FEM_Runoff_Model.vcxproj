@@ -76,7 +76,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;./stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;./VectorFilesParsers;./stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -91,7 +91,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;./stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;./VectorFilesParsers;./stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -108,7 +108,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;./stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;./VectorFilesParsers;./stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -127,7 +127,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;./stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./GeoTIFF-Parser;./;./dearIMGUI\;./dearIMGUI\backends;./GLFW;./glew\include\GL;./MatricesPlusPlus;./VectorFilesParsers;./stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -161,10 +161,13 @@
     <ClCompile Include="MatricesPlusPlus\VectorMaths.cpp" />
     <ClCompile Include="MatricesPlusPlus\VectorPP_f32.cpp" />
     <ClCompile Include="MatricesPlusPlus\VectorPP_f64.cpp" />
+    <ClCompile Include="MeshGenerator.cpp" />
     <ClCompile Include="ModelInterface.cpp" />
     <ClCompile Include="Rectangle.cpp" />
     <ClCompile Include="Solvers.cpp" />
     <ClCompile Include="Triangle.cpp" />
+    <ClCompile Include="VectorFilesParsers\KML_Parser.cpp" />
+    <ClCompile Include="VectorFilesParsers\SHP_Parser.cpp" />
     <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -178,12 +181,16 @@
     <ClInclude Include="GridMesh.hpp" />
     <ClInclude Include="GUI_Handler.hpp" />
     <ClInclude Include="GUI_Requirements.hpp" />
+    <ClInclude Include="MeshGenerator.hpp" />
     <ClInclude Include="Rectangle.hpp" />
     <ClInclude Include="LogManager.hpp" />
     <ClInclude Include="Main.hpp" />
     <ClInclude Include="ModelInterface.hpp" />
     <ClInclude Include="Solvers.hpp" />
     <ClInclude Include="Triangle.hpp" />
+    <ClInclude Include="VectorFilesParsers\KML_Parser.h" />
+    <ClInclude Include="VectorFilesParsers\SHP_Parser.h" />
+    <ClInclude Include="VectorFilesParsers\Vector_File_Parser.h" />
     <ClInclude Include="Viewport.hpp" />
   </ItemGroup>
   <ItemGroup>

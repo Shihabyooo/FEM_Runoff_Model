@@ -37,6 +37,12 @@
     <Filter Include="Source Files\MeshGeneration">
       <UniqueIdentifier>{623d3125-fe8c-4f5e-9b16-dda5f07c4079}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\FileIO">
+      <UniqueIdentifier>{34989e47-c23d-404d-b591-476561a07d33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\FileIO">
+      <UniqueIdentifier>{73a03618-dbed-4ce7-b915-6edb448781fd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -99,9 +105,6 @@
     <ClCompile Include="GeoTIFF-Parser\GeoTIFF_Parser_Globals.cpp">
       <Filter>Source Files\GeoTIFF-Parser</Filter>
     </ClCompile>
-    <ClCompile Include="FileIO.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Globals.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -119,6 +122,18 @@
     </ClCompile>
     <ClCompile Include="Rectangle.cpp">
       <Filter>Source Files\MeshGeneration</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshGenerator.cpp">
+      <Filter>Source Files\MeshGeneration</Filter>
+    </ClCompile>
+    <ClCompile Include="FileIO.cpp">
+      <Filter>Source Files\FileIO</Filter>
+    </ClCompile>
+    <ClCompile Include="VectorFilesParsers\KML_Parser.cpp">
+      <Filter>Source Files\FileIO</Filter>
+    </ClCompile>
+    <ClCompile Include="VectorFilesParsers\SHP_Parser.cpp">
+      <Filter>Source Files\FileIO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -158,9 +173,6 @@
     <ClInclude Include="GeoTIFF-Parser\Decompressor.h">
       <Filter>Header Files\GeoTIFF-Parser</Filter>
     </ClInclude>
-    <ClInclude Include="FileIO.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Solvers.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -172,6 +184,21 @@
     </ClInclude>
     <ClInclude Include="Rectangle.hpp">
       <Filter>Header Files\MeshGeneration</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshGenerator.hpp">
+      <Filter>Header Files\MeshGeneration</Filter>
+    </ClInclude>
+    <ClInclude Include="FileIO.hpp">
+      <Filter>Header Files\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="VectorFilesParsers\Vector_File_Parser.h">
+      <Filter>Header Files\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="VectorFilesParsers\KML_Parser.h">
+      <Filter>Header Files\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="VectorFilesParsers\SHP_Parser.h">
+      <Filter>Header Files\FileIO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
