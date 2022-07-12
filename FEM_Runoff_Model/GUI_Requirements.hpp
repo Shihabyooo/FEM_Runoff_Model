@@ -14,7 +14,10 @@
 
 #define MIN_VIEWPORT_DELTA 1.0
 
-#define CLEAR_ARRAY(x) if (x != NULL) { delete[] x; } x = NULL;
+#define CLEAR_ARRAY(x)\
+	if (x != NULL)\
+		delete[] x;\
+	x = NULL;
 
 enum ToolMode
 {

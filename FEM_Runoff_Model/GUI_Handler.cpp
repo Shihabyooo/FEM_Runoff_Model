@@ -138,6 +138,9 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 }
 
 
+//char shedBound[260] = "Watershed Boundary";
+char shedBound[260] = "Test_Data\\Watershed_Boundary.kml";
+
 //char meshNodes[260] = "Mesh Nodes Coordinates File Path";
 //char meshNodes[260] = "Test_Nodes_G.csv";
 char meshNodes[260] = "Test_Data\\Grid_Nodes.csv";
@@ -261,8 +264,18 @@ void DrawLeftPane()
 	if (ImGui::CollapsingHeader("Topography and Geometry"))
 	{
 		//Geometry data
-		ImGui::Text("Mesh Nodes");
 		ImGui::PushItemWidth(-1);
+		ImGui::Text("Watershed Boundary");
+		ImGui::InputText("Shed Boundary", shedBound, IM_ARRAYSIZE(shedBound));
+		
+		if (ImGui::Button("Load Boundary", ImVec2(100, 50)))
+		{
+			LoadWatershedBoundary(shedBound);
+			SetViewBounds(shedSW, shedNE);
+			UpdateViewport();
+		}
+
+		ImGui::Text("Mesh Nodes");
 		ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
 
 		if (ImGui::Button("Browse##nodes"))

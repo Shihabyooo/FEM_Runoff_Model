@@ -7,9 +7,11 @@ double scale = 0.5f;
 double screenAspectRatio = 1.0f;
 float scaleChangeTicks = 0.01f;
 float * nodesMeshVerts = NULL;
+float * boundaryLineVerts = NULL;
 unsigned int * trianglesIndices = NULL;
 int renderVertsCount = 0;
 int renderTrisIndicesCount = 0;
+int renderBoundVertsCount = 0;
 
 std::unordered_map <int, Layer>  layers;
 Shader triangleShader, pointShader, lineShader;
@@ -45,6 +47,7 @@ void RenderViewport();
 void UpdateContent();
 void UpdateNodes();
 void UpdateTriangles();
+void UpdateWatershed();
 void UpdateViewBounds();
 void UpdateCoordinateProjectionParameters();
 Vector2D NormalizeCoordinates(Vector2D & point);
@@ -62,7 +65,7 @@ void SetupMesh(MeshData * targetGLData, float const * mesh, unsigned int vertice
 	glGenVertexArrays(1, &(targetGLData->vertexArrayObject));
 	glGenBuffers(1, &(targetGLData->vertexArrayElementObject));
 	
-	if (verticesCount >= 3)
+	if (verticesCount >= 1)
 		UpdateMesh(targetGLData, mesh, verticesCount, indices, indexCount);
 }
 
@@ -76,7 +79,7 @@ void UpdateMesh(MeshData * targetGLData, float const * mesh, unsigned int vertic
 	glBindVertexArray(targetGLData->vertexArrayObject);
 	glBindBuffer(GL_ARRAY_BUFFER, targetGLData->vertexArrayObject);
 	glBindBuffer(GL_ARRAY_BUFFER, targetGLData->vertexBufferObject);
-	glBufferData(GL_ARRAY_BUFFER, verticesCount * sizeof(float), mesh, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, verticesCount * 3 * sizeof(float), mesh, GL_STATIC_DRAW);
 	
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
@@ -399,6 +402,7 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //return to normal filled render mode.
 	}
 
+	//Switch to FEM mesh
 	//The nodes and triangles share the same vertices, we use the same vertex object for both, but we glDrawArrays the point, and for
 	//the elements we use glDrawElements.
 	glBindVertexArray(layers[1].meshData.vertexArrayObject);
@@ -417,6 +421,12 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 	glUseProgram(pointShader.program);
 	SetActiveShaderDiffuse(COLOUR_BLACK);
 	glDrawArrays(GL_POINTS, 0, renderVertsCount);
+
+	//Draw watershed boundary
+	glBindVertexArray(layers[2].meshData.vertexArrayObject);
+	glUseProgram(triangleShader.program);
+	SetActiveShaderDiffuse(COLOUR_MAGENTA);
+	glDrawArrays(GL_LINE_LOOP, 0, renderBoundVertsCount);
 
 	//restore default frame buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -477,6 +487,7 @@ bool InitViewport()
 		return FAILED_VIEWPORT_CREATE;
 
 	layers.insert({ 1, Layer("MainMesh", MeshData(), 1) });
+	layers.insert({ 2, Layer("WatershedBoundary", MeshData(), 2) });
 	//layers.insert({ 2, Layer("Triangles", MeshData(), 2) });
 	//layers.insert({ 5, Layer("Test", MeshData(), 5) });
 
@@ -517,8 +528,11 @@ void UpdateContent()
 {
 	UpdateNodes();
 	UpdateTriangles();
+	UpdateWatershed();
 
 	UpdateMesh(&(layers[1].meshData), nodesMeshVerts, renderVertsCount, trianglesIndices, renderTrisIndicesCount);
+	UpdateMesh(&(layers[2].meshData), boundaryLineVerts, renderBoundVertsCount, NULL, 0);
+
 	TestUpdateSuperTriangle();
 }
 
@@ -526,13 +540,17 @@ void UpdateContent()
 only clears the viewport mesh container of the nodes.
 void UpdateNodes()
 {
-	CLEAR_ARRAY(nodesMeshVerts)
-	renderVertsCount = nodes.size() * 3;
+	//TODO this function is identical to UpdatWatershed, and probably all similar future functions. Unify in a one method that takes\
+	the variable params, and call for each set of params from UpdateContent.
 
-	if (nodes.size() < 1)
+	CLEAR_ARRAY(nodesMeshVerts);
+	
+	renderVertsCount = nodes.size();
+
+	if (renderVertsCount < 1)
 		return;
-
-	nodesMeshVerts = new float[nodes.size() * 3];
+	
+	nodesMeshVerts = new float[renderVertsCount * 3];
 
 	int counter = 0;
 	for (auto it = nodes.begin(); it != nodes.end(); ++it)
@@ -549,9 +567,10 @@ void UpdateNodes()
 If triangles count is less than 1, only clears the indices array. 
 void UpdateTriangles()
 {
-	CLEAR_ARRAY(trianglesIndices)
+	CLEAR_ARRAY(trianglesIndices);
+	
 	renderTrisIndicesCount = triangles.size() * 3;
-
+	
 	if (triangles.size() < 1)
 		return;
 
@@ -563,6 +582,30 @@ void UpdateTriangles()
 		trianglesIndices[counter] = it->second.vertIDs[0];
 		trianglesIndices[counter + 1] = it->second.vertIDs[1];
 		trianglesIndices[counter + 2] = it->second.vertIDs[2];
+		counter += 3;
+	}
+}
+
+void UpdateWatershed()
+{
+	CLEAR_ARRAY(boundaryLineVerts);
+	
+	renderBoundVertsCount = shedBoundary.size();
+	if (renderBoundVertsCount < 2)
+	{
+		renderBoundVertsCount = 0;
+		return;
+	}
+
+	boundaryLineVerts = new float[renderBoundVertsCount * 3];
+	int counter = 0;
+
+	for (auto it = shedBoundary.begin(); it != shedBoundary.end(); ++it)
+	{
+		Vector2D relativePos = NormalizeCoordinates(*it);
+		boundaryLineVerts[counter] = relativePos.x;
+		boundaryLineVerts[counter + 1] = relativePos.y;
+		boundaryLineVerts[counter + 2] = 0.0f;
 		counter += 3;
 	}
 }
