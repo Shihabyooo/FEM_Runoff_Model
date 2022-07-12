@@ -29,7 +29,7 @@ int demID, manningRasterID, slopesID, fdrID;
 void ComputeBoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Vector2D & max)
 {
 	min = points[0];
-	nodesNE = points[0];
+	max = points[0];
 
 	for (auto it = points.begin(); it < points.end(); it++)
 	{
