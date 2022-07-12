@@ -1,0 +1,390 @@
+#include "GridMesh.hpp"
+
+//Clear the output vectors/unord_maps.
+//Compute absolute grid values
+	//vertical number of cells = resolution, rows = resolution + 1 (since the rows are for the nodes, not elements)
+	//the element height = (delta.y - 2.0 * padding) / resolution
+	//y pos of first row = boundSE.y + padding. then add element.Height for every following row.
+	//take element width = height.
+	//number of (element) columns =  floor( (delta.x - 2 * padding) / resolution).
+	//x pos of first column = boundSE.x + padding, then add element.width for every following column
+//bin the line segments of boundary as follows:
+	//Create an array of vectors of size = rows.
+	//loop over rows, store row y coordinate
+		//loop over segments. e.g. for (size_t i = 0; i < boundary.size(); i++)\
+			we create a segment as pair<vector2d*, vector2d*> = {&boundary[i], &boundary[i+1]}. With exception when we hit last point\
+			we loopback to {&boundary[i], &boundary[0]}.
+				//test that the row's y is between the segment's begin y and end y
+				//e.g. if ((row.y - begin.y) * (row.y - end.y)) < 0.0) -> row is between segment ends.
+					//if true, push segment pair appropriate row's vector in the array above.
+//The binning step can be skipped for shorter code, but then we'll have to raycast test all elements (or at least do the\
+check above) for every point tested bellow. With the binning, we can limit the internal loop tests to only binned segments.
+//
+//Using number of rows and columns above, creat a 2d array of bools, this will for cheaper mapping of points within the mesh\
+and later generation of elements. All bools are initialized to false (points are not within mesh).
+//Loop over each row
+	//loop over each column (now we have a point to test)
+		//Test that this point is inside boundary by raycasting
+		//for the point, the ray (more like line) to is cast from outside the boundary to the left (startPosition.x = boundarySE.x - rayPadding.\
+		y is the same. rayPadding should be large compared to padding), towards the point.
+		//start a counter at zero.
+		//loop over the binned segments for current row
+			//test interesction between segment and ray
+				//if interescts, counter++
+		//check counter%2, if 0 point is outside boundary, if 1, point is inside.
+			//for inside points, mark the corrosponding bool in the map as true.
+//After the end of the loop we should have  a list of nodes that all are within the boundary, but not all are usefull for elements (e.g.\
+a point may have no adjacent node and equivalent pair of nodes above to create an element from.
+//create a map of size_ts of same dimensions, this will store node IDs
+//start counter = 0;
+//Loop again over rows and columns and test the bool map
+	//if this point is true
+		//test d8 adjacent points in groups of threes (four quadrants) to a single bool.\
+		i.e bool q1 = N && NE && E; q2 = E && SE && S, q3 = S && SW && W, q4 = W && NW && N. \
+		The value of this node would then be q1 || q2 || q3 || q\
+		Note that for boundary cases (nodes at end of the map/grid), the direction equivalent to boundary is false.\
+		This test would ensure that every point in the map can be used to make an element with adjacent nodes.
+		//If the value of the node is true:
+			//id = counter; counter++;
+			//compute the coordinates of the node (using parameters above) and push to nodesList.
+//At this point, we have a map of nodes that can be used to create elements.
+//loop over rows and columns
+	//check that point is true.
+		//check that it is a SW corner (i.e. nodes to E, N and NE are true).
+		//if true
+			//create an element from this node, an N, E, NE nodes, push to elementsList.
+//Free any temp memory created above.
+
+
+struct GriddingParameters
+{
+public:
+
+	bool Validate()
+	{
+		if (elementWidth < MIN_RECTANGLE_WIDTH || elementHeight < MIN_RECTANGLE_HEIGHT)
+		{
+			LogMan::Log("ERROR! Resulting element width/height are too small/invalid at: "
+				+ std::to_string(elementWidth) + "x" + std::to_string(elementHeight), LOG_ERROR);
+		
+			return false;
+		}
+		
+		if (nodesRows < 2 || nodesColumns < 2)
+		{
+			LogMan::Log("ERROR! Resulting nodes rows/columns are too few at: "
+				+ std::to_string(nodesRows) + "x" + std::to_string(nodesColumns), LOG_ERROR);
+
+			return false;
+		}
+
+		return true;
+	}
+
+	double elementWidth = MIN_RECTANGLE_WIDTH;
+	double elementHeight = MIN_RECTANGLE_HEIGHT;
+	size_t nodesRows = 2;
+	size_t nodesColumns = 2;
+	Vector2D gridAnchorSW = Vector2D();
+};
+
+std::vector<std::pair<Vector2D const *, Vector2D const *>> * binnedSegments = NULL;
+bool ** nodesMap = NULL;
+size_t ** idsMap = NULL;
+
+GriddingParameters params;
+
+inline Vector2D GridToWorldPos(size_t row, size_t column)
+{
+	return Vector2D(params.gridAnchorSW.x + column * params.elementWidth,
+					params.gridAnchorSW.y + row * params.elementHeight);
+}
+
+bool ValidateInput(std::vector<Vector2D> const & boundary, size_t resolution, double internalPadding, double rayCastPadding)
+{
+	bool status = true;
+	if (boundary.size() < MIN_BOUNDARY_TO_DISCRETIZE)
+	{
+		LogMan::Log("ERROR! Cannot work with boundry with smaller edges than " + std::to_string(MIN_BOUNDARY_TO_DISCRETIZE), LOG_ERROR);
+		status = false;
+	}
+	
+	if (resolution < MIN_RESOLUTION)
+	{
+		LogMan::Log("ERROR! Resolution must be >= " + std::to_string(MIN_RESOLUTION), LOG_ERROR);
+		status = false;
+	}
+	
+	if (internalPadding <= 0.0)
+	{
+		LogMan::Log("ERROR! Internal padding must be greater than 0.0" , LOG_ERROR);
+		status = false;
+	}
+	
+	if (rayCastPadding)
+	{
+		LogMan::Log("ERROR! Raycast padding must be greater than 0.0", LOG_ERROR);
+		status = false;
+	}
+
+	return status;
+}
+
+void ComputeBoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Vector2D & max)
+{
+	//TODO I really should centralize this...
+	min = points[0];
+	max = points[0];
+
+	for (auto it = points.begin(); it < points.end(); it++)
+	{
+		Print(*it);
+		min.x = Min(it->x, min.x);
+		min.y = Min(it->y, min.y);
+		max.x = Max(it->x, max.x);
+		max.y = Max(it->y, max.y);
+	}
+}
+
+bool ComputeGriddingParameters(std::vector<Vector2D> const & boundary, double internalPadding, double resolution)
+{
+	Vector2D sw, ne;
+	ComputeBoundingBox(boundary, sw, ne);
+	Vector2D delta = ne - sw;
+
+	if ( delta.x < MIN_RECTANGLE_WIDTH || delta.y < MIN_RECTANGLE_HEIGHT) //TOD refine this check.
+	{
+		LogMan::Log("ERROR! Supplied bad boundary to GridMesh", LOG_ERROR);
+		return false;
+	}
+	
+	params.elementWidth = params.elementHeight = (delta.y - 2.0 * internalPadding) / static_cast<double>(resolution);
+	params.gridAnchorSW.y = sw.y + internalPadding;
+	params.nodesRows = resolution + 1;
+	params.nodesColumns = llround(floor(delta.x - 2.0 * internalPadding) / static_cast<double>(resolution));
+
+	//test
+	std::cout << "gridding parameters\n";
+	std::cout << "element size: " << params.elementWidth << " x " << params.elementHeight << std::endl;
+	std::cout << "rows x columns: " << params.nodesRows << " x " << params.nodesColumns << std::endl;
+	std::cout << "anchor: ";
+	Print(params.gridAnchorSW);
+	//endtest
+
+	return params.Validate();
+}
+
+void BinBoundarySegments(std::vector<Vector2D> const & boundary)
+{
+	if (binnedSegments != NULL)
+		delete[] binnedSegments;
+
+	binnedSegments = new std::vector<std::pair<Vector2D const *, Vector2D const *>>[params.nodesRows];
+
+	for (size_t row = 0; row < params.nodesRows; row++)
+		for (size_t column = 0; column < params.nodesColumns; column++)
+		{
+			Vector2D pointPos = GridToWorldPos(row, column);
+			
+			for (size_t i = 0; i < boundary.size(); i++)
+			{
+				std::pair<Vector2D const *, Vector2D const *> segment;
+				
+				if (i < boundary.size() - 1) //first to second-to-last segements
+					segment = std::pair<Vector2D const *, Vector2D const *>(&boundary[i], &boundary[i+1]);
+				else //last segment
+					segment = std::pair<Vector2D const *, Vector2D const *>(&boundary[i], &boundary[0]);
+				
+				double testValue = (pointPos.y - segment.first->y) * (pointPos.y - segment.second->y);
+				if (testValue <= 0.0) //TODO check whether the intersection test works when the intersection is right at the end.
+					binnedSegments[row].push_back(segment);
+			}
+		}
+}
+
+bool AllocateNodesMaps()
+{
+	try
+	{
+		nodesMap = new bool*[params.nodesRows];
+		bool * helperPtr = new bool[params.nodesRows * params.nodesColumns]();
+
+		idsMap = new size_t *[params.nodesRows];
+		size_t * helperPtr2 = new size_t[params.nodesRows * params.nodesColumns]();
+
+		for (size_t i = 0; i < params.nodesRows; i++)
+		{
+			nodesMap[i] = helperPtr;
+			idsMap[i] = helperPtr2;
+
+			helperPtr += params.nodesColumns;
+			helperPtr2 += params.nodesColumns;
+		}
+
+	}
+	catch (const std::bad_alloc& exception)
+	{
+		LogMan::Log("ERROR! Could not allocate internal map. " + std::string(exception.what()), LOG_ERROR);
+		return false;
+	}
+
+	return true;
+}
+
+bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, size_t row)
+{
+	//TODO implement this.
+	return false;
+}
+
+bool IsNodeValid(size_t row, size_t column) //checks that node  creates a valid rect in at least one of its four quadrants
+{
+	
+	//test d8 adjacent points in groups of threes (four quadrants) to a single bool.\
+		i.e bool q1 = N && NE && E; q2 = E && SE && S, q3 = S && SW && W, q4 = W && NW && N. \
+		The value of this node would then be q1 || q2 || q3 || q\
+		Note that for boundary cases (nodes at end of the map/grid), the direction equivalent to boundary is false.\
+		This test would ensure that every point in the map can be used to make an element with adjacent nodes.
+		//If the value of the node is true:
+	return false;
+}
+
+bool IsSWNode(size_t row, size_t column, size_t ** outRectNodes) //outRectNodes is size_t[4]
+{
+	//TODO implement this.
+	return false;
+}
+
+bool GenerateNodes(std::vector<Vector2D> const & boundary, std::vector<Vector2D> & outNodes, std::vector<int> & outBoundaryNodes, double rayCastPadding)
+{
+	LogMan::Log("Generating nodes.");
+
+	if (AllocateNodesMaps())
+		return false;
+
+	//first pass
+	for (size_t row = 0; row < params.nodesRows; row++)
+	{
+		for (size_t column = 0; column < params.nodesColumns; column++)
+		{
+			Vector2D pointPos = GridToWorldPos(row, column);
+			Vector2D raySource(params.gridAnchorSW.x - rayCastPadding, pointPos.y);
+			if (IsPointInsideBoundary(pointPos, raySource, row))
+				nodesMap[row][column] = true;
+		}
+	}
+
+	//second pass
+	size_t counter = 0;
+	for (size_t row = 0; row < params.nodesRows; row++)
+	{
+		for (size_t column = 0; column < params.nodesColumns; column++)
+		{
+			if (nodesMap[row][column])
+			{
+				if (IsNodeValid(row, column))
+				{
+					idsMap[row][column] = counter;
+					counter++;
+					outNodes.push_back(GridToWorldPos(row, column));
+				}
+				else
+				{
+					nodesMap[row][column] = false;
+				}
+			}
+		}
+	}
+
+	LogMan::Log("Generated " + std::to_string(outNodes.size()) + " nodes.");
+}
+
+void GenerateElements(std::vector<Vector2D> const & nodes, std::unordered_map<int, Rectangle> & outRectList)
+{
+	//loop over rows and columns
+	//check that point is true.
+		//check that it is a SW corner (i.e. nodes to E, N and NE are true).
+		//if true
+			//create an element from this node, an N, E, NE nodes, push to elementsList.
+
+	LogMan::Log("Attempting to generate elements");
+
+	size_t counter = 0;
+	size_t * rectNodes = new size_t[4];
+
+	for (size_t row = 0; row < params.nodesRows; row++)
+	{
+		for (size_t column = 0; column < params.nodesColumns; column++)
+		{
+			if (IsSWNode(row, column, &rectNodes))
+			{
+				Rectangle newRect(counter, rectNodes, &nodes);
+				outRectList.insert({ counter, newRect });
+				counter++;
+			}
+		}
+	}
+
+	delete[] rectNodes;
+
+	LogMan::Log("Generated " + std::to_string(outRectList.size()) + " elements.");
+}
+
+
+
+void MemoryCleanup()
+{
+	if (binnedSegments != NULL)
+		delete[] binnedSegments;
+	binnedSegments = NULL;
+
+	if (nodesMap != NULL)
+	{
+		delete[] nodesMap[0];
+		delete[] nodesMap;
+		nodesMap = NULL;
+	}
+
+	if (idsMap != NULL)
+	{
+		delete[] idsMap[0];
+		delete[] idsMap;
+		idsMap = NULL;
+	}
+}
+
+bool GenerateGrid(std::vector<Vector2D> const & boundary,
+				std::vector<Vector2D> & outNodes,
+				std::unordered_map<int, Rectangle> & outRectList,
+				std::vector<int> & outBoundaryNodes,
+				size_t resolution,
+				double internalPadding, double rayCastPadding)
+{
+	//checks
+	if (!ValidateInput(boundary, resolution, internalPadding, rayCastPadding))
+		return false;
+
+	LogMan::Log("Starting grid discretization.");
+
+	outNodes.clear();
+	outRectList.clear();
+	outBoundaryNodes.clear();
+
+	if (!ComputeGriddingParameters(boundary, internalPadding, resolution))
+		return false;
+
+	//from now on, we have to call MemoryCleanup before returning.
+	BinBoundarySegments(boundary);
+
+	if (!GenerateNodes(boundary, outNodes, outBoundaryNodes, rayCastPadding))
+	{
+		LogMan::Log("Failed to generate grid nodes.", LOG_ERROR);
+		MemoryCleanup();
+		return false;
+	}
+
+	GenerateElements(outNodes, outRectList);
+
+	MemoryCleanup();
+	return true;
+}
