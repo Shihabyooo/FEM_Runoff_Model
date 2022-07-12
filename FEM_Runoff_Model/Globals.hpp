@@ -1,6 +1,8 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <MatricesPP.hpp>
+
 #define PROGRAM_NAME "FEM_Runoff_Model"
 
 //Error codes.
@@ -82,6 +84,13 @@ enum class TimeUnit
 	minute = 1,
 	hour = 2,
 	day = 3
+};
+
+enum class ElementType
+{
+	undefined,
+	triangle,
+	rectangle
 };
 
 struct Vector2;

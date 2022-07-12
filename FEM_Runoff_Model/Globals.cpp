@@ -745,8 +745,8 @@ std::unique_ptr<double> ToUTM(double lng, double lat)
 	if (y < 0) y = y + UTM_FALSE_NORTHING; //in case the point was in sourthern hemisphere. for norther hemi, the y above is ok.
 
 	std::unique_ptr<double> coords = std::unique_ptr<double>(new double[2]);
-	coords.get()[0] = y;
-	coords.get()[1] = x;
+	coords.get()[0] = x;
+	coords.get()[1] = y;
 
 	//The part bellow would severely impact performance, in case of large profiles.
 	/*if (isDebug)
