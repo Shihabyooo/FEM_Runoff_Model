@@ -31,7 +31,7 @@ namespace FileIO
 	bool LoadCSV(std::string const & path, std::vector<float> & output, unsigned int firstLinesToSkip = 0);
 	bool LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2D> & output, unsigned int firstLinesToSkip = 0);
 
-	bool LoadRaster(std::string const & path, int * outRasterID, void const ** outBitmapPtr); //outBitmapPtr will be a pointer to a matrixPP_f32
+	bool LoadRaster(std::string const & path, int * outRasterID, Matrix_f64 const ** outBitmapPtr); 
 	bool GetRasterMappingParameters(int rasterID,
 									Vector2Int & outDimensions,
 									int & outSamples,
@@ -43,11 +43,14 @@ namespace FileIO
 
 	Image LoadImage(std::string const & path);
 
+
+	bool LoadVectorPath(std::string const & path, std::vector<Vector2D> & output);
+
 	bool InitLogFile();
 	void CloseLogFile();
 	bool WriteToLog(LogEntry const & newEntry);
 
 	bool InitOutputFile(std::string const & modelName);
 	void CloseOutputFile();
-	bool WriteOutputFrame(double time, void const * heads, void const * qX, void const * qY); //void * are Vector_64 *
+	bool WriteOutputFrame(double time, Vector_f64 const & heads, Vector_f64 const & qX, Vector_f64 const & qY);
 }

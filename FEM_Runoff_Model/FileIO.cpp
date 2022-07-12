@@ -1,9 +1,12 @@
+#pragma once
 #include <GeoTIFF_Parser.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #include "FileIO.hpp"
 #include "LogManager.hpp"
+#include "KML_Parser.h"
+#include "SHP_Parser.h"
 
 bool SkipNLines(std::ifstream & file, unsigned int const & linesToSkip)
 {
@@ -163,7 +166,7 @@ bool FileIO::LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector
 	return true;
 }
 
-bool FileIO::LoadRaster(std::string const & path, int * outRasterID, void const ** outBitmapPtr)
+bool FileIO::LoadRaster(std::string const & path, int * outRasterID, Matrix_f64 const ** outBitmapPtr)
 {
 	LogMan::Log("Attempting to load raster file \"" + path + "\"");
 	if (!LoadGeoTIFF(path, outRasterID))
@@ -225,6 +228,68 @@ Image FileIO::LoadImage(std::string const & path)
 
 std::ofstream logFile;
 
+bool FileIO::LoadVectorPath(std::string const & path, std::vector<Vector2D> & output)
+{
+	//TODO refactor this
+
+	//This is expensive, memory wise. But since, in the current impl, I don't want to maintain neither a FileParser instance and handles (like\
+	I do the GeoTiffParser), I simply instantiate a FileParser only in this scope, then copy the data loaded internally to output,\
+	then have the internal copy freed with the object's destruction as it goes out of scope.\
+	Too much redundancy, but saves LoC in management and spares me the pain of modifiying the parsers...
+
+	std::string extension = path.substr(path.length() - 4, 4);
+
+	FileParser * parser = NULL;
+
+	if (extension == ".kml")
+	{
+		LogMan::Log("Attempting to read KML file \"" + path + "\"");
+		//KMLParser parser;
+		
+		parser = new KMLParser();
+		if (!parser->LoadGeometry(path))
+		{
+			LogMan::Log("ERROR! Could not load from file \"" + path + "\"", LOG_ERROR);
+			delete parser;
+			return false;
+		}
+	}
+	else if (extension == ".shp")
+	{
+		LogMan::Log("Attempting to read SHP file \"" + path + "\"");
+		parser = new SHPParser();
+		if (!parser->LoadGeometry(path))
+		{
+			LogMan::Log("ERROR! Could not load from file \"" + path + "\"", LOG_ERROR);
+			delete parser;
+			return false;
+		}
+	}
+	else
+	{
+		LogMan::Log("ERROR! Unsupported file format.", LOG_ERROR);
+		return false;
+	}
+
+	//if we reached this point, parser is definitely instantiated and has loaded something
+	output.clear();
+	Matrix_f64 const * vertices = parser->GetPathByID(0);
+	for (size_t i = 0; i < vertices->Rows(); i++)
+	{
+		Vector2D coords(vertices->GetValue(i, 0), vertices->GetValue(i, 1));
+		
+		//check if the CRS isn't UTM, convert if so
+		if (parser->GeometryCRS() != CRS::UTM)
+			coords = ProjectPoint(coords);
+		
+		output.push_back(coords);
+	}
+
+	delete parser;
+	LogMan::Log("Successfully loaded file.", LOG_SUCCESS);
+	return true;
+}
+
 bool FileIO::InitLogFile()
 {
 	logFile.open(LOG_FILE_PATH, std::ios_base::app); //open LOG_FILE_PATH and always seek to the end before every write
@@ -278,7 +343,7 @@ void FileIO::CloseOutputFile()
 		outputFile.close();
 }
 
-bool FileIO::WriteOutputFrame(double time, void const * heads, void const * qX, void const * qY)
+bool FileIO::WriteOutputFrame(double time, Vector_f64 const & heads, Vector_f64 const & qX, Vector_f64 const & qY)
 {
 	if (!outputFile.good() || !outputFile.is_open())
 	{
@@ -286,16 +351,16 @@ bool FileIO::WriteOutputFrame(double time, void const * heads, void const * qX, 
 		return false;
 	}
 
-	size_t rows = ((Vector_f64 *)heads)->Rows();
+	size_t rows = heads.Rows();
 
 	outputFile << ",,,\n";
 	outputFile << "Time:," << time << ",,\n";
 	outputFile << "NodeID,Head(m),q-x(m2/hr),q-y(m2/hr)\n";
 	for (size_t i = 0; i < rows; i++)
 		outputFile << i << "," <<
-		((Vector_f64 *)heads)->GetValue(i) << "," <<
-		((Vector_f64 *)qX)->GetValue(i) << "," <<
-		((Vector_f64 *)qY)->GetValue(i) << "\n";
+		heads.GetValue(i) << "," <<
+		qX.GetValue(i) << "," <<
+		qY.GetValue(i) << "\n";
 
 	outputFile.flush();
 	return true;
