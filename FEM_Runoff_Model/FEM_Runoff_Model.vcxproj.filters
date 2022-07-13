@@ -136,7 +136,7 @@
       <Filter>Source Files\FileIO</Filter>
     </ClCompile>
     <ClCompile Include="GridMesh.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\MeshGeneration</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

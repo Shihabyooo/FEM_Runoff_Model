@@ -39,36 +39,36 @@ ModelParameters ModelTestParams()
 	return params;
 }
 
-void TestGenerateSyntheticWatershed()
-{
-	nodes.clear();
-	triangles.clear();
-	boundaryNodes.clear();
-
-	for (int i = 0; i < 6; i++)
-		for (int j = 0; j < 7; j++)
-			nodes.push_back(Vector2D(j * 83.33, i * 80));
-	
-	int counter = 0;
-	for (int i = 0; i < 60; i = i + 2)
-	{
-		triangles.insert({ i, Triangle(i, counter, counter + 6, counter + 7, nodes) });
-		triangles.insert({ i, Triangle(i, counter, counter + 1, counter + 7, nodes) });
-		counter++;
-	}
-
-	for (int i = 0; i < 6; i++)
-	{
-		boundaryNodes.push_back(i);
-		boundaryNodes.push_back(i + 36);
-	}
-	for (int i = 0; i < 37; i += 6)
-	{
-		boundaryNodes.push_back(i + 6);
-		boundaryNodes.push_back(i + 11);
-	}
-
-}
+//void TestGenerateSyntheticWatershed()
+//{
+//	nodes.clear();
+//	triangles.clear();
+//	boundaryNodes.clear();
+//
+//	for (int i = 0; i < 6; i++)
+//		for (int j = 0; j < 7; j++)
+//			nodes.push_back(Vector2D(j * 83.33, i * 80));
+//	
+//	int counter = 0;
+//	for (int i = 0; i < 60; i = i + 2)
+//	{
+//		triangles.insert({ i, Triangle(i, counter, counter + 6, counter + 7, nodes) });
+//		triangles.insert({ i, Triangle(i, counter, counter + 1, counter + 7, nodes) });
+//		counter++;
+//	}
+//
+//	for (int i = 0; i < 6; i++)
+//	{
+//		boundaryNodes.push_back(i);
+//		boundaryNodes.push_back(i + 36);
+//	}
+//	for (int i = 0; i < 37; i += 6)
+//	{
+//		boundaryNodes.push_back(i + 6);
+//		boundaryNodes.push_back(i + 11);
+//	}
+//
+//}
 
 int main(int argc, char ** argv)
 {

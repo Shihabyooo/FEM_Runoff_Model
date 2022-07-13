@@ -5,19 +5,19 @@ Triangle::Triangle()
 {
 }
 
-Triangle::Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, std::vector<Vector2D> const & nodesList)
+Triangle::Triangle(size_t _id, size_t vertexID1, size_t vertexID2, size_t vertexID3, std::vector<Vector2D> const & nodesList)
 {
 	id = _id;
 	UpdateGeometry(vertexID1, vertexID2, vertexID3, nodesList[vertexID1], nodesList[vertexID2], nodesList[vertexID3]);
 }
 
-Triangle::Triangle(int _id, int vertexID1, int vertexID2, int vertexID3, Vector2D const & node1, Vector2D const & node2, Vector2D const & node3)
+Triangle::Triangle(size_t _id, size_t vertexID1, size_t vertexID2, size_t vertexID3, Vector2D const & node1, Vector2D const & node2, Vector2D const & node3)
 {
 	id = _id;
 	UpdateGeometry(vertexID1, vertexID2, vertexID3, node1, node2, node3);
 }
 
-Triangle::Triangle(int _id, int const vertexIDs[3], Vector2D const _nodes[3])
+Triangle::Triangle(size_t _id, size_t const vertexIDs[3], Vector2D const _nodes[3])
 {
 	id = _id;
 	UpdateGeometry(vertexIDs, _nodes);
@@ -42,7 +42,7 @@ Triangle & Triangle::operator=(Triangle const & tri2)
 	return *this;
 }
 
-void Triangle::Subdivide(int centroidID, Vector2D centroidPos, int baseTriangleID, std::vector<Triangle> & outNewTriangles) const
+void Triangle::Subdivide(size_t centroidID, Vector2D centroidPos, size_t baseTriangleID, std::vector<Triangle> & outNewTriangles) const
 {
 	outNewTriangles.push_back(Triangle(baseTriangleID	 , centroidID, vertIDs[0], vertIDs[1], centroidPos, nodes[0], nodes[1]));
 	outNewTriangles.push_back(Triangle(baseTriangleID + 1, centroidID, vertIDs[0], vertIDs[2], centroidPos, nodes[0], nodes[2]));
@@ -65,7 +65,7 @@ bool Triangle::ContainsPoint(Vector2D const & point) const
 	return false;
 }
 
-bool Triangle::ContainsEdge(int vertID1, int vertID2) const
+bool Triangle::ContainsEdge(size_t vertID1, size_t vertID2) const
 {
 	bool check1 = false, check2 = false;
 
@@ -78,12 +78,12 @@ bool Triangle::ContainsEdge(int vertID1, int vertID2) const
 	return (check1 && check2);
 }
 
-bool Triangle::ContainsVertex(int vertexID) const
+bool Triangle::ContainsVertex(size_t vertexID) const
 {
 	return ((vertIDs[0] == vertexID) || (vertIDs[1] == vertexID) || (vertIDs[2] == vertexID));
 }
 
-int Triangle::GetThirdVertexID(int vertID1, int vertID2) const
+int Triangle::GetThirdVertexID(size_t vertID1, size_t vertID2) const
 {
 	for (int i = 0; i < 3; i++)
 	{
@@ -94,7 +94,7 @@ int Triangle::GetThirdVertexID(int vertID1, int vertID2) const
 	return -4;
 }
 
-bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts, int * outMeshEdgeContribCount) const
+bool Triangle::IsExternalTriangle(size_t * externalVertices, size_t * outMeshEdgeVerts, int * outMeshEdgeContribCount) const
 {
 	*outMeshEdgeContribCount = 0;
 	
@@ -119,7 +119,7 @@ bool Triangle::IsExternalTriangle(int * externalVertices, int * outMeshEdgeVerts
 	return !isInternal;
 }
 
-bool Triangle::IsNeighbour(Triangle const & triangle, int outsideVertex, int * outSharedVertsIDs) const
+bool Triangle::IsNeighbour(Triangle const & triangle, size_t outsideVertex, size_t * outSharedVertsIDs) const
 {
 	std::vector<int> edgeVerts;
 
@@ -166,12 +166,12 @@ bool Triangle::IsInsideCircumcircle(Vector2D pos) const
 	return (matrix.Determinant() > 0.0f);
 }
 
-void Triangle::UpdateGeometry(int const vertixIDs[3], Vector2D const _nodes[3])
+void Triangle::UpdateGeometry(size_t const vertixIDs[3], Vector2D const _nodes[3])
 {
 	UpdateGeometry(vertixIDs[0], vertixIDs[1], vertixIDs[2], _nodes[0], _nodes[1], _nodes[2]);
 }
 
-void Triangle::UpdateGeometry(int vertexID1, int vertexID2, int vertexID3,
+void Triangle::UpdateGeometry(size_t vertexID1, size_t vertexID2, size_t vertexID3,
 								Vector2D const & node1, Vector2D const & node2, Vector2D const & node3)
 {
 	vertIDs[0] = vertexID1;

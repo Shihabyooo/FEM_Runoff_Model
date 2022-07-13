@@ -13,6 +13,6 @@
 
 bool Triangulate(	std::vector<Vector2D> const & nodesList,
 					double superTrianglePadding,
-					std::unordered_map<int, Triangle> * outTrianglesList,
-					std::vector<int> * outBoundaryNodes,
+					std::unordered_map<size_t, Triangle> * outTrianglesList,
+					std::vector<size_t> * outBoundaryNodes,
 					Triangle * outSuperTriangles);

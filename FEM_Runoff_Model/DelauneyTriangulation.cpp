@@ -3,7 +3,7 @@
 #include "DelauneyTriangulation.hpp"
 
 //int extVerts[3];//cached external vertices.
-int extVerts[4];//cached external vertices.
+size_t extVerts[4];//cached external vertices.
 int lastID = 0;
 std::vector<int> failedPoints; //to hold points that failed to triangulate on first pass.
 
@@ -26,7 +26,7 @@ std::unique_ptr<Vector2D[]> ComputeBoundingBox(std::vector<Vector2D> &nodesList)
 	return boundingBox;
 }
 
-void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, double padding, std::unordered_map<int, Triangle> * outTrianglesList, Triangle * outSuperTriangles)
+void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, double padding, std::unordered_map<size_t, Triangle> * outTrianglesList, Triangle * outSuperTriangles)
 {
 	LogMan::Log("Generating Super Triangle.");
 	auto boundingBox = ComputeBoundingBox(nodesList);
@@ -62,10 +62,10 @@ void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, double padding, std
 	outSuperTriangles[1] = Triangle(-2, extVerts[0], extVerts[1], extVerts[3], nodesList);
 }
 
-void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & nodesList, std::vector<Triangle *> & trianglesToOptimize, std::unordered_map<int, Triangle> * trianglesList)
+void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & nodesList, std::vector<Triangle *> & trianglesToOptimize, std::unordered_map<size_t, Triangle> * trianglesList)
 {
 	//TODO we don't actually need the shared verts, rather the non shared one of the neighbour tri. Redo related methods to get it directly
-	int * sharedVertsIDs = new int[2];
+	size_t * sharedVertsIDs = new size_t[2];
 
 	while (trianglesToOptimize.size() > 1)
 	{
@@ -79,10 +79,10 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & node
 			{
 				if (oldTri->second.IsInsideCircumcircle(nodesList[pivotVertexID])) //This is a viable optimization candidate.
 				{
-					int distantVertID = oldTri->second.GetThirdVertexID(sharedVertsIDs[0], sharedVertsIDs[1]); 
+					size_t distantVertID = oldTri->second.GetThirdVertexID(sharedVertsIDs[0], sharedVertsIDs[1]);
 
-					int newVerts1[3]{ pivotVertexID, distantVertID, sharedVertsIDs[0] };
-					int newVerts2[3]{ pivotVertexID, distantVertID, sharedVertsIDs[1] };
+					size_t newVerts1[3]{ pivotVertexID, distantVertID, sharedVertsIDs[0] };
+					size_t newVerts2[3]{ pivotVertexID, distantVertID, sharedVertsIDs[1] };
 
 					Vector2D newNodes1[3]{ nodesList[pivotVertexID], nodesList[distantVertID], nodesList[sharedVertsIDs[0]] };
 					Vector2D newNodes2[3]{ nodesList[pivotVertexID], nodesList[distantVertID], nodesList[sharedVertsIDs[1]] };
@@ -124,7 +124,7 @@ void OptimizeTriangulation(int pivotVertexID, std::vector<Vector2D> const & node
 	delete[] sharedVertsIDs;
 }
 
-void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * trianglesList, bool firstPass = true)
+void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList, std::unordered_map<size_t, Triangle> * trianglesList, bool firstPass = true)
 {
 	for (auto it = trianglesList->begin(); it != trianglesList->end(); ++it)
 	{
@@ -166,7 +166,7 @@ void DelauneyTriangulation(int vertexID, std::vector<Vector2D> const & nodesList
 		LogMan::Log("Could not fit point " + std::to_string(vertexID) + " in the mesh.", LOG_WARN); 
 }
 
-void OptimizeAll(std::vector<Vector2D> const & nodesList, std::unordered_map<int, Triangle> * triangles)
+void OptimizeAll(std::vector<Vector2D> const & nodesList, std::unordered_map<size_t, Triangle> * triangles)
 {
 	LogMan::Log("Global Optimization run");
 
@@ -182,18 +182,18 @@ void OptimizeAll(std::vector<Vector2D> const & nodesList, std::unordered_map<int
 	}
 }
 
-void RemoveExteriorTriangles(std::unordered_map<int, Triangle> * trianglesList, std::vector<int> * outBoundaryNodes) //returns a list of exterior nodes within the mesh
+void RemoveExteriorTriangles(std::unordered_map<size_t, Triangle> * trianglesList, std::vector<size_t> * outBoundaryNodes) //returns a list of exterior nodes within the mesh
 {
 	int initialCount = trianglesList->size();
 	LogMan::Log("Cleaning exterior triangles.");
 
 	//std::vector<int> * outerNodes = new std::vector<int>();
-	std::unordered_set<int> tempOuterNodes;
+	std::unordered_set<size_t> tempOuterNodes;
 
 	//loop over triangles, for triangles that test positive for external, add internal nodes (i.e. at mesh edge) to tempOuterNodes, then delete triangle.
 	for (auto it = trianglesList->begin(); it != trianglesList->end(); ++it)
 	{
-		int otherVertices[3];
+		size_t otherVertices[3];
 		int meshEdgeVertContrib;
 		if (it->second.IsExternalTriangle(extVerts, otherVertices, &meshEdgeVertContrib))
 		{
@@ -211,7 +211,7 @@ void RemoveExteriorTriangles(std::unordered_map<int, Triangle> * trianglesList, 
 	LogMan::Log("Removed" + std::to_string(initialCount - trianglesList->size()) + " triangles.");
 }
 
-void Cleanup(std::vector<Vector2D> const & originalNodesList, std::unordered_map<int, Triangle> * trianglesList)
+void Cleanup(std::vector<Vector2D> const & originalNodesList, std::unordered_map<size_t, Triangle> * trianglesList)
 {
 	//Two things to do: Remove invalid tris, and have ID sequentially from 0.
 
@@ -222,11 +222,11 @@ void Cleanup(std::vector<Vector2D> const & originalNodesList, std::unordered_map
 
 	LogMan::Log("Internal cleanup pass");
 	size_t counter = 0;
-	std::unordered_map<int, Triangle> cleanedTriList;
+	std::unordered_map<size_t, Triangle> cleanedTriList;
 
 	for (auto it = trianglesList->begin(); it != trianglesList->end(); ++it)
 	{
-		int const * verts = it->second.vertIDs;
+		size_t const * verts = it->second.vertIDs;
 		Vector2D originalNodes[3]{ originalNodesList[verts[0]], originalNodesList[verts[1]], originalNodesList[verts[2]] };
 		it->second.UpdateGeometry(verts, originalNodes);
 		
@@ -245,7 +245,7 @@ void Cleanup(std::vector<Vector2D> const & originalNodesList, std::unordered_map
 	*trianglesList = std::move(cleanedTriList);
 }
 
-bool Triangulate(std::vector<Vector2D> const & nodesList, double superTrianglePadding, std::unordered_map<int, Triangle> * outTrianglesList, std::vector<int> * outBoundaryNodes, Triangle * outSuperTriangles)
+bool Triangulate(std::vector<Vector2D> const & nodesList, double superTrianglePadding, std::unordered_map<size_t, Triangle> * outTrianglesList, std::vector<size_t> * outBoundaryNodes, Triangle * outSuperTriangles)
 {
 	//check if nodesList has enough elements, else return false.
 	//compute bounding box

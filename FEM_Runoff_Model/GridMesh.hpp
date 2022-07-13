@@ -11,8 +11,8 @@
 
 bool GenerateGrid(std::vector<Vector2D> const & boundary,
 	std::vector<Vector2D> & outNodes,
-	std::unordered_map<int, Rectangle> & outRectList,
-	std::vector<int> & outBoundaryNodes,
+	std::unordered_map<size_t, Rectangle> & outRectList,
+	std::vector<size_t> & outBoundaryNodes,
 	size_t resolution = 100,
 	double internalPadding = 0.001,
 	double rayCastPadding = 1.0);

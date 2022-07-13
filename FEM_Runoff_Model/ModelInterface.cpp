@@ -4,11 +4,11 @@
 #include "Solvers.hpp"
 
 //TODO add a cleanup method to clear the allocated memory (superTriangles, rasters) when program closes.
-std::unordered_map<int, Rectangle> rectangles;
-std::unordered_map<int, Triangle> triangles;
+std::unordered_map<size_t, Rectangle> rectangles;
+std::unordered_map<size_t, Triangle> triangles;
 Triangle superTriangles[2];
 std::vector<Vector2D> nodes;
-std::vector<int> boundaryNodes;
+std::vector<size_t> boundaryNodes;
 Vector2D nodesSW, nodesNE;
 Vector2D shedSW, shedNE;
 //TODO improve this
@@ -305,7 +305,7 @@ void ConstructGlobalCapacitanceMatrix(bool isLumped)
 			otherVal = it->second.area / 12.0; //(A/12.0) * 1.0
 		}
 		
-		int const * vert = it->second.vertIDs;
+		size_t const * vert = it->second.vertIDs;
 
 		globalC[vert[0]][vert[0]] += diagVal;
 		globalC[vert[1]][vert[1]] += diagVal;
@@ -342,10 +342,10 @@ void ConstructGlobalPsiMatrices(double timeStep)
 
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		const int * verts = it->second.vertIDs;
-		const Vector2D & i = it->second.nodes[0];
-		const Vector2D & j = it->second.nodes[1];
-		const Vector2D & k = it->second.nodes[2];
+		size_t const * verts = it->second.vertIDs;
+		Vector2D const & i = it->second.nodes[0];
+		Vector2D const & j = it->second.nodes[1];
+		Vector2D const & k = it->second.nodes[2];
 
 		double contribX1 = (timeStep / 6.0) * (j.y - k.y);
 		double contribX2 = (timeStep / 6.0) * (k.y - i.y);
@@ -582,7 +582,7 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		int const * vert = it->second.vertIDs; //to simplify lines bellow.
+		size_t const * vert = it->second.vertIDs; //to simplify lines bellow.
 		double newPrecipitation = GetCurrentPrecipitation(time + params.timeStep, params, it->second);
 		double elementContrib = (it->second.area / 3.0) * (( 1.0 - params.femOmega) * it->second.elementPrecipitation + params.femOmega * newPrecipitation);
 		elementContrib *= params.timeStep;
@@ -624,7 +624,7 @@ void ComputeDischargeVectors(ModelParameters const & params, Vector_f64 const & 
 	
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		int const * vert = it->second.vertIDs; //to simplify lines bellow.
+		size_t const * vert = it->second.vertIDs; //to simplify lines bellow.
 		
 		for (int i = 0; i < 3; i++)
 		{
@@ -730,7 +730,7 @@ void ComputeUVComponents(ModelParameters const & params, Vector_f64 const & oldH
 
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		int const * verts = it->second.vertIDs;
+		size_t const * verts = it->second.vertIDs;
 
 		for (int i = 0; i < 3; i++)
 		{
@@ -1003,7 +1003,7 @@ bool Simulate(ModelParameters const & params)
 			if (it->second.ContainsVertex(exitNode))
 			{
 				//area = it->second.area;
-				int const * verts = it->second.vertIDs;
+				size_t const * verts = it->second.vertIDs;
 				int otherVerts[2];
 				otherVerts[0] = verts[0] == exitNode ? verts[1] : verts[0];
 				otherVerts[1] = verts[1] == exitNode ? verts[2] : (verts[1] == otherVerts[0] ? verts[2] : verts[1]);

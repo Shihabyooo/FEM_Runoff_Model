@@ -41,11 +41,11 @@ e.g. if mode = 0 (backwards difference), qx, qy and Pe at t+dt are unnecessary, 
 
 
 //extern ElementsList elements;
-extern std::unordered_map<int, Rectangle> rectangles;
-extern std::unordered_map<int, Triangle> triangles;
+extern std::unordered_map<size_t, Rectangle> rectangles;
+extern std::unordered_map<size_t, Triangle> triangles;
 extern Triangle superTriangles[2];
 extern std::vector<Vector2D> nodes;
-extern std::vector<int> boundaryNodes;
+extern std::vector<size_t> boundaryNodes;
 extern Vector2D nodesSW, nodesNE;
 extern Vector2D shedSW, shedNE;
 extern size_t exitNode;
