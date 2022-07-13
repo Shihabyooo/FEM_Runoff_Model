@@ -16,6 +16,7 @@ int renderBoundVertsCount = 0;
 std::unordered_map <int, Layer>  layers;
 Shader triangleShader, pointShader, lineShader;
 float superTriMeshVerts[18];
+ElementType meshType = ElementType::undefined;
 
 Vector2D lastViewportSize;
 Vector2D viewBounds[2];
@@ -47,6 +48,7 @@ void RenderViewport();
 void UpdateContent();
 void UpdateNodes();
 void UpdateTriangles();
+void UpdateRectangles();
 void UpdateWatershed();
 void UpdateViewBounds();
 void UpdateCoordinateProjectionParameters();
@@ -376,6 +378,43 @@ void UpdateGrabbedNode()
 	UpdateMesh(&(layers[1].meshData), nodesMeshVerts, renderVertsCount, trianglesIndices, renderTrisIndicesCount);
 }
 
+//called by RenderViewport Only.
+void RenderMesh()
+{
+	switch (meshType)
+	{
+	case ElementType::undefined:
+		break;
+	case ElementType::triangle:
+		
+		break;
+	case ElementType::rectangle:
+		break;
+	default:
+		break;
+	}
+	
+	//Switch to FEM mesh
+		//The nodes and triangles share the same vertices, we use the same vertex object for both, but we glDrawArrays the point, and for
+		//the elements we use glDrawElements.
+	glBindVertexArray(layers[1].meshData.vertexArrayObject);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, layers[1].meshData.vertexArrayElementObject);
+
+	//draw triangles
+	glUseProgram(triangleShader.program);
+	SetActiveShaderDiffuse(COLOUR_RED);
+	glDrawElements(GL_TRIANGLES, renderTrisIndicesCount, GL_UNSIGNED_INT, 0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Wireframe only
+	SetActiveShaderDiffuse(COLOUR_BLACK);
+	glDrawElements(GL_TRIANGLES, renderTrisIndicesCount, GL_UNSIGNED_INT, 0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //return to normal filled render mode.
+
+	//draw nodes
+	glUseProgram(pointShader.program);
+	SetActiveShaderDiffuse(COLOUR_BLACK);
+	glDrawArrays(GL_POINTS, 0, renderVertsCount);
+}
+
 //Renders the viewport content to the offscreen buffer.
 void RenderViewport() //Renders viewport content to an offscreen buffer.
 {
@@ -402,25 +441,7 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //return to normal filled render mode.
 	}
 
-	//Switch to FEM mesh
-	//The nodes and triangles share the same vertices, we use the same vertex object for both, but we glDrawArrays the point, and for
-	//the elements we use glDrawElements.
-	glBindVertexArray(layers[1].meshData.vertexArrayObject);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, layers[1].meshData.vertexArrayElementObject);
-	
-	//draw triangles
-	glUseProgram(triangleShader.program);
-	SetActiveShaderDiffuse(COLOUR_RED);
-	glDrawElements(GL_TRIANGLES, renderTrisIndicesCount, GL_UNSIGNED_INT, 0);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Wireframe only
-	SetActiveShaderDiffuse(COLOUR_BLACK);
-	glDrawElements(GL_TRIANGLES, renderTrisIndicesCount, GL_UNSIGNED_INT, 0);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //return to normal filled render mode.
-	
-	//draw nodes
-	glUseProgram(pointShader.program);
-	SetActiveShaderDiffuse(COLOUR_BLACK);
-	glDrawArrays(GL_POINTS, 0, renderVertsCount);
+	RenderMesh();
 
 	//Draw watershed boundary
 	glBindVertexArray(layers[2].meshData.vertexArrayObject);
@@ -527,7 +548,21 @@ void UpdateViewport()
 void UpdateContent()
 {
 	UpdateNodes();
-	UpdateTriangles();
+	
+	switch (meshType)
+	{
+	case ElementType::undefined:
+		break;
+	case ElementType::triangle:
+		UpdateTriangles();
+		break;
+	case ElementType::rectangle:
+		UpdateRectangles();
+		break;
+	default:
+		break;
+	}
+	
 	UpdateWatershed();
 
 	UpdateMesh(&(layers[1].meshData), nodesMeshVerts, renderVertsCount, trianglesIndices, renderTrisIndicesCount);
@@ -583,6 +618,32 @@ void UpdateTriangles()
 		trianglesIndices[counter + 1] = it->second.vertIDs[1];
 		trianglesIndices[counter + 2] = it->second.vertIDs[2];
 		counter += 3;
+	}
+}
+
+void UpdateRectangles()
+{
+	CLEAR_ARRAY(trianglesIndices);
+
+	renderTrisIndicesCount = rectangles.size() * 2 * 3;
+
+	if (rectangles.size() < 1)
+		return;
+
+	trianglesIndices = new unsigned int[renderTrisIndicesCount];
+
+	int counter = 0;
+	for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+	{
+		trianglesIndices[counter] = it->second.VertexID(0);
+		trianglesIndices[counter + 1] = it->second.VertexID(1);
+		trianglesIndices[counter + 2] = it->second.VertexID(3);
+
+		trianglesIndices[counter + 3] = it->second.VertexID(1);
+		trianglesIndices[counter + 4] = it->second.VertexID(2);
+		trianglesIndices[counter + 5] = it->second.VertexID(3);
+
+		counter += 6;
 	}
 }
 
