@@ -156,6 +156,9 @@ char percipTSPath[260] = "Test_Data\\Test_Timeseries.csv";
 char manningFilePath[260] = "Manning Raster File Path";
 
 char superTriPadding[24] = "1.0";
+int gridMeshResolution = 100;
+char gridMeshPadding[12] = "0.01";
+char gridMeshRaycastPadding[12] = " 5.0";
 
 int timeSeriesSize = 3;
 TimeSeries inputTS;
@@ -175,12 +178,14 @@ const char* precipitationInput[] = {"Single Time-Series", "Gridded Time-Series" 
 const char* interpMethods1D[] = {"Nearest", "Linear", "Cubic"};
 const char* interpMethods2D[] = { "Nearest", "Bilinear", "Bicubic" };
 const char* timeUnits[] = { "Seconds", "Minutes", "Hours", "Days" };
+const char* elementType[] = { "Triangles", "Rectangles" };
 int selectedPrecipInput = 0;
 int selectedPrecipTempoInterp = 1;
 int selectedPrecipSpaceInterp = 1;
 int selectedTopoInterp = 1;
 int selectedTimeUnit = 1;
 int selectedSolver = 0;
+int selectedElementType = 1;
 
 char solverResidual[12] = "0.0001";
 char solverWeight[12] = "0.5";
@@ -267,7 +272,7 @@ void DrawLeftPane()
 		ImGui::PushItemWidth(-1);
 		ImGui::Text("Watershed Boundary");
 		ImGui::InputText("Shed Boundary", shedBound, IM_ARRAYSIZE(shedBound));
-		
+
 		if (ImGui::Button("Load Boundary", ImVec2(100, 50)))
 		{
 			LoadWatershedBoundary(shedBound);
@@ -275,23 +280,56 @@ void DrawLeftPane()
 			UpdateViewport();
 		}
 
-		ImGui::Text("Mesh Nodes");
-		ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
+		ImGui::Text("Element Type");
+		ImGui::Combo("##elemType", &selectedElementType, elementType, IM_ARRAYSIZE(elementType));
+		//ImGui::PopItemWidth();
 
-		if (ImGui::Button("Browse##nodes"))
+		if (selectedElementType == 0)
 		{
-			//TODO spawn file browser here
+			ImGui::Text("Mesh Nodes");
+			ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
+
+			if (ImGui::Button("Browse##nodes"))
+			{
+				//TODO spawn file browser here
+			}
+
+			ImGui::Text("SuperTriangle padding");
+			ImGui::SameLine();
+			ImGui::InputText("##superTriPad", superTriPadding, 24, ImGuiInputTextFlags_CharsDecimal);
 		}
-		
-		ImGui::Text("SuperTriangle padding");
-		ImGui::SameLine();
-		ImGui::InputText("##superTriPad", superTriPadding, 24, ImGuiInputTextFlags_CharsDecimal);
+		else if (selectedElementType == 1)
+		{
+			ImGui::InputInt("Resolution", &gridMeshResolution);
+			ImGui::Text("Internal padding");
+			ImGui::SameLine();
+			ImGui::InputText("##intPad", gridMeshPadding, 12, ImGuiInputTextFlags_CharsDecimal);
+			ImGui::Text("Raycast padding");
+			ImGui::SameLine();
+			ImGui::InputText("##rayPad", gridMeshRaycastPadding, 12, ImGuiInputTextFlags_CharsDecimal);
+		}
 
 		if (ImGui::Button("Generate Mesh", ImVec2(100, 50)))
 		{
-			GenerateMesh(meshNodes, atof(superTriPadding));
-			SetViewBounds(nodesSW, nodesNE);
-			UpdateViewport();
+			bool success = false;
+			if (selectedElementType == 0)
+			{
+				success = GenerateMesh(meshNodes, atof(superTriPadding));
+				meshType = ElementType::triangle;
+			}
+			else if (selectedElementType == 1)
+			{
+				success = GenerateGridMesh(gridMeshResolution, atof(gridMeshPadding), atof(gridMeshRaycastPadding));
+				meshType = ElementType::rectangle;
+			}
+			else //shouldn't happen, but to be safe.
+				meshType = ElementType::undefined;
+
+			if (success)
+			{
+				SetViewBounds(nodesSW, nodesNE);
+				UpdateViewport();
+			}
 		}
 		
 		ImGui::Text("DEM");

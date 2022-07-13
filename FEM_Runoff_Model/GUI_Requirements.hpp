@@ -11,6 +11,7 @@
 
 #include "ModelInterface.hpp"
 #include "FileIO.hpp"
+#include "Globals.hpp"
 
 #define MIN_VIEWPORT_DELTA 1.0
 
@@ -186,8 +187,6 @@ extern WindowDimensions leftPaneDimensions, logPaneDimensions, viewportDimension
 extern WindowDimensions toolbarDimensions, statusBarDimensions;
 extern Vector2D lastViewportSize;
 
-//extern ToolMode activeTool;
-
 extern int mainWinWidth;
 extern int mainWinHeight;
 extern int minLeftPaneWidth;
@@ -196,6 +195,8 @@ extern int minLogPaneHeight;
 extern int maxLogPaneHeight;
 extern int fixedToolBarHeight;
 extern int fixedStatusBarHeight;
+
+extern ElementType meshType;
 
 namespace PointShader
 {
