@@ -1,7 +1,7 @@
 #pragma once
 #include "FEM_Element.hpp"
 
-class Rectangle : Element
+class Rectangle : public Element
 {
 public:
 	Rectangle();

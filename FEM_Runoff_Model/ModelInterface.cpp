@@ -33,7 +33,7 @@ void ComputeBoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Ve
 
 	for (auto it = points.begin(); it < points.end(); it++)
 	{
-		Print(*it);
+		//Print(*it);
 		min.x = Min(it->x, min.x);
 		min.y = Min(it->y, min.y);
 		max.x = Max(it->x, max.x);
@@ -43,6 +43,14 @@ void ComputeBoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Ve
 	LogMan::Log("Loaded data with bounds: "
 				+ std::to_string(min.x) + ", " + std::to_string(min.y) + " and "
 				+ std::to_string(max.x) + ", " + std::to_string(max.y));
+}
+
+void ResetMeshs()
+{
+	nodes.clear();
+	triangles.clear();
+	rectangles.clear();
+	boundaryNodes.clear();
 }
 
 bool LoadWatershedBoundary(std::string const & boundaryPath)
@@ -62,17 +70,39 @@ bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding)
 {
 	LogMan::Log("Attempting to generate FEM mesh");
 
-	nodes.clear();
-	triangles.clear();
-	boundaryNodes.clear();
+	ResetMeshs();
 
 	if (!FileIO::LoadCoordinatePairsCSV(nodesPath, nodes))
 		return false;
 
 	ComputeBoundingBox(nodes, nodesSW, nodesNE);
-	Triangulate(nodes, superTrianglePadding, &triangles, &boundaryNodes, superTriangles);
+	if (!Triangulate(nodes, superTrianglePadding, &triangles, &boundaryNodes, superTriangles))
+	{
+		LogMan::Log("Failed to generate FEM mesh", LOG_ERROR);
+		ResetMeshs();
+		return false;
+	}
 
 	LogMan::Log("Succesfully generated mesh of " + std::to_string(triangles.size()) + " triangles!", LOG_SUCCESS);
+	return true;
+}
+
+bool GenerateGridMesh(size_t resolution, double internalPadding, double raycastPadding)
+{
+	LogMan::Log("Attempting to generate FEM mesh");
+	
+	ResetMeshs();
+
+	if (!GenerateGrid(shedBoundary, nodes, rectangles, boundaryNodes, resolution, internalPadding, raycastPadding))
+	{
+		LogMan::Log("Failed to generate FEM mesh", LOG_ERROR);
+		ResetMeshs();
+		return false;
+	}
+	
+	ComputeBoundingBox(nodes, nodesSW, nodesNE);
+
+	LogMan::Log("Succesfully generated mesh of " + std::to_string(rectangles.size()) + " rectangles!", LOG_SUCCESS);
 	return true;
 }
 

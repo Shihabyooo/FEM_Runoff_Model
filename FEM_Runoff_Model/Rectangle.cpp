@@ -3,16 +3,20 @@
 Rectangle::Rectangle() : Element()
 {
 	vertCount = 4;
+	vertIDs = new size_t[4];
+	id = 0;
 }
 
 Rectangle::Rectangle(Rectangle const & rect2) : Element(rect2.nodesList)
 {
+	vertIDs = new size_t[4];
 	*this = rect2;
 }
 
 Rectangle::Rectangle(size_t _id, size_t vertexID1, size_t vertexID2, size_t vertexID3, size_t vertexID4, std::vector<Vector2D> const * const _nodesList) : Element(_nodesList)
 {
 	vertCount = 4;
+	vertIDs = new size_t[4];
 	id = _id;
 	size_t vertexIDs[4]{ vertexID1 , vertexID2 , vertexID3 ,vertexID4 };
 	UpdateGeometry(vertexIDs);
@@ -21,6 +25,7 @@ Rectangle::Rectangle(size_t _id, size_t vertexID1, size_t vertexID2, size_t vert
 Rectangle::Rectangle(size_t _id, size_t const vertexIDs[4], std::vector<Vector2D> const * const _nodesList) : Element(_nodesList)
 {
 	vertCount = 4;
+	vertIDs = new size_t[4];
 	id = _id;
 	UpdateGeometry(vertexIDs);
 }
@@ -47,6 +52,8 @@ Rectangle & Rectangle::operator=(Rectangle const & rect2)
 		delete[] vertIDs;
 		vertIDs = NULL;
 	}
+	
+	return *this;
 }
 
 void Rectangle::UpdateGeometry(size_t const vertixIDs[4]) //TODO This method is ugly. Make it better!

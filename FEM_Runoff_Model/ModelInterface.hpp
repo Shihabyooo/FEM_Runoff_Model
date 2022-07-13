@@ -54,6 +54,7 @@ extern std::vector<Vector2D> shedBoundary;
 
 bool LoadWatershedBoundary(std::string const & boundaryPath);
 bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding);
+bool GenerateGridMesh(size_t resolution, double internalPadding, double raycastPadding);
 Triangle const * GetElementContainingPoint(Vector2D const & pos);
 bool UpdateNode(size_t id, Vector2D const & newPos);
 
