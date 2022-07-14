@@ -221,6 +221,7 @@ void FillParametersStruct(ModelParameters & params)
 	params.useLumpedForm = useLumped;
 	params.femOmega = atof(femOmega);
 
+	params.meshType = static_cast<ElementType>(selectedElementType);
 	params.solverType = static_cast<Solver>(selectedSolver);
 	params.residualThreshold = atof(solverResidual);
 	params.weight = atof(solverWeight);

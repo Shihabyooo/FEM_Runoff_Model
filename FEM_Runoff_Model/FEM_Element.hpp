@@ -38,6 +38,16 @@ public:
 		return vertIDs[internalVertID];
 	};
 
+	bool ContainsVertex(size_t vertexID) const
+	{
+		bool containsVert = false;
+
+		for (int i = 0; i < vertCount; i++)
+			containsVert = containsVert || (vertIDs[i] == vertexID);
+
+		return containsVert;
+	}
+
 	virtual bool Validate()
 	{
 		return (area > 0.0); //Consider having a minimum viable area for elements tested in  these classes.

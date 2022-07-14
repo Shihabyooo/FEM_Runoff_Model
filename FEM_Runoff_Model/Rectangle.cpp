@@ -104,3 +104,13 @@ void Rectangle::UpdateGeometry(size_t const vertixIDs[4]) //TODO This method is 
 		vertIDs[3] = vertixIDs[otherVert2];
 	}
 }
+
+double Rectangle::Width()
+{
+	return rect.Width();
+}
+
+double Rectangle::Height()
+{
+	return rect.Height();
+}

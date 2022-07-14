@@ -14,6 +14,9 @@ public:
 
 	void UpdateGeometry(size_t const vertixIDs[4]);
 	
+	double Width();
+	double Height();
+
 private:
 	Rect rect; //rect is not exactly of the position of this element, because Rect assumes orientation matching x-y axes, while element may be rotated.
 };

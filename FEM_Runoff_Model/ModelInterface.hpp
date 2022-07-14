@@ -48,7 +48,7 @@ extern std::vector<Vector2D> nodes;
 extern std::vector<size_t> boundaryNodes;
 extern Vector2D nodesSW, nodesNE;
 extern Vector2D shedSW, shedNE;
-extern size_t exitNode;
+//extern size_t exitNode;
 extern std::vector<Vector2D> shedBoundary;
 
 

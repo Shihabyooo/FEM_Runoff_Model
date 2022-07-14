@@ -11,8 +11,6 @@ std::vector<Vector2D> nodes;
 std::vector<size_t> boundaryNodes;
 Vector2D nodesSW, nodesNE;
 Vector2D shedSW, shedNE;
-//TODO improve this
-size_t exitNode = 0; //Assume first node to be exit node 
 std::vector<Vector2D> shedBoundary;
 
 //Matrices and Vectors
@@ -152,12 +150,32 @@ bool CheckParameters(ModelParameters const & params)
 	bool status = true;
 
 	//Check fails
-
 	//TODO for raster file checks, check also that they are georeffed rasters and inclusive of the mesh boundary.
-	if (triangles.size() < 1) //existence of tris implies existence of nodes (though I probably need to protect both from change outside this file)
+	
+	switch (params.meshType)
 	{
-		LogMan::Log("ERROR! No loaded mesh.", LOG_ERROR);
+	case ElementType::undefined:
+		LogMan::Log("ERROR! Undefined mesh type. (state: Undefined)", LOG_ERROR);
 		status = false;
+		break;
+	case ElementType::rectangle:
+		if (rectangles.size() < 1) //existence of tris implies existence of nodes (though I probably need to protect both from change outside this file)
+		{
+			LogMan::Log("ERROR! No loaded mesh.", LOG_ERROR);
+			status = false;
+		}
+		break;
+	case ElementType::triangle:
+		if (triangles.size() < 1) //existence of tris implies existence of nodes (though I probably need to protect both from change outside this file)
+		{
+			LogMan::Log("ERROR! No loaded mesh.", LOG_ERROR);
+			status = false;
+		}
+		break;
+	default:
+		LogMan::Log("ERROR! Undefined mesh type (state: default).", LOG_ERROR);
+		status = false;
+		break;
 	}
 
 	if (!FileIO::FileExists(params.demPath))
@@ -272,7 +290,7 @@ void UnloadAllRasters()
 	fdr = NULL;
 }
 
-void ConstructGlobalCapacitanceMatrix(bool isLumped)
+void ConstructGlobalCapacitanceMatrix(ModelParameters const & params)
 {
 	//Lumped Capacitance matrix for each element is 3x3 matrix
 	//[C_e] = A/3 * |	1	0	0	|
@@ -289,40 +307,95 @@ void ConstructGlobalCapacitanceMatrix(bool isLumped)
 	globalC = Matrix_f64(nodes.size(), nodes.size());
 
 	//since element matrix comprises of two distinct val, we compute them per element depending on whether lumped formulation or consistent.
-	double diagVal, otherVal;
+	
+	//TODO replace this stupid switch with a unified loop once you figure out a way to abstract elements' containers.
 
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	switch (params.meshType)
 	{
-		//compute diagVal and otherVal
-		if (isLumped)
+		case ElementType::rectangle: //TODO consistant form is wrong for this
 		{
-			diagVal = it->second.area / 3.0; //(A/3.0) * 1.0
-			otherVal = 0.0;
+			double diagVal, otherVal;
+			for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+			{
+				//compute diagVal and otherVal
+				if (params.useLumpedForm)
+				{
+					diagVal = it->second.Area() / 4.0; //(A/3.0) * 1.0
+					otherVal = 0.0;
+				}
+				else
+				{
+					diagVal = 2.0 * it->second.Area() / 12.0;
+					otherVal = it->second.Area() / 12.0; //(A/12.0) * 1.0
+				}
+
+				size_t vert[4] = { it->second.VertexID(0),it->second.VertexID(1),it->second.VertexID(2),it->second.VertexID(3) };
+
+				globalC[vert[0]][vert[0]] += diagVal;
+				globalC[vert[1]][vert[1]] += diagVal;
+				globalC[vert[2]][vert[2]] += diagVal;
+				globalC[vert[3]][vert[3]] += diagVal;
+
+				globalC[vert[0]][vert[1]] += otherVal;
+				globalC[vert[0]][vert[2]] += otherVal;
+				globalC[vert[0]][vert[3]] += otherVal;
+
+				globalC[vert[1]][vert[0]] += otherVal;
+				globalC[vert[1]][vert[2]] += otherVal;
+				globalC[vert[1]][vert[3]] += otherVal;
+
+				globalC[vert[2]][vert[0]] += otherVal;
+				globalC[vert[2]][vert[1]] += otherVal;
+				globalC[vert[2]][vert[3]] += otherVal;
+
+				globalC[vert[3]][vert[0]] += otherVal;
+				globalC[vert[3]][vert[1]] += otherVal;
+				globalC[vert[3]][vert[2]] += otherVal;
+			}
 		}
-		else
+			break;
+
+		case ElementType::triangle:
 		{
-			diagVal = 2.0 * it->second.area / 12.0; 
-			otherVal = it->second.area / 12.0; //(A/12.0) * 1.0
+			double diagVal, otherVal;
+			for (auto it = triangles.begin(); it != triangles.end(); ++it)
+			{
+				//compute diagVal and otherVal
+				if (params.useLumpedForm)
+				{
+					diagVal = it->second.area / 3.0; //(A/3.0) * 1.0
+					otherVal = 0.0;
+				}
+				else
+				{
+					diagVal = 2.0 * it->second.area / 12.0;
+					otherVal = it->second.area / 12.0; //(A/12.0) * 1.0
+				}
+
+				size_t const * vert = it->second.vertIDs;
+
+				globalC[vert[0]][vert[0]] += diagVal;
+				globalC[vert[1]][vert[1]] += diagVal;
+				globalC[vert[2]][vert[2]] += diagVal;
+
+				globalC[vert[0]][vert[1]] += otherVal;
+				globalC[vert[0]][vert[2]] += otherVal;
+
+				globalC[vert[1]][vert[0]] += otherVal;
+				globalC[vert[1]][vert[2]] += otherVal;
+
+				globalC[vert[2]][vert[0]] += otherVal;
+				globalC[vert[2]][vert[1]] += otherVal;
+			}
 		}
-		
-		size_t const * vert = it->second.vertIDs;
+			break;
 
-		globalC[vert[0]][vert[0]] += diagVal;
-		globalC[vert[1]][vert[1]] += diagVal;
-		globalC[vert[2]][vert[2]] += diagVal;
-
-		globalC[vert[0]][vert[1]] += otherVal;
-		globalC[vert[0]][vert[2]] += otherVal;
-
-		globalC[vert[1]][vert[0]] += otherVal;
-		globalC[vert[1]][vert[2]] += otherVal;
-
-		globalC[vert[2]][vert[0]] += otherVal;
-		globalC[vert[2]][vert[1]] += otherVal;
+		default:
+			break;
 	}
 }
 
-void ConstructGlobalPsiMatrices(double timeStep)
+void ConstructGlobalPsiMatrices(ModelParameters const & params)
 {
 	//Psi-X and Psi-Y (for each element) are 3x3 matrices.
 	//[Psi-X_e] = 1/6 * delta T *	|	yj-yk	yk-yi	yi-yj	|
@@ -340,32 +413,81 @@ void ConstructGlobalPsiMatrices(double timeStep)
 	globalPsiX = Matrix_f64(nodes.size(), nodes.size());
 	globalPsiY = Matrix_f64(nodes.size(), nodes.size());
 
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	switch (params.meshType)
 	{
-		size_t const * verts = it->second.vertIDs;
-		Vector2D const & i = it->second.nodes[0];
-		Vector2D const & j = it->second.nodes[1];
-		Vector2D const & k = it->second.nodes[2];
-
-		double contribX1 = (timeStep / 6.0) * (j.y - k.y);
-		double contribX2 = (timeStep / 6.0) * (k.y - i.y);
-		double contribX3 = (timeStep / 6.0) * (i.y - j.y);
-
-		double contribY1 = (timeStep / 6.0) * (k.x - j.x);
-		double contribY2 = (timeStep / 6.0) * (i.x - k.x);
-		double contribY3 = (timeStep / 6.0) * (j.x - i.x);
-			
-		for (int i = 0; i < 3; i++)
+		case ElementType::rectangle:
 		{
-			globalPsiX[verts[i]][verts[0]] += contribX1;
-			globalPsiX[verts[i]][verts[1]] += contribX2;
-			globalPsiX[verts[i]][verts[2]] += contribX3;
+	#pragma region Rectangular Element Psi Matrices Base Definition
+			Matrix_f64 elementPsiXBase(4, 4);
+			Matrix_f64 elementPsiYBase(4, 4);
 
-			globalPsiY[verts[i]][verts[0]] += contribY1;
-			globalPsiY[verts[i]][verts[1]] += contribY2;
-			globalPsiY[verts[i]][verts[2]] += contribY3;
+			elementPsiXBase[0][0] = -2.0; elementPsiXBase[0][1] = 2.0; elementPsiXBase[0][2] = 1.0; elementPsiXBase[0][3] = -1.0;
+			elementPsiXBase[1][0] = -2.0; elementPsiXBase[1][1] = 2.0; elementPsiXBase[1][2] = 1.0; elementPsiXBase[1][3] = -1.0;
+			elementPsiXBase[2][0] = -1.0; elementPsiXBase[2][1] = 1.0; elementPsiXBase[2][2] = 2.0; elementPsiXBase[2][3] = -2.0;
+			elementPsiXBase[3][0] = -1.0; elementPsiXBase[3][1] = 1.0; elementPsiXBase[3][2] = 2.0; elementPsiXBase[3][3] = -2.0;
+
+			elementPsiYBase[0][0] = -2.0; elementPsiYBase[0][1] = -1.0; elementPsiYBase[0][2] = 1.0; elementPsiYBase[0][3] = 2.0;
+			elementPsiYBase[1][0] = -1.0; elementPsiYBase[1][1] = -2.0; elementPsiYBase[1][2] = 2.0; elementPsiYBase[1][3] = 1.0;
+			elementPsiYBase[2][0] = -1.0; elementPsiYBase[2][1] = -2.0; elementPsiYBase[2][2] = 2.0; elementPsiYBase[2][3] = 1.0;
+			elementPsiYBase[3][0] = -2.0; elementPsiYBase[3][1] = -1.0; elementPsiYBase[3][2] = 1.0; elementPsiYBase[3][3] = 2.0;
+
+			/*elementPsiXBase[1][0] = -1.0; elementPsiXBase[1][1] = 1.0; elementPsiXBase[1][2] = -1.0; elementPsiXBase[1][3] = 1.0;
+			elementPsiXBase[2][0] = -5.0; elementPsiXBase[2][1] = 5.0; elementPsiXBase[2][2] = 7.0; elementPsiXBase[2][3] = -7.0;
+
+			elementPsiYBase[2][0] = -5.0; elementPsiYBase[2][1] = -7.0; elementPsiYBase[2][2] = 7.0; elementPsiYBase[2][3] = 5.0;
+			elementPsiYBase[3][0] = -1.0; elementPsiYBase[3][1] = 1.0; elementPsiYBase[3][2] = -1.0; elementPsiYBase[3][3] = 1.0;*/
+		
+			elementPsiXBase *= 1.0 / 12.0;
+			elementPsiYBase *= 1.0 / 12.0;
+	#pragma endregion
+		
+			for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+			{
+				size_t verts[4] = { it->second.VertexID(0) , it->second.VertexID(1) , it->second.VertexID(2) , it->second.VertexID(3) };
+
+				for (int i = 0; i < 4; i++)
+					for (int j = 0; j < 4; j++)
+					{
+						globalPsiX[verts[i]][verts[j]] += it->second.Height() * params.timeStep * elementPsiXBase[i][j];
+						globalPsiY[verts[i]][verts[j]] += it->second.Width() * params.timeStep * elementPsiYBase[i][j];
+					}
+			}
 		}
+			break;
+		case ElementType::triangle:
+			for (auto it = triangles.begin(); it != triangles.end(); ++it)
+			{
+				size_t const * verts = it->second.vertIDs;
+				Vector2D const & i = it->second.nodes[0];
+				Vector2D const & j = it->second.nodes[1];
+				Vector2D const & k = it->second.nodes[2];
+
+				double contribX1 = (params.timeStep / 6.0) * (j.y - k.y);
+				double contribX2 = (params.timeStep / 6.0) * (k.y - i.y);
+				double contribX3 = (params.timeStep / 6.0) * (i.y - j.y);
+
+				double contribY1 = (params.timeStep / 6.0) * (k.x - j.x);
+				double contribY2 = (params.timeStep / 6.0) * (i.x - k.x);
+				double contribY3 = (params.timeStep / 6.0) * (j.x - i.x);
+
+				for (int i = 0; i < 3; i++)
+				{
+					globalPsiX[verts[i]][verts[0]] += contribX1;
+					globalPsiX[verts[i]][verts[1]] += contribX2;
+					globalPsiX[verts[i]][verts[2]] += contribX3;
+
+					globalPsiY[verts[i]][verts[0]] += contribY1;
+					globalPsiY[verts[i]][verts[1]] += contribY2;
+					globalPsiY[verts[i]][verts[2]] += contribY3;
+				}
+			}
+			break;
+		default:
+			break;
 	}
+	
+
+	
 	//test
 	for (int i = 0; i < nodes.size(); i++)
 	{
@@ -386,6 +508,11 @@ void ConstructGlobalPsiMatrices(double timeStep)
 
 	for (size_t i = 0; i < globalPsiX.Rows(); i++)
 	{
+		std::string prefix = "internal";
+		for (int j = 0; j < boundaryNodes.size(); j++)
+			if (i == boundaryNodes[j])
+				prefix = "external";
+
 		double rowSumX = 0.0, columnSumX = 0.0;
 		double rowSumY = 0.0, columnSumY = 0.0;
 		for (size_t j = 0; j < globalPsiX.Rows(); j++)
@@ -395,7 +522,7 @@ void ConstructGlobalPsiMatrices(double timeStep)
 			rowSumY += globalPsiY[i][j];
 			columnSumY += globalPsiY[j][i];
 		}
-		std::cout << i << ":\t" << rowSumX << "\t" << columnSumX << "\t" << rowSumY << "\t" << columnSumY << "\n";
+		std::cout << i << " - " << prefix.c_str() << ":\t" << rowSumX << "\t" << columnSumX << "\t" << rowSumY << "\t" << columnSumY << "\n";
 	}
 	//endtest
 }
@@ -554,7 +681,7 @@ bool CacheElevations()
 
 //Precipitation returned as meters per hour.
 //current impl doesn't need triangle, but later it would.
-double GetCurrentPrecipitation(double time, ModelParameters const & params, Triangle const & triangle)
+double GetCurrentPrecipitation(double time, ModelParameters const & params, Element const & triangle)
 {
 	if (params.variablePrecipitation)
 	{
@@ -580,19 +707,20 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 	//zero out outVector before doing anything.
 	Vector_f64 result(nodes.size());
 
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
 	{
-		size_t const * vert = it->second.vertIDs; //to simplify lines bellow.
+		//size_t const * vert = it->second.vertIDs; //to simplify lines bellow.
+		size_t vert[4] = { it->second.VertexID(0),it->second.VertexID(1), it->second.VertexID(2), it->second.VertexID(3) };
 		double newPrecipitation = GetCurrentPrecipitation(time + params.timeStep, params, it->second);
-		double elementContrib = (it->second.area / 3.0) * (( 1.0 - params.femOmega) * it->second.elementPrecipitation + params.femOmega * newPrecipitation);
+		double elementContrib = (it->second.Area() / 3.0) * (( 1.0 - params.femOmega) * it->second.elementPrecipitation + params.femOmega * newPrecipitation);
 		elementContrib *= params.timeStep;
 		it->second.elementPrecipitation = newPrecipitation;
 
 		//test
-		if (!it->second.ContainsVertex(17) && !it->second.ContainsVertex(18) && !it->second.ContainsVertex(23) &&
+		/*if (!it->second.ContainsVertex(17) && !it->second.ContainsVertex(18) && !it->second.ContainsVertex(23) &&
 			!it->second.ContainsVertex(24) && !it->second.ContainsVertex(28) && !it->second.ContainsVertex(29) &&
 			!it->second.ContainsVertex(30) && !it->second.ContainsVertex(31) && !it->second.ContainsVertex(32) &&
-			!it->second.ContainsVertex(33) )
+			!it->second.ContainsVertex(33) )*/
 		/*if (!it->second.ContainsVertex(47) && !it->second.ContainsVertex(48) && !it->second.ContainsVertex(49) &&
 			!it->second.ContainsVertex(56) && !it->second.ContainsVertex(57) && !it->second.ContainsVertex(58) &&
 			!it->second.ContainsVertex(59) && !it->second.ContainsVertex(60) && !it->second.ContainsVertex(68) &&
@@ -601,6 +729,9 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 			!it->second.ContainsVertex(80) && !it->second.ContainsVertex(81) && !it->second.ContainsVertex(82) &&
 			!it->second.ContainsVertex(83) && !it->second.ContainsVertex(84) && !it->second.ContainsVertex(85) &&
 			!it->second.ContainsVertex(86))*/
+		if (!it->second.ContainsVertex(12) &&
+			!it->second.ContainsVertex(18) && !it->second.ContainsVertex(19) && !it->second.ContainsVertex(20) &&
+			!it->second.ContainsVertex(21) && !it->second.ContainsVertex(22) )
 			elementContrib = 0.0;
 		//end test
 
@@ -608,6 +739,7 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 		result[vert[0]] += elementContrib;
 		result[vert[1]] += elementContrib;
 		result[vert[2]] += elementContrib;
+		result[vert[3]] += elementContrib;
 	}
 
 	return result;
@@ -622,42 +754,30 @@ void ComputeDischargeVectors(ModelParameters const & params, Vector_f64 const & 
 	outVectorX = Vector_f64(nodes.size());
 	outVectorY = Vector_f64(nodes.size());
 	
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
 	{
-		size_t const * vert = it->second.vertIDs; //to simplify lines bellow.
-		
-		for (int i = 0; i < 3; i++)
+		size_t vert[4] = { it->second.VertexID(0),it->second.VertexID(1),it->second.VertexID(2),it->second.VertexID(3) };
+
+		for (int i = 0; i < 4; i++)
 		{
-			//double head = heads[vert[i]];
 			double head = heads[vert[i]] - nodeElevation[vert[i]];
 
-			double xContrib = sqrt(nodeSlopeX[vert[i]]) * pow(head, 5.0 / 3.0) / nodeManning[vert[i]];
-			double yContrib = sqrt(nodeSlopeY[vert[i]]) * pow(head, 5.0 / 3.0) / nodeManning[vert[i]];
-			
-			/*double sign = head < 0 ? -1.0 : 1.0;
-			double xContrib = sign * sqrt(nodeSlopeX[vert[i]]) * pow(abs(head), 5.0 / 3.0) / nodeManning[vert[i]];
-			double yContrib = sign * sqrt(nodeSlopeY[vert[i]]) * pow(abs(head), 5.0 / 3.0) / nodeManning[vert[i]];*/
-
-			outVectorX[vert[i]] += xContrib;
-			outVectorY[vert[i]] += yContrib;
+			double xContrib = 3600.0 * sqrt(nodeSlopeX[vert[i]]) * pow(head, 5.0 / 3.0) / nodeManning[vert[i]];
+			double yContrib = 3600.0 *sqrt(nodeSlopeY[vert[i]]) * pow(head, 5.0 / 3.0) / nodeManning[vert[i]];
 
 			//test
 			/*int dir = lround(nodeFDR[vert[i]]);
-			double signX = (dir == 2 || dir == 3 || dir == 4) ? 1.0 : -1.0;
+			double signX = (dir == 2 || dir == 3 || dir == 4) ? -1.0 : 1.0;
 			double signY = (dir == 1 || dir == 2 || dir == 8) ? 1.0 : -1.0;
 			outVectorX[vert[i]] += signX * xContrib;
 			outVectorY[vert[i]] += signY * yContrib;*/
 			//end test
 
+			outVectorX[vert[i]] += xContrib;
+			outVectorY[vert[i]] += yContrib;
+
 		}
 	}
-	/*for (auto i = 0; i < outVectorX.Rows(); i++)
-		std::cout << outVectorX[i] << ", " << outVectorY[i] << std::endl;*/
-	/*for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-	{
-		outVectorX[*it] = 0.0;
-		outVectorY[*it] = 0.0;
-	}*/
 }
 
 #pragma region Test
@@ -674,16 +794,16 @@ bool IsBoundaryNode(int id)
 void TestShowInternalRHSVectors()
 {
 	Vector_f64 chold = globalC * _oldHeads;
-	std::cout << "\n id   | oldH  |  newH  |||Diff||| [C]{h0}|  qx_0  |  qx_1 |  qy_0  |  qy_1  | precip | RHS" << std::endl;
+	std::cout << "\n id   | oldH  |  newH |||Diff|||  [C]{h0}   |    qx_0    |    qx_1    |    qy_0    |    qy_1    |  precip  | RHS" << std::endl;
 	for (size_t i = 0; i < _oldHeads.Rows(); i++)
 		std::cout << std::fixed << std::setw(3) << i \
 		<< ( IsBoundaryNode(i) ? " B" : "  ") << " | "\
-		<< std::setw(3) << std::setprecision(3) << _oldHeads[i] << " | " << std::setw(6) << _newHeads[i] << " ||| " \
+		<< std::setw(4) << std::setprecision(3) << _oldHeads[i] << " | " << std::setw(4) << _newHeads[i] << " ||| " \
 		<< (_newHeads[i] > _oldHeads[i] ? "UP" : (_newHeads[i] == _oldHeads[i] ? "--" :  "DN")) << " ||| " \
-		<< std::setw(6) << std::setprecision(1) << chold[i] << " | " \
-		<< std::setw(6) << std::setprecision(3) << _q_x_old[i] << " | " << std::setw(3) << _q_x_new[i] << " | " \
-		<< std::setw(6) << _q_y_old[i] << " | " << std::setw(6) << _q_y_new[i] << " | " \
-		<< std::setw(6) << std::setprecision(1) << _precipContrib[i] << " | " << _RHS[i] << std::endl;
+		<< std::setw(10) << std::setprecision(1) << chold[i] << " | " \
+		<< std::setw(10) << std::setprecision(1) << _q_x_old[i] << " | " << std::setw(10) << _q_x_new[i] << " | " \
+		<< std::setw(10) << _q_y_old[i] << " | " << std::setw(10) << _q_y_new[i] << " | " \
+		<< std::setw(7) << std::setprecision(1) << _precipContrib[i] << " | " << _RHS[i] << std::endl;
 }
 #pragma endregion
 
@@ -782,18 +902,24 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 	//PsiX and PsiY already have dT multiplied with them.
 	//TODO [C]{h0} and {P} don't change from (internal) iteration to the next. Should refactor this function to have one called\
 	every time loop (external loop), and the other every internal loop, which add results of external loop to {q} vectors.
-	/*outRHS = globalC * oldHeads
+	outRHS = globalC * oldHeads
 			- ((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega)))
 			- ((globalPsiY) * ((q_y_old * (1.0 - params.femOmega)) + (q_y_new * params.femOmega)))
-			+ ComputePreciptationVector(time, params);*/
+			+ ComputePreciptationVector(time, params);
+
+	//test
+	/*Vector_f64 test = ((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega)));
+	for (int i = 0; i < test.Rows(); i++)
+		std::cout << i << " : " << test[i] << std::endl;
+	std::cout << "\n";*/
 
 	//Using UV decomp
-	Vector_f64 uComp, vComp;
+	/*Vector_f64 uComp, vComp;
 	ComputeUVComponents(params, oldHeads, newHeads, uComp, vComp);
 	outRHS = (globalC * oldHeads)
 		- uComp
 		- vComp
-		+ ComputePreciptationVector(time, params);
+		+ ComputePreciptationVector(time, params);*/
 
 	//test
 	//cache so we can display once after end of internal loop.
@@ -806,13 +932,8 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 co
 	_precipContrib = ComputePreciptationVector(time, params);
 	_RHS = outRHS;
 
-	//Vector_f64 compX1 = ((globalPsiX) * ((q_x_old * (1.0 - params.femOmega)) + (q_x_new * params.femOmega)));
-	//Vector_f64 compY1 = ((globalPsiY) * ((q_y_old * (1.0 - params.femOmega)) + (q_y_new * params.femOmega)));
-	//for (int i = 0; i < nodes.size(); i++)
-	//	std::cout << q_x_new[i] << " - " << q_y_new[i] << " | " << compX1[i] << " - " << compY1[i] << std::endl;
-	//end test
-
 	//TestShowInternalRHSVectors();
+
 	//cache the newly computed qs for use in next step.
 	last_q_x_new = std::move(q_x_new);
 	last_q_y_new = std::move(q_y_new);
@@ -835,7 +956,7 @@ bool Simulate(ModelParameters const & params)
 
 	//Special consideration. Since the boundary node listing includes our exit node, we have to manually remove it.
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-		if (*it == exitNode)
+		if (*it == params.outletNode)
 		{
 			boundaryNodes.erase(it);
 			break;
@@ -851,8 +972,8 @@ bool Simulate(ModelParameters const & params)
 		return false;
 
 	LogMan::Log("Constructing global matrices and vectors");
-	ConstructGlobalCapacitanceMatrix(params.useLumpedForm);
-	ConstructGlobalPsiMatrices(params.timeStep);
+	ConstructGlobalCapacitanceMatrix(params);
+	ConstructGlobalPsiMatrices(params);
 
 #pragma endregion
 
@@ -897,7 +1018,7 @@ bool Simulate(ModelParameters const & params)
 	//Set initial heads to zero (Dry conditions).
 	//heads = Vector_f64(nodes.size());
 	
-	//nodeElevation = Vector_f64(nodes.size()); //test .
+	nodeElevation = Vector_f64(nodes.size()); //test .
 	heads = nodeElevation;
 	//init cached old qs (not directly. value of last_q_x_new will be moved to q_x_old at begining of every time step.
 	last_q_x_new = Vector_f64(nodes.size());
@@ -967,23 +1088,17 @@ bool Simulate(ModelParameters const & params)
 			//}
 			//end test
 
-			/*if (!Solve(adjustedC, RHS, fixedNewH, residuals, params))
+			if (!Solve(adjustedC, RHS, fixedNewH, residuals, params))
 			{
 				LogMan::Log("ERROR! Internal solver error.", LOG_ERROR);
 				return false;
-			}*/
-			//test
-			fixedNewH = Vector_f64(nodes.size());
-			for (size_t j = 0; j < RHS.Rows(); j++)
-				fixedNewH[j] = RHS[j] / adjustedC[j][j];
-			//end test
-			
+			}
+
 			//(fixedNewH - nodeElevation).DisplayOnCLI(10);
 			//force computed newHeads to be positive (not sure about this)
 			for (size_t j = 0; j < fixedNewH.Rows(); j++)
 				fixedNewH[j] = Max(fixedNewH[j], nodeElevation[j]);
 			
-
 			if ((newHeads - fixedNewH).Magnitude() <= params.internalResidualTreshold)
 			{
 				newHeads = fixedNewH;
@@ -999,23 +1114,15 @@ bool Simulate(ModelParameters const & params)
 		TestShowInternalRHSVectors();
 		double area = 0.0;
 		double widthX = 0.0, widthY = 0.0;
-		for (auto it = triangles.begin(); it != triangles.end(); ++it)
-			if (it->second.ContainsVertex(exitNode))
+		for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+			if (it->second.ContainsVertex(params.outletNode))
 			{
-				//area = it->second.area;
-				size_t const * verts = it->second.vertIDs;
-				int otherVerts[2];
-				otherVerts[0] = verts[0] == exitNode ? verts[1] : verts[0];
-				otherVerts[1] = verts[1] == exitNode ? verts[2] : (verts[1] == otherVerts[0] ? verts[2] : verts[1]);
-
-				widthX = abs(nodes[otherVerts[0]].y - nodes[otherVerts[1]].y);
-				widthY = abs(nodes[otherVerts[0]].x - nodes[otherVerts[1]].x);
+				widthX = it->second.Height();
+				widthY = it->second.Width();
 				break;
 			}
-		//RHS[exitNode] -= ((q_x_old[exitNode] + last_q_x_new[exitNode]) / 2.0 + (q_y_old[exitNode] + last_q_y_new[exitNode])/ 2.0) * sqrt(area) * params.timeStep;
-		double Qx = q_x_old[exitNode] * widthX;
-		double Qy = q_y_old[exitNode] * widthY;
-		//std::cout << "At time: " << time << " out discharge (x, y) : " << std::setprecision(4) << q_x_old[exitNode] * sqrt(area) << ", " << q_y_old[exitNode] * sqrt(area) << std::endl;
+		double Qx = q_x_old[params.outletNode] * widthX;
+		double Qy = q_y_old[params.outletNode] * widthY;
 		std::cout << "At time: " << time << " out discharge (x, y) : " << std::setprecision(4) << Qx << ", " << Qy << std::endl;
 		outletQs.push_back(std::pair(Qx, Qy));
 		//end test

@@ -87,10 +87,10 @@ enum class TimeUnit
 };
 
 enum class ElementType
-{
-	undefined,
-	triangle,
-	rectangle
+{	
+	triangle = 0,
+	rectangle = 1,
+	undefined = 2
 };
 
 struct Vector2;
@@ -328,6 +328,8 @@ public:
 	std::string fdrPath = "";
 	InterpolationType topographySamplingMethod = InterpolationType::nearest;
 
+	//TODO expose to GUI
+	size_t outletNode = 0; //the watershed's outlet. 
 	//Precipitation
 	bool variablePrecipitation = true; //false use unitTimeseries for all elements for all periods.
 										//true, use gridded precipitation of 1D time series.
@@ -378,6 +380,7 @@ public:
 							0.5 = Central difference (Crank-Nicholson method)
 
 	//Solver related params
+	ElementType meshType = ElementType::undefined;
 	Solver solverType = Solver::Auto;
 	double residualThreshold = -1.0; //Negative value -> use default threshold. Only for iterative solvers.
 	double weight = -1.0; //Negative value -> use default weight. Only for weighted solvers.
