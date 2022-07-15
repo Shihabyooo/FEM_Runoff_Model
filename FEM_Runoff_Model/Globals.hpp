@@ -393,6 +393,25 @@ public:
 	//TODO implement output formating.
 };
 
+struct MeshGeneratorParameters
+{
+public:
+	ElementType meshType = ElementType::undefined; //Required Triangle or Rectangle
+	std::vector<Vector2D> const * boundary = NULL; //Required except if meshType == Triangle && useCustomNodes == true.
+
+	//for triangular elements
+	bool useCustomNodes = true; //If true, nodesList must be supplied (to user, inNodesListPath is what must be supplied).
+	std::vector<Vector2D> * inNodesList = NULL;
+	std::string inNodesListPath = "";
+	Vector2D * outSuperTriangleNodes = NULL; //optional. If supplied, must point to an array of 6 Vector2Ds.
+	double superTrianglePadding = -1.0; // must be positive real number greater than 0.0
+
+	//for rectangular elements
+	size_t resolution = 10; //must be greater than 2.
+	double internalPadding = 0.001; //must be real, positive value.
+	double rayCastPadding = 1.0; //must be real, positive value.
+};
+
 //Helper functions
 
 static double Min(double const & a, double const & b)
