@@ -270,10 +270,10 @@ bool SelectHoveredElement()
 	if (selectedElement != NULL)
 	{
 		elementViewName = std::move(std::string("Element: " + std::to_string(selectedElement->id)).c_str());
-		elementViewVerts = std::move(std::string("Vertices: " + std::to_string(selectedElement->vertIDs[0]) + ", "
-			+ std::to_string(selectedElement->vertIDs[1]) + ", "
-			+ std::to_string(selectedElement->vertIDs[2])).c_str());
-		elementViewArea = std::move(std::string("Area: " + std::to_string(selectedElement->area)).c_str());
+		elementViewVerts = std::move(std::string("Vertices: " + std::to_string(selectedElement->VertexID(0)) + ", "
+			+ std::to_string(selectedElement->VertexID(1)) + ", "
+			+ std::to_string(selectedElement->VertexID(2))).c_str());
+		elementViewArea = std::move(std::string("Area: " + std::to_string(selectedElement->Area())).c_str());
 		return true;	
 	}
 	else
@@ -614,9 +614,9 @@ void UpdateTriangles()
 	int counter = 0;
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		trianglesIndices[counter] = it->second.vertIDs[0];
-		trianglesIndices[counter + 1] = it->second.vertIDs[1];
-		trianglesIndices[counter + 2] = it->second.vertIDs[2];
+		trianglesIndices[counter] = it->second.VertexID(0);
+		trianglesIndices[counter + 1] = it->second.VertexID(1);
+		trianglesIndices[counter + 2] = it->second.VertexID(2);
 		counter += 3;
 	}
 }
@@ -749,8 +749,8 @@ void TestUpdateSuperTriangle()
 	if (nodes.size() < 2)
 		return;
 
-	Vector2D superVerts[6]{ superTriangles[0].nodes[0], superTriangles[0].nodes[1], superTriangles[0].nodes[2],
-							superTriangles[1].nodes[0], superTriangles[1].nodes[1], superTriangles[1].nodes[2]};
+	Vector2D superVerts[6]{ superTriangles[0], superTriangles[1], superTriangles[2],
+							superTriangles[3], superTriangles[4], superTriangles[5] };
 
 	int counter = 0;
 	for (int i = 0; i < 18; i += 3)

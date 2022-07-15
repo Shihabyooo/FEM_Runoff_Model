@@ -11,8 +11,8 @@
 #define MIN_NODES_TO_TRIANGULATE 3
 #define SUPER_TRIANGLE_PADDING 0.001 //as percentage of delta of boundary
 
-bool Triangulate(	std::vector<Vector2D> const & nodesList,
+bool Triangulate(	std::vector<Vector2D> & nodesList,
 					double superTrianglePadding,
 					std::unordered_map<size_t, Triangle> * outTrianglesList,
 					std::vector<size_t> * outBoundaryNodes,
-					Triangle * outSuperTriangles);
+					Vector2D * outSuperTriangles);

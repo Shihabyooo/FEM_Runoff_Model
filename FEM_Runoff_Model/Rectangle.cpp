@@ -42,12 +42,17 @@ Rectangle & Rectangle::operator=(Rectangle const & rect2)
 	vertCount = rect2.vertCount; //pointless? vertCount is always 4 for rectangles...
 	area = rect2.area;
 
+	
+
 	if (rect2.vertIDs != NULL)
 	{
+		if (vertIDs == NULL)
+			vertIDs = new size_t[4];
+
 		for (int i = 0; i < 4; i++)
 			vertIDs[i] = rect2.vertIDs[i];
 	}
-	else if (vertIDs != NULL)
+	else if (vertIDs != NULL) //If the assigned vertIDs is null and this one isn't, delete this one so it can also be null.
 	{
 		delete[] vertIDs;
 		vertIDs = NULL;
@@ -103,6 +108,21 @@ void Rectangle::UpdateGeometry(size_t const vertixIDs[4]) //TODO This method is 
 		vertIDs[2] = vertixIDs[distantVertInternalID];
 		vertIDs[3] = vertixIDs[otherVert2];
 	}
+}
+
+double Rectangle::ComputeArea() const
+{
+	//divide rect to two tris. Start testing around vert[0], compute three dimensions from vert[0] to other verts.
+	//the largest of the three is the hypotenuse (rect's diagonal). The other two are the width and length of rect
+	double dim1 = Node(0).DistanceTo(Node(1));
+	double dim2 = Node(0).DistanceTo(Node(2));
+	double dim3 = Node(0).DistanceTo(Node(3));
+
+	//Probably a much better way to do this...
+	double height = Min(Min(dim1, dim2), dim3);
+	double width = dim1 == height ? (Min(dim2, dim3)) : (dim2 == height ? Min(dim1, dim3) : Min(dim1, dim2));
+
+	return Rect(Vector2D(0, 0), width, height).Area();
 }
 
 double Rectangle::Width()

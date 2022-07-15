@@ -14,6 +14,8 @@ public:
 
 	void UpdateGeometry(size_t const vertixIDs[4]);
 	
+	double ComputeArea() const override;
+
 	double Width();
 	double Height();
 

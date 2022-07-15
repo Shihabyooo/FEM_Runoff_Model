@@ -18,7 +18,7 @@ public:
 		if (vertIDs != NULL)
 			delete[] vertIDs;
 	};
-	
+
 	Vector2D Node(size_t internalVertID) const
 	{
 		//Leave bounds check to user...
@@ -38,6 +38,11 @@ public:
 		return vertIDs[internalVertID];
 	};
 
+	size_t const * VertexIDs() const
+	{
+		return vertIDs;
+	}
+
 	bool ContainsVertex(size_t vertexID) const
 	{
 		bool containsVert = false;
@@ -48,10 +53,47 @@ public:
 		return containsVert;
 	}
 
+	virtual bool ContainsPoint(Vector2D const & point) const
+	{
+		return false;
+	}
+
+	bool ContainsEdge(size_t vertID1, size_t vertID2) const //Note: Does not test whether the verts actually make an edge, rather that the two verts are part of element.
+	{
+		bool check1 = false, check2 = false;
+
+		for (int i = 0; i < vertCount; i++)
+		{
+			check1 = check1 || (vertIDs[i] == vertID1);
+			check2 = check2 || (vertIDs[i] == vertID2);
+		}
+
+		return (check1 && check2);
+	}
+
 	virtual bool Validate()
 	{
+		area = ComputeArea();
 		return (area > 0.0); //Consider having a minimum viable area for elements tested in  these classes.
 	};
+
+	virtual double ComputeArea() const
+	{
+		return 0.0;
+	}
+
+	Vector2D Centroid() const
+	{
+		Vector2D centroid;
+
+		for (int i = 0; i < vertCount; i++)
+			centroid = centroid + Node(i);
+
+		centroid.x *= 1.0 / static_cast<double>(vertCount);
+		centroid.y *= 1.0 / static_cast<double>(vertCount);
+
+		return centroid;
+	}
 
 	void DebugPrintDetails()
 	{
@@ -73,7 +115,7 @@ public:
 	double elementPrecipitation = 0.0; //in m/hr. The precipitation at last pass.	
 protected:
 	
-	int vertCount = 3;
+	int vertCount = 0;
 	size_t * vertIDs = NULL;
 
 	std::vector<Vector2D> const * const nodesList;
