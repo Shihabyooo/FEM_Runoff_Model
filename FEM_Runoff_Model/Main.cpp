@@ -12,7 +12,9 @@ ModelParameters ModelTestParams()
 	params.slopesPath = "Test_Data\\Slope_Percent.tif";
 	params.fdrPath = "Test_Data\\FDR.tif";
 	params.topographySamplingMethod = InterpolationType::linear;
-	params.outletNode = 1;
+	params.outletNode = 0;
+
+	params.useLumpedForm = false;
 
 	params.variablePrecipitation = false;
 	params.unitTimeSeries;
@@ -28,7 +30,7 @@ ModelParameters ModelTestParams()
 	params.startTime = 0.0; //should be left at 0.0
 	params.endTime = 7.5f; //hours after startTime to end simulation.
 
-	params.meshType = ElementType::rectangle;
+	params.meshType = ElementType::triangle;
 	params.useLumpedForm = true;
 	params.femOmega = 0.5;
 	params.solverType = Solver::Auto;
@@ -36,7 +38,7 @@ ModelParameters ModelTestParams()
 	params.weight = 0.5;
 	params.maxIterations = 1000;
 	params.internalResidualTreshold = 0.0001;
-	params.maxInternalIterations = 5;
+	params.maxInternalIterations = 10;
 
 	return params;
 }
@@ -84,12 +86,12 @@ int main(int argc, char ** argv)
 
 	////testing model on CLI directly
 	////TestGenerateSyntheticWatershed();
-	//GenerateMesh("Test_Data\\Grid_Nodes.csv", 1.0);
-	LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
-	GenerateGridMesh(8, 0.01, 5.0);
+	GenerateMesh("Test_Data\\Grid_Nodes.csv", 10.0);
+	//LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
+	//GenerateGridMesh(8, 0.01, 5.0);
 	Simulate(ModelTestParams());
 
-	LogMan::Terminate();
+	//LogMan::Terminate();
 
 	std::cin.sync(); //TODO remove
 	std::cin.get(); //TODO remove
