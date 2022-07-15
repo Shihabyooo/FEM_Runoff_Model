@@ -81,17 +81,16 @@ int main(int argc, char ** argv)
 	
 	int returnVal = 0;
 	//TODO uncomment this after testing is done.
-	//returnVal = StartUI(1280, 720);
+	returnVal = StartUI(1280, 720);
 	
-
 	////testing model on CLI directly
 	////TestGenerateSyntheticWatershed();
-	GenerateMesh("Test_Data\\Grid_Nodes.csv", 10.0);
+	//GenerateMesh("Test_Data\\Grid_Nodes.csv", 10.0);
 	//LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
 	//GenerateGridMesh(8, 0.01, 5.0);
-	Simulate(ModelTestParams());
+	//Simulate(ModelTestParams());
 
-	//LogMan::Terminate();
+	LogMan::Terminate();
 
 	std::cin.sync(); //TODO remove
 	std::cin.get(); //TODO remove

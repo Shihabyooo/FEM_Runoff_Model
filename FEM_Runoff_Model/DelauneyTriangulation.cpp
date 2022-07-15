@@ -53,6 +53,9 @@ void GenerateSuperTriangle(std::vector<Vector2D> &nodesList, double padding, std
 	outTrianglesList->insert({0, Triangle(0, extVerts[0],extVerts[1], extVerts[2], &nodesList)});
 	outTrianglesList->insert({1, Triangle(1, extVerts[0],extVerts[1], extVerts[3], &nodesList)});
 
+	if (outSuperTriangles == NULL)
+		return;
+
 	for (int i = 0; i < 3; i++)
 	{
 		outSuperTriangles[i] = (*outTrianglesList)[0].Node(i);

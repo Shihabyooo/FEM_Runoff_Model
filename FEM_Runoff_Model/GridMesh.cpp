@@ -287,7 +287,7 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 }
 
 //Validates node, if valid, assign an id to it, if is boundary, push id to outBoundaryNodes.
-bool ValidateNode(size_t row, size_t column, size_t idToAssign, std::vector<size_t> & outBoundaryNodes) //checks that node  creates a valid rect in at least one of its four quadrants
+bool ValidateNode(size_t row, size_t column, size_t idToAssign, std::vector<size_t> * outBoundaryNodes) //checks that node  creates a valid rect in at least one of its four quadrants
 {
 	//test d8 adjacent points in groups of threes (four quadrants) to a single bool.\
 		i.e bool q1 = N && NE && E; q2 = E && SE && S, q3 = S && SW && W, q4 = W && NW && N. \
@@ -322,7 +322,7 @@ bool ValidateNode(size_t row, size_t column, size_t idToAssign, std::vector<size
 	{
 		idsMap[row][column] = idToAssign;
 		if (!isInternal)
-			outBoundaryNodes.push_back(idToAssign);
+			outBoundaryNodes->push_back(idToAssign);
 	}
 	
 	//Warning for potentially problematic nodes (not d4 connected, i.e. doesn't create shared edges)
@@ -347,7 +347,7 @@ bool IsSWNode(size_t row, size_t column, size_t ** outRectNodes) //outRectNodes 
 	return nodesMap[row][column + 1] && nodesMap[row + 1][column] && nodesMap[row + 1][column + 1];
 }
 
-bool GenerateNodes(std::vector<Vector2D> const & boundary, std::vector<Vector2D> & outNodes, std::vector<size_t> & outBoundaryNodes, double rayCastPadding)
+bool GenerateNodes(std::vector<Vector2D> const & boundary, std::vector<Vector2D> * outNodes, std::vector<size_t> * outBoundaryNodes, double rayCastPadding)
 {
 	LogMan::Log("Generating nodes.");
 
@@ -377,7 +377,7 @@ bool GenerateNodes(std::vector<Vector2D> const & boundary, std::vector<Vector2D>
 				if (ValidateNode(row, column, counter, outBoundaryNodes))
 				{
 					//idsMap[row][column] = counter;
-					outNodes.push_back(GridToWorldPos(row, column));
+					outNodes->push_back(GridToWorldPos(row, column));
 					counter++;
 				}
 				else
@@ -386,12 +386,12 @@ bool GenerateNodes(std::vector<Vector2D> const & boundary, std::vector<Vector2D>
 		}
 	}
 
-	LogMan::Log("Generated " + std::to_string(outNodes.size()) + " nodes.");
-	LogMan::Log("With " + std::to_string(outBoundaryNodes.size()) + " boundary nodes.");
+	LogMan::Log("Generated " + std::to_string(outNodes->size()) + " nodes.");
+	LogMan::Log("With " + std::to_string(outBoundaryNodes->size()) + " boundary nodes.");
 	return true;
 }
 
-void GenerateElements(std::vector<Vector2D> const & nodes, std::unordered_map<size_t, Rectangle> & outRectList)
+void GenerateElements(std::vector<Vector2D> const * nodes, std::unordered_map<size_t, Rectangle> * outRectList)
 {
 	//loop over rows and columns
 	//check that point is true.
@@ -410,9 +410,8 @@ void GenerateElements(std::vector<Vector2D> const & nodes, std::unordered_map<si
 		{
 			if (nodesMap[row][column] && IsSWNode(row, column, &rectNodes))
 			{
-				//std::cout << "creating rect of nodes: " << rectNodes[0] << ", " << rectNodes[1] << ", " << rectNodes[2] << ", " << rectNodes[3] << std::endl; //test
-				Rectangle newRect(counter, rectNodes, &nodes);
-				outRectList.insert({ counter, newRect });
+				Rectangle newRect(counter, rectNodes, nodes);
+				outRectList->insert({ counter, newRect });
 				counter++;
 			}
 		}
@@ -420,7 +419,7 @@ void GenerateElements(std::vector<Vector2D> const & nodes, std::unordered_map<si
 
 	delete[] rectNodes;
 
-	LogMan::Log("Generated " + std::to_string(outRectList.size()) + " elements.");
+	LogMan::Log("Generated " + std::to_string(outRectList->size()) + " elements.");
 }
 
 void MemoryCleanup()
@@ -445,9 +444,9 @@ void MemoryCleanup()
 }
 
 bool GenerateGrid(std::vector<Vector2D> const & boundary,
-				std::vector<Vector2D> & outNodes,
-				std::unordered_map<size_t, Rectangle> & outRectList,
-				std::vector<size_t> & outBoundaryNodes,
+				std::vector<Vector2D> * outNodes,
+				std::unordered_map<size_t, Rectangle> * outRectList,
+				std::vector<size_t> * outBoundaryNodes,
 				size_t resolution,
 				double internalPadding, double rayCastPadding)
 {
@@ -457,9 +456,9 @@ bool GenerateGrid(std::vector<Vector2D> const & boundary,
 
 	LogMan::Log("Starting grid discretization.");
 
-	outNodes.clear();
-	outRectList.clear();
-	outBoundaryNodes.clear();
+	outNodes->clear();
+	outRectList->clear();
+	outBoundaryNodes->clear();
 
 	if (!ComputeGriddingParameters(boundary, internalPadding, resolution))
 		return false;
@@ -481,7 +480,7 @@ bool GenerateGrid(std::vector<Vector2D> const & boundary,
 
 	MemoryCleanup();
 
-	if (outRectList.size() < 1)
+	if (outRectList->size() < 1)
 	{
 		LogMan::Log("Failed to generate mesh! (Generated zero elements)", LOG_SUCCESS);
 		return false;

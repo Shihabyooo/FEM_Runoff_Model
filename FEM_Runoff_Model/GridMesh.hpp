@@ -10,9 +10,9 @@
 #define MIN_RESOLUTION 1
 
 bool GenerateGrid(std::vector<Vector2D> const & boundary,
-	std::vector<Vector2D> & outNodes,
-	std::unordered_map<size_t, Rectangle> & outRectList,
-	std::vector<size_t> & outBoundaryNodes,
+	std::vector<Vector2D> * outNodes,
+	std::unordered_map<size_t, Rectangle> * outRectList,
+	std::vector<size_t> * outBoundaryNodes,
 	size_t resolution = 100,
 	double internalPadding = 0.001,
 	double rayCastPadding = 1.0);

@@ -313,21 +313,21 @@ void DrawLeftPane()
 		if (ImGui::Button("Generate Mesh", ImVec2(100, 50)))
 		{
 			bool success = false;
-			if (selectedElementType == 0)
+			
+			//It's easer to just set everything. The reciever will sort out what is needed.
+			//params.boundary is set at ModelInterface.
+			MeshGeneratorParameters meshParams;
+			meshParams.inNodesListPath = meshNodes;
+			meshParams.superTrianglePadding = atof(superTriPadding);
+			meshParams.resolution = gridMeshResolution;
+			meshParams.internalPadding = atof(gridMeshPadding);
+			meshParams.rayCastPadding = atof(gridMeshRaycastPadding);
+		
+			meshParams.meshType = static_cast<ElementType>(selectedElementType);
+			if (GenerateMesh(meshParams))
 			{
-				success = GenerateMesh(meshNodes, atof(superTriPadding));
-				meshType = ElementType::triangle;
-			}
-			else if (selectedElementType == 1)
-			{
-				success = GenerateGridMesh(gridMeshResolution, atof(gridMeshPadding), atof(gridMeshRaycastPadding));
-				meshType = ElementType::rectangle;
-			}
-			else //shouldn't happen, but to be safe.
-				meshType = ElementType::undefined;
-
-			if (success)
-			{
+				//Remember to set the meshType (in GuiRequirements) to set the viewport mode to appropriate renderer.
+				meshType = meshParams.meshType;
 				SetViewBounds(nodesSW, nodesNE);
 				UpdateViewport();
 			}

@@ -64,44 +64,45 @@ bool LoadWatershedBoundary(std::string const & boundaryPath)
 	return true;
 }
 
-bool GenerateMesh(std::string const & nodesPath, double superTrianglePadding)
+bool GenerateMesh(MeshGeneratorParameters & params)
 {
 	LogMan::Log("Attempting to generate FEM mesh");
-
 	ResetMeshs();
 
-	if (!FileIO::LoadCoordinatePairsCSV(nodesPath, nodes))
-		return false;
-
-	ComputeBoundingBox(nodes, nodesSW, nodesNE);
-	if (!Triangulate(nodes, superTrianglePadding, &triangles, &boundaryNodes, superTriangles))
+	if (!MeshGen::ValidateParameters(params))
 	{
-		LogMan::Log("Failed to generate FEM mesh", LOG_ERROR);
-		ResetMeshs();
+		LogMan::Log("ERROR! Invalid meshing parameters!", LOG_ERROR);
 		return false;
 	}
 
-	LogMan::Log("Succesfully generated mesh of " + std::to_string(triangles.size()) + " triangles!", LOG_SUCCESS);
-	return true;
-}
+	params.boundary = &shedBoundary;
 
-bool GenerateGridMesh(size_t resolution, double internalPadding, double raycastPadding)
-{
-	LogMan::Log("Attempting to generate FEM mesh");
+	void * elementsContainerPtr = NULL;
 	
-	ResetMeshs();
-
-	if (!GenerateGrid(shedBoundary, nodes, rectangles, boundaryNodes, resolution, internalPadding, raycastPadding))
+	switch (params.meshType)
 	{
-		LogMan::Log("Failed to generate FEM mesh", LOG_ERROR);
-		ResetMeshs();
-		return false;
+	case ElementType::rectangle:
+		elementsContainerPtr = static_cast<void *>(&rectangles);
+		break;
+	case ElementType::triangle:
+		if (params.useCustomNodes)
+		{
+			if (!FileIO::LoadCoordinatePairsCSV(params.inNodesListPath, nodes))
+				return false;
+			params.inNodesList = &nodes;
+		}
+		elementsContainerPtr = static_cast<void *>(&triangles);
+		break;
 	}
-	
-	ComputeBoundingBox(nodes, nodesSW, nodesNE);
 
-	LogMan::Log("Succesfully generated mesh of " + std::to_string(rectangles.size()) + " rectangles!", LOG_SUCCESS);
-	return true;
+	bool status = MeshGen::GenerateMesh(params, elementsContainerPtr, &nodes, &boundaryNodes);
+
+	if (status)
+		ComputeBoundingBox(nodes, nodesSW, nodesNE);
+	else
+		ResetMeshs();
+
+	return status;
 }
 
 Triangle const * GetElementContainingPoint(Vector2D const & pos)
