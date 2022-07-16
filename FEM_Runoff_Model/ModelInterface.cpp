@@ -143,6 +143,14 @@ bool UpdateNode(size_t id, Vector2D const & newPos)
 	return true;
 }
 
+bool IsBoundaryNode(size_t nodeID)
+{
+	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
+		if (*it == nodeID)
+			return true;
+	return false;
+}
+
 bool LoadTimeSeries(std::string const & path, TimeSeries & ts)
 {
 	return FileIO::LoadTimeSeries(path, ts);
@@ -625,16 +633,21 @@ std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 wa
 {
 	double head = waterElevation[nodeID] - nodeElevation[nodeID];
 	
+
 	double u = 3600.0 * sqrt(nodeSlopeX[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 	double v = 3600.0 * sqrt(nodeSlopeY[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 
 	//test
 	/*int dir = lround(nodeFDR[nodeID]);
-	double signX = (dir == 2 || dir == 3 || dir == 4) ? -1.0 : 1.0;
+	double signX = (dir == 2 || dir == 3 || dir == 4) ? 1.0 : -1.0; 
 	double signY = (dir == 1 || dir == 2 || dir == 8) ? 1.0 : -1.0;
 	u *= signX;
 	v *= signY;*/
 	//end test
+
+	//test
+	/*if (IsBoundaryNode(nodeID))
+		u = v = 0.0;*/
 
 	return std::pair<double, double>(u, v);
 }
@@ -709,6 +722,9 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 			auto uvj = ComputeVelocityComponents(it->second.VertexID(1), heads);
 			auto uvk = ComputeVelocityComponents(it->second.VertexID(2), heads);
 
+			//uvi.second = uvj.second = uvk.second = (uvi.second + uvj.second + uvk.second) / 3.0;//test
+			//uvi.first = uvj.first = uvk.first = (uvi.first + uvj.first + uvk.first) / 3.0;//test
+
 			kMat[0][0] = uvi.first * (j.y - k.y) + uvi.second * (k.x - j.x);
 			kMat[0][1] = uvi.first * (k.y - i.y) + uvi.second * (i.x - k.x);
 			kMat[0][2] = uvi.first * (i.y - j.y) + uvi.second * (j.x - i.x);
@@ -734,14 +750,6 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 
 #pragma region Test
 
-bool IsBoundaryNode(int id)
-{
-	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-		if (*it == id)
-			return true;
-	return false;
-}
-
 Vector_f64 _new_h, _precipComp, _RHS;
 
 void TestShowValues(ModelParameters const & params)
@@ -761,16 +769,15 @@ void TestShowValues(ModelParameters const & params)
 			std::fixed << std::setprecision(2) << std::setw(7) << _RHS[i] << std::endl;
 	}
 
-	std::cout << "\nConductance Matrix:\n";
-	(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(1);
+	/*std::cout << "\nConductance Matrix:\n";
+	(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(0);
 
 	std::cout << "\nCoefficients Matrix:\n";
-	(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(1);
+	(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(0);*/
 
 	std::cout << std::endl;
 }
 #pragma endregion
-
 
 void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & outRHS)
 {
@@ -782,7 +789,78 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & 
 	_RHS = outRHS;
 	_precipComp = ComputePreciptationVector(time, params);
 
-	TestShowValues(params);
+	//TestShowValues(params);
+}
+
+//[A]{x} = {b}
+void AdjustForBoundaryConditions(Matrix_f64 & aMat, Vector_f64 & xVec, Vector_f64 & bVec)
+{
+	//Using https://finite-element.github.io/7_boundary_conditions.html
+	/*for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
+	{
+		bVec[*it] = nodeElevation[*it];
+
+		for (size_t i = 0; i < aMat.Columns(); i++)
+			aMat[*it][i] = 0.0;
+
+		aMat[*it][*it] = 1.0;
+	}*/
+
+	//Using Istok's method
+	size_t reducedSystemSize = nodes.size() - boundaryNodes.size();
+	Matrix_f64 adjustedAMat(reducedSystemSize, reducedSystemSize);
+	Vector_f64 adjustedXVec(reducedSystemSize);
+	Vector_f64 adjustedBVec(reducedSystemSize);
+
+	size_t rowCounter = 0;
+	size_t columnCounter = 0;
+	for (size_t row = 0; row < aMat.Rows(); row++)
+	{
+		if (IsBoundaryNode(row))
+			continue;
+		
+		adjustedBVec[rowCounter] = bVec[row];
+		//adjustedXVec[rowCounter] = xVec[row]; //pointless. xVec is not filled with data yet.
+
+		for (size_t column = 0; column < aMat.Columns(); column++)
+		{
+			if (IsBoundaryNode(column))
+				continue;
+
+			adjustedAMat[rowCounter][columnCounter] = aMat[row][column];
+			columnCounter++;
+		}
+		columnCounter = 0;
+		rowCounter++;
+	}
+	
+	aMat = adjustedAMat;
+	bVec = adjustedBVec;
+	xVec = adjustedXVec;
+}
+
+void ReIntroduceBoundaryNodes(Vector_f64 & vec)
+{
+	if (vec.Rows() == nodes.size()) 
+		return;
+
+	Vector_f64 adjustedVec(nodes.size());
+
+	size_t rowCounter = 0;
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		if (IsBoundaryNode(i))
+		{
+			adjustedVec[i] = 0.0;
+		}
+		else
+		{
+			adjustedVec[i] = vec[rowCounter];
+			rowCounter++;
+		}
+	}
+
+	vec = adjustedVec;
 }
 
 bool Simulate(ModelParameters const & params)
@@ -861,7 +939,7 @@ bool Simulate(ModelParameters const & params)
 		LogMan::Log("At T= " + std::to_string(time));
 		std::cout << "===================================================\n";
 	
-		Vector_f64 newHeads = heads +Vector_f64(nodes.size(), 0.05);
+		Vector_f64 newHeads = heads;// + Vector_f64(nodes.size(), 0.001);
 
 		//internal loop
 		for (size_t i = 0; i <= params.maxInternalIterations; i++)
@@ -876,17 +954,7 @@ bool Simulate(ModelParameters const & params)
 
 			Matrix_f64 coeffMat = ComputeGlobalCoefficientsMatrix(params, newHeads);
 
-			//Adjust system for boundary cond
-			//https://finite-element.github.io/7_boundary_conditions.html
-			for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-			{
-				RHS[*it] = nodeElevation[*it];
-
-				for (size_t i = 0; i < coeffMat.Columns(); i++)
-					coeffMat[*it][i] = 0.0;
-				
-				coeffMat[*it][*it] = 1.0;
-			}
+			AdjustForBoundaryConditions(coeffMat, fixedNewH, RHS);
 
 			if (!Solve(coeffMat, RHS, fixedNewH, residuals, params))
 			{
@@ -898,7 +966,10 @@ bool Simulate(ModelParameters const & params)
 			for (size_t j = 0; j < fixedNewH.Rows(); j++)
 				fixedNewH[j] = Max(fixedNewH[j], nodeElevation[j]);
 			
-			std::cout << "current Internal Residual: " << std::fixed << std::setprecision(10) <<  (newHeads - fixedNewH).Magnitude() << std::endl;
+			ReIntroduceBoundaryNodes(fixedNewH);
+
+			std::cout << "Solver residual: " << std::fixed << std::setprecision(10) << residuals.Magnitude() << std::endl; //test
+			std::cout << "current Internal Residual: " << std::fixed << std::setprecision(10) <<  (newHeads - fixedNewH).Magnitude() << std::endl; //test
 			if ((newHeads - fixedNewH).Magnitude() <= params.internalResidualTreshold)
 			{
 				newHeads = fixedNewH;
@@ -909,19 +980,19 @@ bool Simulate(ModelParameters const & params)
 			
 			newHeads = fixedNewH;
 		}
+		TestShowValues(params);
 
 		std::cout << "heads result:" << std::endl;
-		for (size_t i = 0; i < nodes.size(); i++)
+		for (size_t i = 0; i < heads.Rows(); i++)
 			std::cout << i << "\t:\t" << heads[i] << std::endl;
-
 
 		heads = newHeads;
 		time += params.timeStep;
 
 		//test
-		std::cout << "Enter to proceed to next step\n";
+		/*std::cout << "Enter to proceed to next step\n";
 		std::cin.sync();
-		std::cin.get();
+		std::cin.get();*/
 
 	}
 

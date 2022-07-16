@@ -300,7 +300,7 @@ void DrawLeftPane()
 			ImGui::SameLine();
 			ImGui::InputText("##superTriPad", superTriPadding, 24, ImGuiInputTextFlags_CharsDecimal);
 		}
-		else if (selectedElementType == 1)
+		//else if (selectedElementType == 1)
 		{
 			ImGui::InputInt("Resolution", &gridMeshResolution);
 			ImGui::Text("Internal padding");
@@ -318,6 +318,7 @@ void DrawLeftPane()
 			//It's easer to just set everything. The reciever will sort out what is needed.
 			//params.boundary is set at ModelInterface.
 			MeshGeneratorParameters meshParams;
+			meshParams.useCustomNodes = false; //to do expose option to set this in GUI.
 			meshParams.inNodesListPath = meshNodes;
 			meshParams.superTrianglePadding = atof(superTriPadding);
 			meshParams.resolution = gridMeshResolution;
