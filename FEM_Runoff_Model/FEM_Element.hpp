@@ -10,14 +10,28 @@ public:
 
 	Element(std::vector<Vector2D> const * const _nodesList) : nodesList(_nodesList)
 	{
-
 	}
 	
+	Element(Element const & elem2) : nodesList(elem2.nodesList)
+	{
+		vertCount = elem2.vertCount;
+		if (vertCount > 0 && elem2.vertIDs != NULL)
+		{
+			vertIDs = new size_t[vertCount];
+			for (int i = 0; i < vertCount; i++)
+				vertIDs[i] = elem2.vertIDs[i];
+		}
+
+		area = elem2.area;
+	}
+
 	~Element() 
 	{
 		if (vertIDs != NULL)
 			delete[] vertIDs;
 	};
+
+	
 
 	Vector2D Node(size_t internalVertID) const
 	{
@@ -41,6 +55,11 @@ public:
 	size_t const * VertexIDs() const
 	{
 		return vertIDs;
+	}
+
+	int NodeCount() const
+	{
+		return vertCount;
 	}
 
 	bool ContainsVertex(size_t vertexID) const

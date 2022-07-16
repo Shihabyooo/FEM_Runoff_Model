@@ -144,7 +144,8 @@ char shedBound[260] = "Test_Data\\Watershed_Boundary.kml";
 //char meshNodes[260] = "Mesh Nodes Coordinates File Path";
 //char meshNodes[260] = "Test_Nodes_G.csv";
 char meshNodes[260] = "Test_Data\\Grid_Nodes.csv";
-char demFilePath[260] = "DEM Raster Path";
+//char demFilePath[260] = "DEM Raster Path";
+char demFilePath[260] = "Test_Data\\DEM.tif";
 //char slopeFilePath[260] = "Slopes Raster Path";
 char slopeFilePath[260] = "Test_Data\\Slope_Percent.tif";
 //char fdrFilePath[260] = "Flow Direction Raster Path";
@@ -221,7 +222,7 @@ void FillParametersStruct(ModelParameters & params)
 	params.useLumpedForm = useLumped;
 	params.femOmega = atof(femOmega);
 
-	params.meshType = static_cast<ElementType>(selectedElementType);
+	//params.meshType = static_cast<ElementType>(selectedElementType);
 	params.solverType = static_cast<Solver>(selectedSolver);
 	params.residualThreshold = atof(solverResidual);
 	params.weight = atof(solverWeight);

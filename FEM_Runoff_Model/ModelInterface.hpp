@@ -8,7 +8,6 @@
 #include "Globals.hpp"
 #include "MeshGenerator.hpp"
 
-
 //TODO the current time approximation uses a double for the omega variable. While it is mathematically correct, practically, the values\
 should typically either be 0.0, 0.5 or 1.0. In the first and last case, the RHS computation can be significantly sped up by omitting\
 that would -in each case- result in a vector of zeroes (see approximate solution formulation). It may make sense hence to instead use a\

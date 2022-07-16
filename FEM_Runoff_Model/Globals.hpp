@@ -380,7 +380,7 @@ public:
 							0.5 = Central difference (Crank-Nicholson method)
 
 	//Solver related params
-	ElementType meshType = ElementType::undefined;
+	//ElementType meshType = ElementType::undefined;
 	Solver solverType = Solver::Auto;
 	double residualThreshold = -1.0; //Negative value -> use default threshold. Only for iterative solvers.
 	double weight = -1.0; //Negative value -> use default weight. Only for weighted solvers.

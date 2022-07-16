@@ -4,6 +4,7 @@
 #include "Solvers.hpp"
 
 //TODO add a cleanup method to clear the allocated memory (superTriangles, rasters) when program closes.
+ElementType activeMeshType = ElementType::undefined;
 std::unordered_map<size_t, Rectangle> rectangles;
 std::unordered_map<size_t, Triangle> triangles;
 Vector2D superTriangles[6];
@@ -49,6 +50,8 @@ void ResetMeshs()
 	triangles.clear();
 	rectangles.clear();
 	boundaryNodes.clear();
+	
+	activeMeshType = ElementType::undefined;
 }
 
 bool LoadWatershedBoundary(std::string const & boundaryPath)
@@ -98,7 +101,10 @@ bool GenerateMesh(MeshGeneratorParameters & params)
 	bool status = MeshGen::GenerateMesh(params, elementsContainerPtr, &nodes, &boundaryNodes);
 
 	if (status)
+	{
 		ComputeBoundingBox(nodes, nodesSW, nodesNE);
+		activeMeshType = params.meshType;
+	}
 	else
 		ResetMeshs();
 
@@ -150,10 +156,10 @@ bool CheckParameters(ModelParameters const & params)
 	//Check fails
 	//TODO for raster file checks, check also that they are georeffed rasters and inclusive of the mesh boundary.
 	
-	switch (params.meshType)
+	switch (activeMeshType)
 	{
 	case ElementType::undefined:
-		LogMan::Log("ERROR! Undefined mesh type. (state: Undefined)", LOG_ERROR);
+		LogMan::Log("ERROR! No loaded mesh. (state: Undefined)", LOG_ERROR);
 		status = false;
 		break;
 	case ElementType::rectangle:
@@ -288,108 +294,108 @@ void UnloadAllRasters()
 	fdr = NULL;
 }
 
-void ConstructGlobalCapacitanceMatrix(ModelParameters const & params)
+//Works for both mesh types
+void ConstructLumpedCapacitanceMatrix()
 {
-	//Lumped Capacitance matrix for each element is 3x3 matrix
+	//Lumped Capacitance matrix for each (triangular) element is 3x3 matrix
 	//[C_e] = A/3 * |	1	0	0	|
 	//				|	0	1	0	|
 	//				|	0	0	1	|
 	//Where A is the area of element.
+	//Same for diagnoal matrix for rectangular elements, but with a 4 x 4 matrix.
 
+	size_t elementCount = 0;
+	int nodesPerElement = 0;
+
+	switch (activeMeshType)
+	{
+	case ElementType::rectangle:
+		elementCount = rectangles.size();
+		nodesPerElement = 4;
+		break;
+	case ElementType::triangle:
+		elementCount = triangles.size();
+		nodesPerElement = 3;
+		break;
+	}
+
+	for (size_t i = 0; i < elementCount; i++)
+	{
+		Element * element = NULL;
+
+		switch (activeMeshType)
+		{
+		case ElementType::rectangle:
+			element = new Element(rectangles[i]);
+			break;
+		case ElementType::triangle:
+			element = new Element(triangles[i]);
+			break;
+		}
+
+		for (int intNodeID = 0; intNodeID < element->NodeCount(); intNodeID++)
+			globalC[element->VertexID(intNodeID)][element->VertexID(intNodeID)] += element->Area() / 3.0;
+
+
+		delete element;
+	}
+}
+
+//TODO Implement
+void ConstructConsistantCapacitanceMatrix_Rect()
+{
+	LogMan::Log("WARNING! Consistant Capacitance matrix for rectanguler elements not yet implemented.", LOG_WARN);
+}
+
+void ConstructConsistantCapacitanceMatrix_Tri()
+{
 	//Consistent Capacitance matrix for each element is 3x3 matrix
 	//[C_e] = A/12 *	|	2	1	1	|
 	//					|	1	2	1	|
 	//					|	1	1	2	|
 	//Where A is the area of element.
+	
+	double diagVal, otherVal;
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		
+		diagVal = 2.0 * it->second.Area() / 12.0;
+		otherVal = it->second.Area() / 12.0; //(A/12.0) * 1.0
 
+		size_t const * vert = it->second.VertexIDs();
+
+		globalC[vert[0]][vert[0]] += diagVal;
+		globalC[vert[1]][vert[1]] += diagVal;
+		globalC[vert[2]][vert[2]] += diagVal;
+
+		globalC[vert[0]][vert[1]] += otherVal;
+		globalC[vert[0]][vert[2]] += otherVal;
+
+		globalC[vert[1]][vert[0]] += otherVal;
+		globalC[vert[1]][vert[2]] += otherVal;
+
+		globalC[vert[2]][vert[0]] += otherVal;
+		globalC[vert[2]][vert[1]] += otherVal;
+	}
+}
+
+void ConstructGlobalCapacitanceMatrix(ModelParameters const & params)
+{
 	globalC = Matrix_f64(nodes.size(), nodes.size());
 
-	//since element matrix comprises of two distinct val, we compute them per element depending on whether lumped formulation or consistent.
-	
-	//TODO replace this stupid switch with a unified loop once you figure out a way to abstract elements' containers.
-
-	switch (params.meshType)
+	if (params.useLumpedForm)
+		ConstructLumpedCapacitanceMatrix();
+	else
 	{
-		case ElementType::rectangle: //TODO consistant form is wrong for this
+		switch (activeMeshType)
 		{
-			double diagVal, otherVal;
-			for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
-			{
-				//compute diagVal and otherVal
-				if (params.useLumpedForm)
-				{
-					diagVal = it->second.Area() / 4.0; //(A/3.0) * 1.0
-					otherVal = 0.0;
-				}
-				else
-				{
-					diagVal = 2.0 * it->second.Area() / 12.0;
-					otherVal = it->second.Area() / 12.0; //(A/12.0) * 1.0
-				}
-
-				size_t vert[4] = { it->second.VertexID(0),it->second.VertexID(1),it->second.VertexID(2),it->second.VertexID(3) };
-
-				globalC[vert[0]][vert[0]] += diagVal;
-				globalC[vert[1]][vert[1]] += diagVal;
-				globalC[vert[2]][vert[2]] += diagVal;
-				globalC[vert[3]][vert[3]] += diagVal;
-
-				globalC[vert[0]][vert[1]] += otherVal;
-				globalC[vert[0]][vert[2]] += otherVal;
-				globalC[vert[0]][vert[3]] += otherVal;
-
-				globalC[vert[1]][vert[0]] += otherVal;
-				globalC[vert[1]][vert[2]] += otherVal;
-				globalC[vert[1]][vert[3]] += otherVal;
-
-				globalC[vert[2]][vert[0]] += otherVal;
-				globalC[vert[2]][vert[1]] += otherVal;
-				globalC[vert[2]][vert[3]] += otherVal;
-
-				globalC[vert[3]][vert[0]] += otherVal;
-				globalC[vert[3]][vert[1]] += otherVal;
-				globalC[vert[3]][vert[2]] += otherVal;
-			}
-		}
+		case ElementType::rectangle:
+			ConstructConsistantCapacitanceMatrix_Rect();
 			break;
-
 		case ElementType::triangle:
-		{
-			double diagVal, otherVal;
-			for (auto it = triangles.begin(); it != triangles.end(); ++it)
-			{
-				//compute diagVal and otherVal
-				if (params.useLumpedForm)
-				{
-					diagVal = it->second.Area() / 3.0; //(A/3.0) * 1.0
-					otherVal = 0.0;
-				}
-				else
-				{
-					diagVal = 2.0 * it->second.Area() / 12.0;
-					otherVal = it->second.Area() / 12.0; //(A/12.0) * 1.0
-				}
-
-				size_t const * vert = it->second.VertexIDs();
-
-				globalC[vert[0]][vert[0]] += diagVal;
-				globalC[vert[1]][vert[1]] += diagVal;
-				globalC[vert[2]][vert[2]] += diagVal;
-
-				globalC[vert[0]][vert[1]] += otherVal;
-				globalC[vert[0]][vert[2]] += otherVal;
-
-				globalC[vert[1]][vert[0]] += otherVal;
-				globalC[vert[1]][vert[2]] += otherVal;
-
-				globalC[vert[2]][vert[0]] += otherVal;
-				globalC[vert[2]][vert[1]] += otherVal;
-			}
+			ConstructConsistantCapacitanceMatrix_Tri();
+			break;
 		}
-			break;
-
-		default:
-			break;
 	}
 }
 
@@ -539,15 +545,9 @@ bool CacheElevations()
 	return true;
 }
 
-//void ZeroBoundaryNodes(Vector_f64 & targetVector)
-//{
-//	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-//		targetVector[*it] = 0.0;
-//}
-
 //Precipitation returned as meters per hour.
 //current impl doesn't need triangle, but later it would.
-double GetCurrentPrecipitation(double time, ModelParameters const & params, Element const & triangle)
+double GetCurrentPrecipitation(double time, ModelParameters const & params, Element const * element)
 {
 	if (params.variablePrecipitation)
 	{
@@ -573,23 +573,49 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 	//zero out outVector before doing anything.
 	Vector_f64 result(nodes.size());
 
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	size_t elementCount = 0;
+	int nodesPerElement = 0;
+
+	switch (activeMeshType)
 	{
-		//size_t const * vert = it->second.vertIDs; //to simplify lines bellow.
-		size_t vert[3] = { it->second.VertexID(0),it->second.VertexID(1), it->second.VertexID(2)};
-		double newPrecipitation = GetCurrentPrecipitation(time + params.timeStep, params, it->second);
-		double elementContrib = (it->second.Area() / 3.0) * (( 1.0 - params.femOmega) * it->second.elementPrecipitation + params.femOmega * newPrecipitation);
+	case ElementType::rectangle:
+		elementCount = rectangles.size();
+		nodesPerElement = 4;
+		break;
+	case ElementType::triangle:
+		elementCount = triangles.size();
+		nodesPerElement = 3;
+		break;
+	}
+
+	for (size_t i = 0; i < elementCount; i++)
+	{
+		Element * element = NULL;
+
+		switch (activeMeshType)
+		{
+		case ElementType::rectangle:
+			element = new Element(rectangles[i]);
+			break;
+		case ElementType::triangle:
+			element = new Element(triangles[i]);
+			break;
+		}
+
+		double newPrecipitation = GetCurrentPrecipitation(time + params.timeStep, params, element);
+		double elementContrib = (element->Area() / 3.0) * ((1.0 - params.femOmega) * element->elementPrecipitation + params.femOmega * newPrecipitation);
 		elementContrib *= params.timeStep;
-		it->second.elementPrecipitation = newPrecipitation;
+		element->elementPrecipitation = newPrecipitation;
 
 		//test
-		if (!it->second.ContainsVertex(17) && !it->second.ContainsVertex(18))
+		if (!element->ContainsVertex(17) && !element->ContainsVertex(18))
 			elementContrib = 0.0;
 		//end test
 
-		result[vert[0]] += elementContrib;
-		result[vert[1]] += elementContrib;
-		result[vert[2]] += elementContrib;
+		for (int intNodeID = 0; intNodeID < element->NodeCount(); intNodeID++)
+			result[element->VertexID(intNodeID)] += elementContrib;
+		
+		delete element;
 	}
 
 	return result;
