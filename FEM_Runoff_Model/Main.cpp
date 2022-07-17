@@ -12,7 +12,7 @@ ModelParameters ModelTestParams()
 	params.slopesPath = "Test_Data\\Slope_Percent.tif";
 	params.fdrPath = "Test_Data\\FDR.tif";
 	params.topographySamplingMethod = InterpolationType::linear;
-	params.outletNode = 3;
+	params.outletNode = 22;
 
 	params.useLumpedForm = false;
 
@@ -26,9 +26,9 @@ ModelParameters ModelTestParams()
 	params.variableManningCoefficients = false;
 	params.fixedManningCoeffient = 0.03; //must be positive value > 0.0
 	params.manningCoefficientRasterPath = "";
-	params.timeStep = 0.05; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
+	params.timeStep = 0.5; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
 	params.startTime = 0.0; //should be left at 0.0
-	params.endTime = 7.5f; //hours after startTime to end simulation.
+	params.endTime = 25.0f; //hours after startTime to end simulation.
 
 	//params.meshType = ElementType::triangle;
 	params.useLumpedForm = true;
@@ -37,7 +37,7 @@ ModelParameters ModelTestParams()
 	params.residualThreshold = 0.0001;
 	params.weight = 0.5;
 	params.maxIterations = 1000;
-	params.internalResidualTreshold = 0.000001;
+	params.internalResidualTreshold = 0.0001;
 	params.maxInternalIterations = 10;
 
 	return params;
@@ -53,7 +53,7 @@ void GenTestMesh()
 	meshParams.inNodesListPath = "Test_Data\\Grid_Nodes_Dense2.csv";
 	meshParams.superTrianglePadding = 1.0;
 
-	meshParams.resolution = 10;
+	meshParams.resolution = 4;
 	meshParams.internalPadding = 0.001;
 	meshParams.rayCastPadding = 10.0;
 

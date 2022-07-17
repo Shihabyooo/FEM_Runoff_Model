@@ -616,8 +616,8 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 		element->elementPrecipitation = newPrecipitation;
 
 		//test
-		if (!element->ContainsVertex(17) && !element->ContainsVertex(18))
-			elementContrib = 0.0;
+		/*if (!element->ContainsVertex(1) && !element->ContainsVertex(2) && !element->ContainsVertex(3))
+			elementContrib = 0.0;*/
 		//end test
 
 		for (int intNodeID = 0; intNodeID < element->NodeCount(); intNodeID++)
@@ -638,11 +638,11 @@ std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 wa
 	double v = 3600.0 * sqrt(nodeSlopeY[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 
 	//test
-	/*int dir = lround(nodeFDR[nodeID]);
+	int dir = lround(nodeFDR[nodeID]);
 	double signX = (dir == 2 || dir == 3 || dir == 4) ? 1.0 : -1.0; 
 	double signY = (dir == 1 || dir == 2 || dir == 8) ? 1.0 : -1.0;
 	u *= signX;
-	v *= signY;*/
+	v *= signY;
 	//end test
 
 	//test
@@ -655,103 +655,114 @@ std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 wa
 Matrix_f64 ComputeGlobalCoefficientsMatrix(ModelParameters const & params, Vector_f64 const & newHeads)
 {
 	//[C] + w*dt*[K]
-	Matrix_f64 secondTerm(nodes.size(), nodes.size());
+	Matrix_f64 coefMat(nodes.size(), nodes.size());
+	
+	//						|	ui (yj - yk) + vi (xk - xj)		ui (yk - yi) + vi (xi - xk)		ui (yi - yj) + vi (xj - xi)	|
+	//[K_element] = 1/6	*	|	uj (yj - yk) + vj (xk - xj)		uj (yk - yi) + vj (xi - xk)		uj (yi - yj) + vj (xj - xi)	|
+	//						|	uk (yj - yk) + vk (xk - xj)		uk (yk - yi) + vk (xi - xk)		uk (yi - yj) + vk (xj - xi)	|
+
+	Matrix_f64 kMat(3, 3);
+	Matrix_f64 cMat(3, 3);
 
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		//						|	ui (yj - yk) + vi (xk - xj)		ui (yk - yi) + vi (xi - xk)		ui (yi - yj) + vi (xj - xi)	|
-		//[K_element] = 1/6	*	|	uj (yj - yk) + vj (xk - xj)		uj (yk - yi) + vj (xi - xk)		uj (yi - yj) + vj (xj - xi)	|
-		//						|	uk (yj - yk) + vk (xk - xj)		uk (yk - yi) + vk (xi - xk)		uk (yi - yj) + vk (xj - xi)	|
+		Vector2D const & i = it->second.Node(0);
+		Vector2D const & j = it->second.Node(1);
+		Vector2D const & k = it->second.Node(2);
 
-		Matrix_f64 kMat(3, 3);
+		auto uvi = ComputeVelocityComponents(it->second.VertexID(0), newHeads);
+		auto uvj = ComputeVelocityComponents(it->second.VertexID(1), newHeads);
+		auto uvk = ComputeVelocityComponents(it->second.VertexID(2), newHeads);
 
-		for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		{
-			Vector2D const & i = it->second.Node(0);
-			Vector2D const & j = it->second.Node(1);
-			Vector2D const & k = it->second.Node(2);
+		//uvi.second = uvj.second = uvk.second = (uvi.second + uvj.second + uvk.second) / 3.0;//test
+		//uvi.first = uvj.first = uvk.first = (uvi.first + uvj.first + uvk.first) / 3.0;//test
 
-			auto uvi = ComputeVelocityComponents(it->second.VertexID(0), newHeads);
-			auto uvj = ComputeVelocityComponents(it->second.VertexID(1), newHeads);
-			auto uvk = ComputeVelocityComponents(it->second.VertexID(2), newHeads);
+		kMat[0][0] = uvi.first * (j.y - k.y) + uvi.second * (k.x - j.x);
+		kMat[0][1] = uvi.first * (k.y - i.y) + uvi.second * (i.x - k.x);
+		kMat[0][2] = uvi.first * (i.y - j.y) + uvi.second * (j.x - i.x);
 
-			kMat[0][0] = uvi.first * (j.y - k.y) + uvi.second * (k.x - j.x);
-			kMat[0][1] = uvi.first * (k.y - i.y) + uvi.second * (i.x - k.x);
-			kMat[0][2] = uvi.first * (i.y - j.y) + uvi.second * (j.x - i.x);
+		kMat[1][0] = uvj.first * (j.y - k.y) + uvj.second * (k.x - j.x);
+		kMat[1][1] = uvj.first * (k.y - i.y) + uvj.second * (i.x - k.x);
+		kMat[1][2] = uvj.first * (i.y - j.y) + uvj.second * (j.x - i.x);
 
-			kMat[0][0] = uvj.first * (j.y - k.y) + uvj.second * (k.x - j.x);
-			kMat[0][1] = uvj.first * (k.y - i.y) + uvj.second * (i.x - k.x);
-			kMat[0][2] = uvj.first * (i.y - j.y) + uvj.second * (j.x - i.x);
+		kMat[2][0] = uvk.first * (j.y - k.y) + uvk.second * (k.x - j.x);
+		kMat[2][1] = uvk.first * (k.y - i.y) + uvk.second * (i.x - k.x);
+		kMat[2][2] = uvk.first * (i.y - j.y) + uvk.second * (j.x - i.x);
 
-			kMat[0][0] = uvk.first * (j.y - k.y) + uvk.second * (k.x - j.x);
-			kMat[0][1] = uvk.first * (k.y - i.y) + uvk.second * (i.x - k.x);
-			kMat[0][2] = uvk.first * (i.y - j.y) + uvk.second * (j.x - i.x);
+		kMat *= params.timeStep * params.femOmega / 6.0;
 
-			kMat *= params.timeStep * params.femOmega / 6.0;
+		cMat[0][0] = cMat[1][1] = cMat[2][2] = it->second.Area() / 3.0;
 
-			for (int row = 0; row < 3; row++)
-				for (int column = 0; column < 3; column++)
-					secondTerm[it->second.VertexID(row)][it->second.VertexID(column)] += kMat[row][column];
-		}
+		for (int row = 0; row < 3; row++)
+			for (int column = 0; column < 3; column++)
+				coefMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] + kMat[row][column]);
 	}
 
-	return globalC + secondTerm;
+	return coefMat;
 }
 
 Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 {
 	//[C] - dt*(1-w)*[K]
 
-	Matrix_f64 secondTerm(nodes.size(), nodes.size());
+	Matrix_f64 condMat(nodes.size(), nodes.size());
 
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
-	{
+	
 		//						|	ui (yj - yk) + vi (xk - xj)		ui (yk - yi) + vi (xi - xk)		ui (yi - yj) + vi (xj - xi)	|
 		//[K_element] = 1/6	*	|	uj (yj - yk) + vj (xk - xj)		uj (yk - yi) + vj (xi - xk)		uj (yi - yj) + vj (xj - xi)	|
 		//						|	uk (yj - yk) + vk (xk - xj)		uk (yk - yi) + vk (xi - xk)		uk (yi - yj) + vk (xj - xi)	|
 
-		Matrix_f64 kMat(3, 3);
+	Matrix_f64 kMat(3, 3);
+	Matrix_f64 cMat(3, 3);
 
-		for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		{
-			Vector2D const & i = it->second.Node(0);
-			Vector2D const & j = it->second.Node(1);
-			Vector2D const & k = it->second.Node(2);
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		Vector2D const & i = it->second.Node(0);
+		Vector2D const & j = it->second.Node(1);
+		Vector2D const & k = it->second.Node(2);
 
-			auto uvi = ComputeVelocityComponents(it->second.VertexID(0), heads);
-			auto uvj = ComputeVelocityComponents(it->second.VertexID(1), heads);
-			auto uvk = ComputeVelocityComponents(it->second.VertexID(2), heads);
+		auto uvi = ComputeVelocityComponents(it->second.VertexID(0), heads);
+		auto uvj = ComputeVelocityComponents(it->second.VertexID(1), heads);
+		auto uvk = ComputeVelocityComponents(it->second.VertexID(2), heads);
 
-			//uvi.second = uvj.second = uvk.second = (uvi.second + uvj.second + uvk.second) / 3.0;//test
-			//uvi.first = uvj.first = uvk.first = (uvi.first + uvj.first + uvk.first) / 3.0;//test
+		//uvi.second = uvj.second = uvk.second = (uvi.second + uvj.second + uvk.second) / 3.0;//test
+		//uvi.first = uvj.first = uvk.first = (uvi.first + uvj.first + uvk.first) / 3.0;//test
 
-			kMat[0][0] = uvi.first * (j.y - k.y) + uvi.second * (k.x - j.x);
-			kMat[0][1] = uvi.first * (k.y - i.y) + uvi.second * (i.x - k.x);
-			kMat[0][2] = uvi.first * (i.y - j.y) + uvi.second * (j.x - i.x);
+		kMat[0][0] = uvi.first * (j.y - k.y) + uvi.second * (k.x - j.x);
+		kMat[0][1] = uvi.first * (k.y - i.y) + uvi.second * (i.x - k.x);
+		kMat[0][2] = uvi.first * (i.y - j.y) + uvi.second * (j.x - i.x);
 
-			kMat[0][0] = uvj.first * (j.y - k.y) + uvj.second * (k.x - j.x);
-			kMat[0][1] = uvj.first * (k.y - i.y) + uvj.second * (i.x - k.x);
-			kMat[0][2] = uvj.first * (i.y - j.y) + uvj.second * (j.x - i.x);
+		kMat[1][0] = uvj.first * (j.y - k.y) + uvj.second * (k.x - j.x);
+		kMat[1][1] = uvj.first * (k.y - i.y) + uvj.second * (i.x - k.x);
+		kMat[1][2] = uvj.first * (i.y - j.y) + uvj.second * (j.x - i.x);
 
-			kMat[0][0] = uvk.first * (j.y - k.y) + uvk.second * (k.x - j.x);
-			kMat[0][1] = uvk.first * (k.y - i.y) + uvk.second * (i.x - k.x);
-			kMat[0][2] = uvk.first * (i.y - j.y) + uvk.second * (j.x - i.x);
+		kMat[2][0] = uvk.first * (j.y - k.y) + uvk.second * (k.x - j.x);
+		kMat[2][1] = uvk.first * (k.y - i.y) + uvk.second * (i.x - k.x);
+		kMat[2][2] = uvk.first * (i.y - j.y) + uvk.second * (j.x - i.x);
 
-			kMat *= params.timeStep * (1.0 - params.femOmega) / 6.0;
+		kMat *= params.timeStep * (1.0 - params.femOmega) / 6.0;
 
-			for (int row = 0; row < 3; row++)
-				for (int column = 0; column < 3; column++)
-					secondTerm[it->second.VertexID(row)][it->second.VertexID(column)] += kMat[row][column];
-		}
+		cMat[0][0] = cMat[1][1] = cMat[2][2] = it->second.Area() / 3.0;
+
+		for (int row = 0; row < 3; row++)
+			for (int column = 0; column < 3; column++)
+				condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
+
+		//if (it->second.id == 5 || it->second.id == 6 || it->second.id == 13 || it->second.id == 14) //test
+		//{
+		//	std::cout << "element: ";
+		//	it->second.DebugPrintDetails();
+		//	kMat.DisplayOnCLI();
+		//}
 	}
-
-	return globalC - secondTerm;
+	
+	return condMat;
 }
 
 #pragma region Test
 
 Vector_f64 _new_h, _precipComp, _RHS;
-
+std::vector<std::pair<double, double>> qTS;
 void TestShowValues(ModelParameters const & params)
 {
 	std::cout << "\n  id     |  head | newH |||  |||   u0   |    v0   |   u1    |   v1    |  precip  |  RHS\n";
@@ -769,11 +780,13 @@ void TestShowValues(ModelParameters const & params)
 			std::fixed << std::setprecision(2) << std::setw(7) << _RHS[i] << std::endl;
 	}
 
-	/*std::cout << "\nConductance Matrix:\n";
-	(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(0);
+	//std::cout << "\nConductance Matrix:\n";
+	////(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(0);
+	//ComputeGlobalConductanceMatrix(params).DisplayOnCLI(0);
 
-	std::cout << "\nCoefficients Matrix:\n";
-	(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(0);*/
+	//std::cout << "\nCoefficients Matrix:\n";
+	////(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(0);
+	//ComputeGlobalCoefficientsMatrix(params, _new_h).DisplayOnCLI();
 
 	std::cout << std::endl;
 }
@@ -783,7 +796,7 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & 
 {
 	//[GlobalConductanceMat] * {h_0} + precipComponent
 
-	outRHS = ComputeGlobalConductanceMatrix(params) * heads + ComputePreciptationVector(time, params);
+	outRHS = ComputeGlobalConductanceMatrix(params) * heads +ComputePreciptationVector(time, params);
 	
 	//test
 	_RHS = outRHS;
@@ -929,6 +942,8 @@ bool Simulate(ModelParameters const & params)
 	nodeElevation = Vector_f64(nodes.size()); //test
 	heads = nodeElevation;
 
+	//heads[7] += 1.0;//test
+
 	//Loop from start time to end time
 	double time = params.startTime;
 	LogMan::Log("Starting simulation loop");
@@ -939,7 +954,12 @@ bool Simulate(ModelParameters const & params)
 		LogMan::Log("At T= " + std::to_string(time));
 		std::cout << "===================================================\n";
 	
-		Vector_f64 newHeads = heads;// + Vector_f64(nodes.size(), 0.001);
+		//Vector_f64 newHeads = heads + Vector_f64(nodes.size(), 0.001);
+		Vector_f64 newHeads(nodes.size());
+		for (size_t i = 0; i < nodes.size(); i++)
+			if (!IsBoundaryNode(i))
+				newHeads[i] = heads[i] + 0.001;
+
 
 		//internal loop
 		for (size_t i = 0; i <= params.maxInternalIterations; i++)
@@ -982,9 +1002,21 @@ bool Simulate(ModelParameters const & params)
 		}
 		TestShowValues(params);
 
-		std::cout << "heads result:" << std::endl;
+		std::cout << "\n------------------------------------------------------\n";
+		std::cout << "heads result at time: " << std::setprecision(4) << time << std::endl;
 		for (size_t i = 0; i < heads.Rows(); i++)
-			std::cout << i << "\t:\t" << heads[i] << std::endl;
+			std::cout << i << "\t:\t" << std::setprecision(10) << heads[i] << "\t-->\t" <<
+						std::setprecision(10) << newHeads[i] << "  " <<
+						(newHeads[i] > heads[i] ? "UP" : (newHeads[i] == heads[i] ? "--" : "DN"))<<
+						std::endl;
+		std::cout << "\n------------------------------------------------------\n";
+		double qx = sqrt(nodeSlopeX[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
+		double qy = sqrt(nodeSlopeY[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
+		double q = sqrt(qx * qx + qy * qy);
+		double flowWidth = 100.0; //test
+		std::cout << "Q: " << q * flowWidth << std::endl;
+		qTS.push_back(std::pair<double, double>(time, q * flowWidth));
+		std::cout << "\n------------------------------------------------------\n";
 
 		heads = newHeads;
 		time += params.timeStep;
@@ -995,6 +1027,12 @@ bool Simulate(ModelParameters const & params)
 		std::cin.get();*/
 
 	}
+
+	//test
+	std::cout << " time \t Q (cms)\n";
+	for (auto it = qTS.begin(); it != qTS.end(); ++it)
+		std::cout << std::setw(6) << std::setprecision(3) << it->first << "\t" << std::setprecision(5) << it->second << std::endl;
+	qTS.clear();
 
 	return true;
 }

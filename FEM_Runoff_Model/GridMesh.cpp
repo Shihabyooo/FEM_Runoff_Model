@@ -163,7 +163,7 @@ bool ComputeGriddingParameters(std::vector<Vector2D> const & boundary, double in
 	params.elementWidth = params.elementHeight = (delta.y - 2.0 * internalPadding) / static_cast<double>(resolution);
 	params.gridAnchorSW = sw + Vector2D(internalPadding, internalPadding);
 	params.nodesRows = resolution + 1;
-	params.nodesColumns = llround(floor(delta.x - 2.0 * internalPadding) / static_cast<double>(params.elementWidth));
+	params.nodesColumns = llround(delta.x - 2.0 * internalPadding / static_cast<double>(params.elementWidth));
 
 	//test
 	std::cout << "gridding parameters\n";
