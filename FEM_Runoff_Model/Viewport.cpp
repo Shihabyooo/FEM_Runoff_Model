@@ -404,6 +404,7 @@ void RenderMesh()
 	glUseProgram(triangleShader.program);
 	SetActiveShaderDiffuse(COLOUR_RED);
 	glDrawElements(GL_TRIANGLES, renderTrisIndicesCount, GL_UNSIGNED_INT, 0);
+	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Wireframe only
 	SetActiveShaderDiffuse(COLOUR_BLACK);
 	glDrawElements(GL_TRIANGLES, renderTrisIndicesCount, GL_UNSIGNED_INT, 0);

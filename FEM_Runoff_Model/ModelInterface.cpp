@@ -632,22 +632,15 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 waterElevation) //waterElevation = nodeElevation + head
 {
 	double head = waterElevation[nodeID] - nodeElevation[nodeID];
-	
 
 	double u = 3600.0 * sqrt(nodeSlopeX[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 	double v = 3600.0 * sqrt(nodeSlopeY[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 
-	//test
 	int dir = lround(nodeFDR[nodeID]);
 	double signX = (dir == 2 || dir == 3 || dir == 4) ? 1.0 : -1.0; 
 	double signY = (dir == 1 || dir == 2 || dir == 8) ? 1.0 : -1.0;
 	u *= signX;
 	v *= signY;
-	//end test
-
-	//test
-	/*if (IsBoundaryNode(nodeID))
-		u = v = 0.0;*/
 
 	return std::pair<double, double>(u, v);
 }
@@ -1003,10 +996,10 @@ bool Simulate(ModelParameters const & params)
 		TestShowValues(params);
 
 		std::cout << "\n------------------------------------------------------\n";
-		std::cout << "heads result at time: " << std::setprecision(4) << time << std::endl;
+		std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
 		for (size_t i = 0; i < heads.Rows(); i++)
-			std::cout << i << "\t:\t" << std::setprecision(10) << heads[i] << "\t-->\t" <<
-						std::setprecision(10) << newHeads[i] << "  " <<
+			std::cout << i << "\t:\t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
+						std::setprecision(4) << newHeads[i] << "  " <<
 						(newHeads[i] > heads[i] ? "UP" : (newHeads[i] == heads[i] ? "--" : "DN"))<<
 						std::endl;
 		std::cout << "\n------------------------------------------------------\n";
@@ -1025,7 +1018,6 @@ bool Simulate(ModelParameters const & params)
 		/*std::cout << "Enter to proceed to next step\n";
 		std::cin.sync();
 		std::cin.get();*/
-
 	}
 
 	//test
