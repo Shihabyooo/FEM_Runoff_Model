@@ -407,6 +407,53 @@ void ConstructGlobalCapacitanceMatrix(ModelParameters const & params)
 	}
 }
 
+//TODO this function is a slightly modified version of similarily named function in GridMesh generator. Merge them.
+bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, std::vector<Vector2D> const & boundary)
+{
+	//https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
+	//https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
+	
+	if (boundary.size() < 2)
+		return false;
+	
+	size_t counter = 0;
+	double dX = point.x - raySource.x;
+	double dY = point.y - raySource.y;
+
+	for (size_t i = 0; i < boundary.size(); i++)
+	{
+		std::pair<Vector2D const *, Vector2D const *> segment;
+		if(i < boundary.size() - 1)
+			segment = std::pair<Vector2D const *, Vector2D const *>(&boundary[i], &boundary [i+1]);
+		else
+			segment = std::pair<Vector2D const *, Vector2D const *>(&boundary[i], &boundary[0]);
+
+		double dX2 = segment.first->x - segment.second->x;
+		double dY2 = segment.first->y - segment.second->y;
+		double denominator = dX * dY2 - dY * dX2;
+
+		if (denominator == 0.0)
+		{
+			std::cout << "!!!!!!!! Caught zero denominator!\n"; //test
+			continue;
+		}
+
+		double dX3 = point.x - segment.first->x;
+		double dY3 = point.y - segment.first->y;
+
+		double t = dX3 * dY2 - dY3 * dX2;
+		t = t / denominator;
+		double u = dX3 * dY - dY3 * dX;
+		u = u / denominator;
+
+		if (t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0)
+			counter++;
+	}
+
+	return counter % 2 != 0;
+}
+
+//TODO Test and refactor this
 //returns negative valued VectorInt if error
 std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 const * raster, int rasterID)
 {
@@ -457,6 +504,120 @@ std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 c
 	delete[] tiePoints[1];
 	delete[] tiePoints;
 
+	return result;
+}
+
+//returns negative value if error
+double SampleAggregatedPixels(size_t nodeID, Matrix_f64 const * raster, int rasterID, SpatialSamplingMethod method, double tolerance = -1.0)
+{
+	//TODO  cache rastermapping params
+	double ** tiePoints = NULL;
+	double * pixelScale = NULL;
+	bool isUTM;
+	Vector2Int dimensions;
+	int samples;
+
+	if (!FileIO::GetRasterMappingParameters(rasterID, dimensions, samples, isUTM, &tiePoints, &pixelScale))
+	{
+		//Error already logged in GetRasterMappingParameters();
+		return - 1.0;
+	}
+	
+	Vector2D anchorNE(tiePoints[1][0] + (pixelScale[0] / 2.0), tiePoints[1][1] - (pixelScale[1] / 2.0));
+
+	//construct a region of influence for node, bu connecting the centroid for all elements that this node is part of.
+	std::vector<Vector2D> subRegionBoundary;
+
+	switch (activeMeshType)
+	{
+	case ElementType::triangle:
+	{
+		for (auto it = triangles.begin(); it != triangles.end(); ++it)
+		{
+			if (it->second.ContainsVertex(nodeID))
+				subRegionBoundary.push_back(it->second.Centroid());
+		}
+	}
+		break;
+	case ElementType::rectangle:
+	{
+		for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+		{
+			if (it->second.ContainsVertex(nodeID))
+				subRegionBoundary.push_back(it->second.Centroid());
+		}
+	}
+		break;
+	case ElementType::undefined: //should never reach this point in the code, but still.
+		LogMan::Log("ERROR! Internal error. (Undefined meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
+		return -1.0;
+	default:
+		LogMan::Log("ERROR! Internal error. (Default meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
+		return -1.0;
+	}
+
+	if (subRegionBoundary.size() < 3)
+	{
+		//TODO handle boundary cases here
+	}
+
+	Vector2D subRegionSW, subRegionNE;
+	ComputeBoundingBox(subRegionBoundary, subRegionSW, subRegionNE);
+	Rect subRegionRect(subRegionSW, subRegionNE);
+	
+	std::vector<double> values;
+
+	for (size_t row = 0; row < raster->Rows(); row++)
+		for (size_t column = 0; column < raster->Columns(); column++)
+		{
+			Vector2D pixelPos(anchorNE.x + column * pixelScale[0],
+				anchorNE.y - row * pixelScale[1]);
+
+			//To avoid having to ray cast for all pixels of raster, we do a simple bounds check by testing whether\
+			pixel centroid falls within boundary, if true, then we proceed to the finer (and more expensive) raycast test.
+
+			if (subRegionRect.ContainsInclusive(pixelPos))
+			{
+				Vector2D rayStart(subRegionSW.x - 10.0f, pixelPos.y);
+				if (IsPointInsideBoundary(pixelPos, rayStart, subRegionBoundary)
+					&& !isnan(raster->GetValue(row, column)))
+				{
+					values.push_back(raster->GetValue(row, column));
+				}
+			}			
+		}
+
+
+	if (values.size() < 1)
+	{
+		LogMan::Log("ERROR! Could not sample any values for nodeID: " + std::to_string(nodeID), LOG_ERROR);
+		return -1.0;
+	}
+
+
+	double result = 0.0;
+
+	switch (method)
+	{
+	case SpatialSamplingMethod::average:
+		result = Average(values);
+		break;
+	case SpatialSamplingMethod::median:
+		result = Median(values);
+		break;
+	case SpatialSamplingMethod::majority:
+		result = Majority(values, tolerance);
+		break;
+	default:
+		LogMan::Log("ERROR! Internal error (Unspecified spatial sampling method in SampleAggregatedPixels())", LOG_ERROR);
+		break;
+	}
+
+	//cleanup memory and return
+	delete[] pixelScale;
+	delete[] tiePoints[0];
+	delete[] tiePoints[1];
+	delete[] tiePoints;
 	return result;
 }
 
@@ -789,7 +950,7 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & 
 {
 	//[GlobalConductanceMat] * {h_0} + precipComponent
 
-	outRHS = ComputeGlobalConductanceMatrix(params) * heads +ComputePreciptationVector(time, params);
+	outRHS = ComputeGlobalConductanceMatrix(params) * heads + ComputePreciptationVector(time, params);
 	
 	//test
 	_RHS = outRHS;
@@ -905,10 +1066,10 @@ bool Simulate(ModelParameters const & params)
 #pragma endregion
 
 #pragma region Test
-	std::cout << "\n===================================================\n";
+	/*std::cout << "\n===================================================\n";
 	std::cout << "Global Capacitance";
 	std::cout << "\n===================================================\n";
-	globalC.DisplayOnCLI(0);
+	globalC.DisplayOnCLI(0);*/
 	
 	std::cout << "\n===================================================\n";
 	std::cout << "Time series";
@@ -935,7 +1096,7 @@ bool Simulate(ModelParameters const & params)
 	nodeElevation = Vector_f64(nodes.size()); //test
 	heads = nodeElevation;
 
-	//heads[7] += 1.0;//test
+	//heads[270] += 1.0;//test
 
 	//Loop from start time to end time
 	double time = params.startTime;
@@ -993,21 +1154,21 @@ bool Simulate(ModelParameters const & params)
 			
 			newHeads = fixedNewH;
 		}
-		TestShowValues(params);
+		//TestShowValues(params);
 
 		std::cout << "\n------------------------------------------------------\n";
-		std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
+		/*std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
 		for (size_t i = 0; i < heads.Rows(); i++)
-			std::cout << i << "\t:\t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
+			std::cout << i << "\t dir: " << std::setprecision(1) << nodeFDR[i]  << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
 						std::setprecision(4) << newHeads[i] << "  " <<
 						(newHeads[i] > heads[i] ? "UP" : (newHeads[i] == heads[i] ? "--" : "DN"))<<
-						std::endl;
+						std::endl;*/
 		std::cout << "\n------------------------------------------------------\n";
 		double qx = sqrt(nodeSlopeX[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
 		double qy = sqrt(nodeSlopeY[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
 		double q = sqrt(qx * qx + qy * qy);
-		double flowWidth = 100.0; //test
-		std::cout << "Q: " << q * flowWidth << std::endl;
+		double flowWidth = 2.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //test. 
+		std::cout << "h: " << std::setprecision(7) << heads[params.outletNode]  << "\tQ: "  << std::setprecision(3) << (q * flowWidth) << std::endl;
 		qTS.push_back(std::pair<double, double>(time, q * flowWidth));
 		std::cout << "\n------------------------------------------------------\n";
 
@@ -1023,7 +1184,7 @@ bool Simulate(ModelParameters const & params)
 	//test
 	std::cout << " time \t Q (cms)\n";
 	for (auto it = qTS.begin(); it != qTS.end(); ++it)
-		std::cout << std::setw(6) << std::setprecision(3) << it->first << "\t" << std::setprecision(5) << it->second << std::endl;
+		std::cout << std::setw(6) << std::setfill('0') << std::setprecision(3) << it->first << "\t" << std::setprecision(5) << it->second << std::endl;
 	qTS.clear();
 
 	return true;
