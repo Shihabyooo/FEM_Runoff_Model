@@ -163,7 +163,7 @@ bool ComputeGriddingParameters(std::vector<Vector2D> const & boundary, double in
 	params.elementWidth = params.elementHeight = (delta.y - 2.0 * internalPadding) / static_cast<double>(resolution);
 	params.gridAnchorSW = sw + Vector2D(internalPadding, internalPadding);
 	params.nodesRows = resolution + 1;
-	params.nodesColumns = llround(delta.x - 2.0 * internalPadding / static_cast<double>(params.elementWidth));
+	params.nodesColumns = llround((delta.x - (2.0 * internalPadding)) / static_cast<double>(params.elementWidth));
 
 	//test
 	std::cout << "gridding parameters\n";
@@ -204,7 +204,6 @@ bool BinBoundarySegments(std::vector<Vector2D> const & boundary)
 			LogMan::Log("ERROR! Supplied bad boundary to GridMesh (Failed binning stage)", LOG_ERROR);
 			return false;
 		}
-		//std::cout << "Binned at row: " << row << " = " << binnedSegments[row].size() << std::endl; //test
 	}
 	return true;
 }
@@ -245,19 +244,10 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 	size_t counter = 0;
 	double dX = point.x - raySource.x;
 	double dY = point.y - raySource.y;
-	
-	//std::cout << "testing point: ";//test
-	//Print(point);//test
 
 	for (size_t i = 0; i < binnedSegments[row].size(); i++)
 	{
 		std::pair<Vector2D const *, Vector2D const *> const & segment = binnedSegments[row][i];
-
-		//std::cout << "testing segment: "; //test
-		//Print(*segment.first, true); //test
-		//std::cout << " | "; //test
-		//Print(*segment.second); //test
-
 
 		double dX2 = segment.first->x - segment.second->x;
 		double dY2 = segment.first->y - segment.second->y;
@@ -276,8 +266,6 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 		t = t / denominator;
 		double u = dX3 * dY - dY3 * dX;
 		u = u / denominator;
-
-		//std::cout << "T: " << t << ", u: " << u << std::endl;
 
 		if (t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0)
 			counter++;
@@ -376,7 +364,6 @@ bool GenerateNodes(std::vector<Vector2D> const & boundary, std::vector<Vector2D>
 			{
 				if (ValidateNode(row, column, counter, outBoundaryNodes))
 				{
-					//idsMap[row][column] = counter;
 					outNodes->push_back(GridToWorldPos(row, column));
 					counter++;
 				}
