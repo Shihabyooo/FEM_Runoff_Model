@@ -14,6 +14,7 @@ that would -in each case- result in a vector of zeroes (see approximate solution
 "mode" variable (i.e. an int = 0, 1 or 2) instead of a double, and a switch statement to do an optimized RHS computation based on the mode\
 e.g. if mode = 0 (backwards difference), qx, qy and Pe at t+dt are unnecessary, for mode = 2 (forward diff), qx, qy and Pe at t are uncessary.
 
+//[The explanation bellow is outdated]
 //Process is as follows:
 //Recieve a model parameters from GUI (or CLI)
 //Load required rasters and datasets that need loading.

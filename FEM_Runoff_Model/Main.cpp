@@ -8,11 +8,16 @@ ModelParameters ModelTestParams()
 {
 	ModelParameters params;
 
-	params.demPath = "Test_Data\\DEM.tif";
+	/*params.demPath = "Test_Data\\DEM.tif";
 	params.slopesPath = "Test_Data\\Slope_Percent.tif";
-	params.fdrPath = "Test_Data\\FDR.tif";
+	params.fdrPath = "Test_Data\\FDR.tif";*/
+	params.demPath = "Test_Data\\V2\\DEM.tif";
+	params.slopesPath = "Test_Data\\V2\\Slope_Percent.tif";
+	params.fdrPath = "Test_Data\\V2\\FDR.tif";
 	params.topographySamplingMethod = InterpolationType::linear;
-	params.outletNode = 22;
+	//params.outletNode = 22;
+	params.outletNode = 4;
+	//params.outletNode = 13;
 
 	params.useLumpedForm = true;
 
@@ -37,8 +42,8 @@ ModelParameters ModelTestParams()
 	params.residualThreshold = 0.00001;
 	params.weight = 0.5;
 	params.maxIterations = 5000;
-	params.internalResidualTreshold = 0.000001;
-	params.maxInternalIterations = 100;
+	params.internalResidualTreshold = 0.0001;
+	params.maxInternalIterations = 50;
 
 	return params;
 }
@@ -53,8 +58,10 @@ void GenTestMesh()
 	meshParams.inNodesListPath = "Test_Data\\Grid_Nodes_Dense2.csv";
 	meshParams.superTrianglePadding = 1.0;
 
-	meshParams.resolution = 4;
-	meshParams.internalPadding = 0.001;
+	//meshParams.resolution = 4;
+	meshParams.resolution = 12;
+	//meshParams.resolution = 25;
+	meshParams.internalPadding = 0.01;
 	meshParams.rayCastPadding = 10.0;
 
 	GenerateMesh(meshParams);
@@ -102,9 +109,10 @@ int main(int argc, char ** argv)
 	
 	////testing model on CLI directly
 	////TestGenerateSyntheticWatershed();
-	LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
-	GenTestMesh();
+	//LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
 	
+	LoadWatershedBoundary("Test_Data\\v2\\Watershed_Boundary.kml");
+	GenTestMesh();
 	Simulate(ModelTestParams());
 
 	LogMan::Terminate();
@@ -114,3 +122,4 @@ int main(int argc, char ** argv)
 
 	return returnVal;
 }
+
