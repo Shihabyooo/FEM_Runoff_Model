@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <MatricesPP.hpp>
 
 #define PROGRAM_NAME "FEM_Runoff_Model"
@@ -76,6 +77,13 @@ enum class InterpolationType
 	nearest = 0,
 	linear = 1, //linear for 1D, bilinear for 2D
 	cubic = 2 //cubic for 1D, bicbic for 2D
+};
+
+enum class SpatialSamplingMethod
+{
+	average = 0,
+	median = 1,
+	majority = 2,
 };
 
 enum class TimeUnit
@@ -179,7 +187,8 @@ public:
 	void Translate(Vector2D delta);
 	void Translate(Vector2D direction, double magnitude);
 	bool Contains(Vector2D point); //not including edges
-	
+	bool ContainsInclusive(Vector2D point); //includes edges
+
 	Vector2D minCorner;
 	Vector2D maxCorner;
 };
@@ -413,7 +422,7 @@ public:
 };
 
 //Helper functions
-
+//TODO convert to templates.
 static double Min(double const & a, double const & b)
 {
 	return (a > b ? b : a);
@@ -466,6 +475,90 @@ static int Clamp(int const & a, int const & b, int const & c)
 	int min = Min(b, c);
 	int max = Max(b, c);
 	return (a > max ? max : (a < min ? min : a));
+}
+
+template<typename T>
+static T Average(std::vector<T> const & values)
+{
+	T result = 0.0;
+	
+	for (auto it = values.begin(); it != values.end(); ++it)
+	{
+		result += *it;
+	}
+
+	return result / static_cast<T>(values.size());
+}
+
+template<typename T>
+static T Median(std::vector<T> const & values)
+{
+	if (values.size() < 1)
+		return T();
+	else if (values.size() < 2)
+		return values[0];
+
+	std::vector<T> orderedValues = values;
+	std::sort(orderedValues.begin(), orderedValues.end());
+
+	if (orderedValues.size() % 2 == 1)
+		return orderedValues[(orderedValues.size() - 1) / 2];
+	
+	T avg = orderedValues[orderedValues.size() / 2] + orderedValues[(orderedValues.size() / 2) - 1];
+	return avg / 2.0; //This may cause issues...
+}
+
+template<typename T>
+static T Majority(std::vector<T> const & values) //Returns smallest element if no majority was found. Returns majority with smallest value for T if multiple had equal frequency.
+{
+	if (values.size() < 1)
+		return T();
+	else if (values.size() < 2)
+		return values[0];
+
+	std::vector<T> orderedValues = values;
+	std::sort(orderedValues.begin(), orderedValues.end());
+
+	std::vector<std::pair<T, size_t>> frequency;
+	frequency.push_back(std::pair < T, size_t>(orderedValues[0], 1));
+
+	for (size_t i = 1; i < values.size(); i++)
+	{
+		if (orderedValues[i] == frequency.back().first)
+			frequency.back().second++;
+		else
+			frequency.push_back(std::pair < T, size_t>(orderedValues[i], 1));
+	}
+
+	T result;
+	size_t maxFrequency = 0;
+	for (auto it = frequency.begin(); it != frequency.end(); ++it)
+		if (it->second > maxFrequency)
+		{
+			result = it->first;
+			maxFrequency = it->second;
+		}
+
+	return result;
+}
+
+template<typename T>
+static T Majority(std::vector<T> const & values, double tolerance) //for floating points. Tolerence is the range within two values are assumed equal.
+{
+	std::vector<T> adjustedValues = values;
+
+	if (tolerance > 0.0)
+	{
+		std::sort(adjustedValues.begin(), adjustedValues.end());
+
+		for (size_t i = 1; i < adjustedValues.size(); i++)
+		{
+			if (adjustedValues[i] - adjustedValues[i - 1] < tolerance)
+				adjustedValues[i] = adjustedValues[i - 1];
+		}
+	}
+
+	return Majority(adjustedValues);
 }
 
 static inline void Print(Vector2 const & vec, bool sameLine = false)

@@ -286,6 +286,12 @@ bool Rect::Contains(Vector2D point)
 			
 }
 
+bool Rect::ContainsInclusive(Vector2D point)
+{
+	return	point.x >= minCorner.x && point.x <= maxCorner.x &&
+		point.y >= minCorner.y && point.y <= maxCorner.y;
+}
+
 #pragma endregion
 
 #pragma region Rect3D Defitions
