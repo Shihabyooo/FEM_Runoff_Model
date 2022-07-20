@@ -477,6 +477,16 @@ static int Clamp(int const & a, int const & b, int const & c)
 	return (a > max ? max : (a < min ? min : a));
 }
 
+static double Sign(double value)
+{
+	return value < 0.0 ? -1.0 : 1.0;
+}
+
+static int Sign(int value)
+{
+	return value < 0 ? -1 : 1;
+}
+
 template<typename T>
 static T Average(std::vector<T> const & values)
 {
