@@ -11,9 +11,9 @@ ModelParameters ModelTestParams()
 	/*params.demPath = "Test_Data\\DEM.tif";
 	params.slopesPath = "Test_Data\\Slope_Percent.tif";
 	params.fdrPath = "Test_Data\\FDR.tif";*/
-	params.demPath = "Test_Data\\V2\\DEM.tif";
-	params.slopesPath = "Test_Data\\V2\\Slope_Percent.tif";
-	params.fdrPath = "Test_Data\\V2\\FDR.tif";
+	params.demPath = "Test_Data\\V3\\DEM.tif";
+	params.slopesPath = "Test_Data\\V3\\Slope_Percent.tif";
+	params.fdrPath = "Test_Data\\V3\\FDR.tif";
 	params.topographySamplingMethod = InterpolationType::linear;
 	//params.outletNode = 22;
 	params.outletNode = 4;

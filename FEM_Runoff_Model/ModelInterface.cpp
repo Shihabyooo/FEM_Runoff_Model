@@ -16,8 +16,9 @@ std::vector<Vector2D> shedBoundary;
 
 //Matrices and Vectors
 Matrix_f64 globalC;
-Vector_f64 nodeSlopeX, nodeSlopeY, nodeManning; //TODO consider pre-computing sqrt(slope-x)/manning and sqrt(slope-y)/manning and caching them instead
-Vector_f64 nodeFDR; //test
+Vector_f64 nodeSlopeX, nodeSlopeY, nodeManning, nodeFDR; //TODO consider pre-computing sqrt(slope-x)/manning and sqrt(slope-y)/manning and caching them instead
+//Vector_f64 nodeSlope, nodeManning, nodeFDR;
+
 Vector_f64 nodeElevation;
 Vector_f64 heads;
 
@@ -39,9 +40,9 @@ void ComputeBoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Ve
 		max.y = Max(it->y, max.y);
 	}
 
-	LogMan::Log("Loaded data with bounds: "
+	/*LogMan::Log("Loaded data with bounds: "
 				+ std::to_string(min.x) + ", " + std::to_string(min.y) + " and "
-				+ std::to_string(max.x) + ", " + std::to_string(max.y));
+				+ std::to_string(max.x) + ", " + std::to_string(max.y));*/
 }
 
 void ResetMeshs()
@@ -434,7 +435,7 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 
 		if (denominator == 0.0)
 		{
-			std::cout << "!!!!!!!! Caught zero denominator!\n"; //test
+			//std::cout << "!!!!!!!! Caught zero denominator!\n"; //test
 			continue;
 		}
 
@@ -453,7 +454,193 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 	return counter % 2 != 0;
 }
 
-//TODO Test and refactor this
+void GetNodeSamplingSubBoundary_Rect(size_t nodeID, std::vector<Vector2D> & outSubBoundary, bool sampleOutsideMesh) //sampleOutsideMesh is for boundary nodes.
+{
+	outSubBoundary.clear();
+	for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+	{
+		if (it->second.ContainsVertex(nodeID))
+			outSubBoundary.push_back(it->second.Centroid());
+	}
+
+	if (outSubBoundary.size() < 3) //Assuming the meshing is working properly, all nodes are part of at least one element, so outSubBoundary should have min size of 1.
+	{
+		Vector2D const & pos = nodes[nodeID];
+		
+		if (sampleOutsideMesh)
+		{
+			Vector2D delta = outSubBoundary[0] - pos;
+
+			if (outSubBoundary.size() == 2)
+				outSubBoundary.pop_back(); //because the computations bellow will add it again, but we don't want to complexify the code to check which one does.
+
+			outSubBoundary.push_back(Vector2D(pos.x - delta.x, outSubBoundary[0].y));
+			outSubBoundary.push_back(Vector2D(pos.x - delta.x, pos.y - delta.y));
+			outSubBoundary.push_back(Vector2D(outSubBoundary[0].x, pos.y - delta.y));
+		}
+		else
+		{
+			if (outSubBoundary.size() == 2)
+			{
+				outSubBoundary.push_back(outSubBoundary[0].x == outSubBoundary[1].x ? Vector2D(nodes[nodeID].x, outSubBoundary[1].y) : Vector2D(outSubBoundary[1].x, nodes[nodeID].y));
+				outSubBoundary.push_back(outSubBoundary[0].x == outSubBoundary[1].x ? Vector2D(nodes[nodeID].x, outSubBoundary[0].y) : Vector2D(outSubBoundary[0].x, nodes[nodeID].y));
+			}
+			else
+			{
+				outSubBoundary.push_back(Vector2D(outSubBoundary[0].x, pos.y));
+				outSubBoundary.push_back(Vector2D(pos.x, pos.y));
+				outSubBoundary.push_back(Vector2D(pos.x, outSubBoundary[0].y));
+			}
+		}
+	}
+}
+
+void GetNodeSamplingSubBoundary_Tri(size_t nodeID, std::vector<Vector2D> & outSubBoundary, bool sampleOutsideMesh) //sampleOutsideMesh is for boundary nodes.
+{
+	outSubBoundary.clear();
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		if (it->second.ContainsVertex(nodeID))
+			outSubBoundary.push_back(it->second.Centroid());
+	}
+
+	//TODO testing outSubBoundary.size() to determine whether node is boundary or not does not work in the case of Delauney generated elements. Handle this.
+	if (outSubBoundary.size() < 3) 
+	{
+		Vector2D const & pos = nodes[nodeID];
+		
+		//TODO replace
+		//This is a placeholder implementation
+		//get average distance to current sample boundnodes.
+
+		double avgDist = 0.0;
+		for (auto it = outSubBoundary.begin(); it != outSubBoundary.end(); ++it)
+			avgDist += nodes[nodeID].DistanceTo(*it);
+		avgDist = avgDist / static_cast<double>(outSubBoundary.size());
+		outSubBoundary.clear();
+
+		/*if (sampleOutsideMesh)
+		{*/
+			outSubBoundary.push_back(pos + Vector2D(avgDist, avgDist));
+			outSubBoundary.push_back(pos + Vector2D(avgDist, -1.0 * avgDist));
+			outSubBoundary.push_back(pos + Vector2D(-1.0 * avgDist, -1.0 * avgDist));
+			outSubBoundary.push_back(pos + Vector2D(-1.0 * avgDist, avgDist));
+		/*}
+		else
+		{
+
+		}*/
+	}
+}
+
+double FDR2Angle(int fdr) //return angle in radians. Assumes AgNPS fdr format
+{
+	switch (fdr)
+	{
+	case 1: //90 degrees
+		return 1.5707963267949;
+	case 2: //45 deg
+		return 0.785398163397448;
+	case 3: //0 deg
+		return 0.0;
+	case 4: //315 deg
+		return 5.49778714378214;
+	case 5: //270 deg
+		return 4.71238898038469;
+	case 6: //225 deg
+		return 3.92699081698724;
+	case 7: //180 de
+		return 3.14159265358979;
+	case 8: //135 deg
+		return 2.35619449019234;
+	default: //shouldn't happen
+		return 0.0;
+	}
+}
+
+bool SamplePixelsValues(std::vector<Vector2D> const & samplingRegion, Matrix_f64 const * raster, int rasterID, std::vector<double> & outValues)
+{
+	//TODO  cache rastermapping params
+	double ** tiePoints = NULL;
+	double * pixelScale = NULL;
+	bool isUTM;
+	Vector2Int dimensions;
+	int samples;
+
+	if (!FileIO::GetRasterMappingParameters(rasterID, dimensions, samples, isUTM, &tiePoints, &pixelScale))
+	{
+		//Error already logged in GetRasterMappingParameters();
+		return false;
+	}
+
+	Vector2D anchorNE(tiePoints[1][0] + (pixelScale[0] / 2.0), tiePoints[1][1] - (pixelScale[1] / 2.0));
+
+	Vector2D subRegionSW, subRegionNE;
+	ComputeBoundingBox(samplingRegion, subRegionSW, subRegionNE);
+	Rect subRegionRect(subRegionSW, subRegionNE);
+
+	for (size_t row = 0; row < raster->Rows(); row++)
+		for (size_t column = 0; column < raster->Columns(); column++)
+		{
+			Vector2D pixelPos(anchorNE.x + column * pixelScale[0],
+				anchorNE.y - row * pixelScale[1]);
+
+			//To avoid having to ray cast for all pixels of raster, we do a simple bounds check by testing whether\
+			pixel centroid falls within boundary, if true, then we proceed to the finer (and more expensive) raycast test.
+
+			if (subRegionRect.ContainsInclusive(pixelPos))
+			{
+				Vector2D rayStart(subRegionSW.x - 10.0f, pixelPos.y);
+				if (IsPointInsideBoundary(pixelPos, rayStart, samplingRegion))
+					outValues.push_back(raster->GetValue(row, column));
+			}
+		}
+
+	//cleanup memory
+	delete[] pixelScale;
+	delete[] tiePoints[0];
+	delete[] tiePoints[1];
+	delete[] tiePoints;
+
+	return true;
+}
+
+bool ComputeSlopesComponents(size_t nodeID,
+							std::vector<double> const & slopeValues,
+							std::vector<double> const & fdrValues,
+							std::vector<double> & outSlopesX,
+							std::vector<double> & outSlopesY)
+{
+
+	outSlopesX.clear();
+	outSlopesY.clear();
+
+	for (size_t i = 0; i < slopeValues.size(); i++)
+	{
+		if (isnan(fdrValues[i]) || isnan(slopeValues[i]))
+		{
+			LogMan::Log("WARNING! Caught NaN values for FDR or Slopes for node: " + std::to_string(nodeID), LOG_WARN);
+			continue;
+		}
+		
+		int dir = lround(fdrValues[i]);
+
+		if (dir < 1 || dir > 7)
+		{
+			LogMan::Log("WARNING! Caught invalid FDR code sampling for nodeID: " + std::to_string(nodeID), LOG_WARN);
+			continue;
+		}
+
+		double angle = FDR2Angle(dir);
+
+		outSlopesX.push_back(slopeValues[i] * cos(angle) / 100.0);
+		outSlopesY.push_back(slopeValues[i] * sin(angle) / 100.0);
+	}
+
+	return true;
+}
+
+//TODO add NearestNeighbour as option for SpatialSamplingMethod and merge this with SampleAggregatedSlopes
 //returns negative valued VectorInt if error
 std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 const * raster, int rasterID)
 {
@@ -507,117 +694,129 @@ std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 c
 	return result;
 }
 
-//returns negative value if error
-double SampleAggregatedPixels(size_t nodeID, Matrix_f64 const * raster, int rasterID, SpatialSamplingMethod method, double tolerance = -1.0)
+bool SampleAggregatedPixels(size_t nodeID, SpatialSamplingMethod method, Matrix_f64 const * raster, int rasterID, double & outValue, double tolerance = -1.0) //tolereance required only for majority aggregation
 {
-	//TODO  cache rastermapping params
-	double ** tiePoints = NULL;
-	double * pixelScale = NULL;
-	bool isUTM;
-	Vector2Int dimensions;
-	int samples;
-
-	if (!FileIO::GetRasterMappingParameters(rasterID, dimensions, samples, isUTM, &tiePoints, &pixelScale))
-	{
-		//Error already logged in GetRasterMappingParameters();
-		return - 1.0;
-	}
-	
-	Vector2D anchorNE(tiePoints[1][0] + (pixelScale[0] / 2.0), tiePoints[1][1] - (pixelScale[1] / 2.0));
-
 	//construct a region of influence for node, bu connecting the centroid for all elements that this node is part of.
-	std::vector<Vector2D> subRegionBoundary;
+	std::vector<Vector2D> nodeSamplingSubBound;
 
 	switch (activeMeshType)
 	{
 	case ElementType::triangle:
 	{
-		for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		{
-			if (it->second.ContainsVertex(nodeID))
-				subRegionBoundary.push_back(it->second.Centroid());
-		}
+		GetNodeSamplingSubBoundary_Tri(nodeID, nodeSamplingSubBound, true);
 	}
-		break;
+	break;
 	case ElementType::rectangle:
 	{
-		for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
-		{
-			if (it->second.ContainsVertex(nodeID))
-				subRegionBoundary.push_back(it->second.Centroid());
-		}
+		GetNodeSamplingSubBoundary_Rect(nodeID, nodeSamplingSubBound, true);
 	}
-		break;
+	break;
 	case ElementType::undefined: //should never reach this point in the code, but still.
 		LogMan::Log("ERROR! Internal error. (Undefined meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
-		return -1.0;
+		return false;
 	default:
 		LogMan::Log("ERROR! Internal error. (Default meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
-		return -1.0;
+		return false;
 	}
 
-	if (subRegionBoundary.size() < 3)
-	{
-		//TODO handle boundary cases here
-	}
-
-	Vector2D subRegionSW, subRegionNE;
-	ComputeBoundingBox(subRegionBoundary, subRegionSW, subRegionNE);
-	Rect subRegionRect(subRegionSW, subRegionNE);
-	
 	std::vector<double> values;
 
-	for (size_t row = 0; row < raster->Rows(); row++)
-		for (size_t column = 0; column < raster->Columns(); column++)
-		{
-			Vector2D pixelPos(anchorNE.x + column * pixelScale[0],
-				anchorNE.y - row * pixelScale[1]);
+	if (!SamplePixelsValues(nodeSamplingSubBound, raster, rasterID, values))
+		return false;
 
-			//To avoid having to ray cast for all pixels of raster, we do a simple bounds check by testing whether\
-			pixel centroid falls within boundary, if true, then we proceed to the finer (and more expensive) raycast test.
-
-			if (subRegionRect.ContainsInclusive(pixelPos))
-			{
-				Vector2D rayStart(subRegionSW.x - 10.0f, pixelPos.y);
-				if (IsPointInsideBoundary(pixelPos, rayStart, subRegionBoundary)
-					&& !isnan(raster->GetValue(row, column)))
-				{
-					values.push_back(raster->GetValue(row, column));
-				}
-			}			
-		}
-
-
-	if (values.size() < 1)
-	{
-		LogMan::Log("ERROR! Could not sample any values for nodeID: " + std::to_string(nodeID), LOG_ERROR);
-		return -1.0;
-	}
-
-
-	double result = 0.0;
-
+	std::pair<double, double> result;
 	switch (method)
 	{
 	case SpatialSamplingMethod::average:
-		result = Average(values);
+		outValue = Average(values);
 		break;
 	case SpatialSamplingMethod::median:
-		result = Median(values);
+		outValue = Median(values);
 		break;
 	case SpatialSamplingMethod::majority:
-		result = Majority(values, tolerance);
+		outValue = Majority(values);
 		break;
 	default:
 		LogMan::Log("ERROR! Internal error (Unspecified spatial sampling method in SampleAggregatedPixels())", LOG_ERROR);
 		break;
 	}
 
-	//cleanup memory and return
-	delete[] pixelScale;
-	delete[] tiePoints[0];
-	delete[] tiePoints[1];
-	delete[] tiePoints;
+	return true;
+}
+
+//returns DBL_MIN values if error
+std::pair<double, double> SampleAggregatedSlopes(size_t nodeID, SpatialSamplingMethod method, double tolerance = -1.0)
+{
+	//construct a region of influence for node, bu connecting the centroid for all elements that this node is part of.
+	std::vector<Vector2D> nodeSamplingSubBound;
+
+	switch (activeMeshType)
+	{
+	case ElementType::triangle:
+	{
+		GetNodeSamplingSubBoundary_Tri(nodeID, nodeSamplingSubBound, true);
+	}
+		break;
+	case ElementType::rectangle:
+	{
+		GetNodeSamplingSubBoundary_Rect(nodeID, nodeSamplingSubBound, true);
+	}
+		break;
+	case ElementType::undefined: //should never reach this point in the code, but still.
+		LogMan::Log("ERROR! Internal error. (Undefined meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
+		return std::pair<double, double> (DBL_MIN, DBL_MIN);
+	default:
+		LogMan::Log("ERROR! Internal error. (Default meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
+		return std::pair<double, double>(DBL_MIN, DBL_MIN);
+	}
+
+	std::vector<double> slopeValues, fdrValues;
+
+	if (!SamplePixelsValues(nodeSamplingSubBound, slopes, slopesID, slopeValues) ||
+		!SamplePixelsValues(nodeSamplingSubBound, fdr, fdrID, fdrValues))
+		return std::pair<double, double>(DBL_MIN, DBL_MIN);
+	
+	if (slopeValues.size() != fdrValues.size())
+	{
+		LogMan::Log("ERROR! Mismatched FDR and Slope sampling for nodeID: " + std::to_string(nodeID) + ". Check input rasters.", LOG_ERROR);
+		return std::pair<double, double>(DBL_MIN, DBL_MIN);
+	}
+
+	std::vector<double> slopesX, slopesY;
+
+	if (slopeValues.size() < 1 ) //implies fdrValues.size() also < 1.
+	{
+		//LogMan::Log("No pixel within subregion for node : " + std::to_string(nodeID) + ". Falling back to nearest neighbour sampling.");
+		slopeValues.push_back(SampleNearestPixel(nodes[nodeID], slopes, slopesID).second);
+		fdrValues.push_back(SampleNearestPixel(nodes[nodeID], fdr, fdrID).second);
+	}
+	
+	if (!ComputeSlopesComponents(nodeID, slopeValues, fdrValues, slopesX, slopesY))
+		return std::pair<double, double>(DBL_MIN, DBL_MIN);
+
+	std::pair<double, double> result;
+	switch (method)
+	{
+	case SpatialSamplingMethod::average:
+		result.first = Average(slopesX);
+		result.second = Average(slopesY);
+		break;
+	case SpatialSamplingMethod::median:
+		result.first = Median(slopesX);
+		result.second = Median(slopesY);
+		break;
+	case SpatialSamplingMethod::majority:
+		result.first = Majority(slopesX, tolerance);
+		result.second = Majority(slopesY, tolerance);
+		break;
+	default:
+		LogMan::Log("ERROR! Internal error (Unspecified spatial sampling method in SampleAggregatedPixels())", LOG_ERROR);
+		break;
+	}
+
+	//TODO remove this and fdr vector after removing references to the latter in the rest of the code
+	nodeFDR[nodeID] = lround(Majority(fdrValues));
+
 	return result;
 }
 
@@ -653,41 +852,21 @@ bool CacheSlopes(ModelParameters const & params)
 
 	nodeSlopeX = Vector_f64(nodes.size());
 	nodeSlopeY = Vector_f64(nodes.size());
+	//nodeSlope = Vector_f32(nodes.size());
 	nodeFDR = Vector_f64(nodes.size());
 
-	size_t counter = 0;
-	for (auto it = nodes.begin(); it != nodes.end(); ++it)
+	for (size_t i = 0; i < nodes.size(); i++)
 	{
-		std::pair<Vector2Int, double> nodeSlopePixel = SampleNearestPixel(*it, slopes, slopesID);
-		if (nodeSlopePixel.first.x < 0)
-		{
-			LogMan::Log("ERROR! No slopes sampled for node: " + std::to_string(counter), LOG_ERROR);
-			return false;
-		}
+		std::pair<double, double> newSlopes = SampleAggregatedSlopes(i, SpatialSamplingMethod::average, 0.000001);
+		nodeSlopeX[i] = newSlopes.first;
+		nodeSlopeY[i] = newSlopes.second;
 
-		std::pair<Vector2Int, double> nodeFDRPixel = SampleNearestPixel(*it, fdr, fdrID);
-		if (nodeFDRPixel.first.x < 0)
-		{
-			LogMan::Log("ERROR! No slopes sampled for node: " + std::to_string(counter), LOG_ERROR);
-			return false;
-		}
+		//if (!SampleAggregatedPixels(i, SpatialSamplingMethod::average, slopes, slopesID, nodeSlope[i]) ||
+		//	!SampleAggregatedPixels(i, SpatialSamplingMethod::majority, fdr, fdrID, nodeFDR[i]))
+		//	LogMan::Log("WARNING! Failed to sample slope/FDR for node: " + std::to_string(i), LOG_WARN);
 
-
-		int dir = lround(nodeFDRPixel.second);
-
-		if (dir == 1 || dir == 5)
-			nodeSlopeY[counter] = nodeSlopePixel.second / 100.0;
-		else if (dir == 3 || dir == 7)
-			nodeSlopeX[counter] = nodeSlopePixel.second / 100.0;
-		else
-		{
-			double component = nodeSlopePixel.second * 0.7071067811865475244 / 100.0; //adjacent = hypotenuse * cos(45)
-			nodeSlopeX[counter] = component;
-			nodeSlopeY[counter] = component;
-		}
-
-		nodeFDR[counter] = dir;
-		counter++;
+		////convert the slope from percentage to m/m
+		//nodeSlope[i] = nodeSlope[i] / 100.0;
 	}
 
 	return true;
@@ -790,62 +969,73 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 	return result;
 }
 
+//TODO have to vector_f64 to store computed nodal velocities, and a function to compute the newheads nodal velocities every \
+iteration. newHead velos are then moved to oldHead velos after internal iterations are done.
 std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 waterElevation) //waterElevation = nodeElevation + head
 {
 	double head = waterElevation[nodeID] - nodeElevation[nodeID];
+	
+	/*double velocity = 3600.0 * sqrt(nodeSlope[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 
-	double u = 3600.0 * sqrt(nodeSlopeX[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
-	double v = 3600.0 * sqrt(nodeSlopeY[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
+	double angle = FDR2Angle(lround(nodeFDR[nodeID]));
 
-	int dir = lround(nodeFDR[nodeID]);
-	double signX = (dir == 2 || dir == 3 || dir == 4) ? 1.0 : -1.0; 
-	double signY = (dir == 1 || dir == 2 || dir == 8) ? 1.0 : -1.0;
-	u *= signX;
-	v *= signY;
+	double u = velocity * cos(angle);
+	double v = velocity * sin(angle);*/
+
+	double u = Sign(nodeSlopeX[nodeID]) * 3600.0 * sqrt(abs(nodeSlopeX[nodeID])) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
+	double v = Sign(nodeSlopeY[nodeID]) *3600.0 * sqrt(abs(nodeSlopeY[nodeID])) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 
 	return std::pair<double, double>(u, v);
+}
+
+Matrix_f64 ElementKMatrix_Tri(Triangle const & tri, std::pair<double, double> uv[3])
+{
+	//						|	ui (yj - yk) + vi (xk - xj)		ui (yk - yi) + vi (xi - xk)		ui (yi - yj) + vi (xj - xi)	|
+	//[K_element] = 1/6	*	|	uj (yj - yk) + vj (xk - xj)		uj (yk - yi) + vj (xi - xk)		uj (yi - yj) + vj (xj - xi)	|
+	//						|	uk (yj - yk) + vk (xk - xj)		uk (yk - yi) + vk (xi - xk)		uk (yi - yj) + vk (xj - xi)	|
+
+	//The 1/6 scalar is mulitplied in the calling function.
+
+	Vector2D const & i = tri.Node(0);
+	Vector2D const & j = tri.Node(1);
+	Vector2D const & k = tri.Node(2);
+
+	Matrix_f64 kMat(3, 3);
+
+	//uv[0].second = uv[1].second = uv[2].second = (uv[0].second + uv[1].second + uv[2].second) / 3.0;//test
+	//uv[0].first = uv[1].first = uv[2].first = (uv[0].first + uv[2].first + uv[2].first) / 3.0;//test
+
+	kMat[0][0] = uv[0].first * (j.y - k.y) + uv[0].second * (k.x - j.x);
+	kMat[0][1] = uv[0].first * (k.y - i.y) + uv[0].second * (i.x - k.x);
+	kMat[0][2] = uv[0].first * (i.y - j.y) + uv[0].second * (j.x - i.x);
+
+	kMat[1][0] = uv[1].first * (j.y - k.y) + uv[1].second * (k.x - j.x);
+	kMat[1][1] = uv[1].first * (k.y - i.y) + uv[1].second * (i.x - k.x);
+	kMat[1][2] = uv[1].first * (i.y - j.y) + uv[1].second * (j.x - i.x);
+
+	kMat[2][0] = uv[2].first * (j.y - k.y) + uv[2].second * (k.x - j.x);
+	kMat[2][1] = uv[2].first * (k.y - i.y) + uv[2].second * (i.x - k.x);
+	kMat[2][2] = uv[2].first * (i.y - j.y) + uv[2].second * (j.x - i.x);
+
+	return kMat;
 }
 
 Matrix_f64 ComputeGlobalCoefficientsMatrix(ModelParameters const & params, Vector_f64 const & newHeads)
 {
 	//[C] + w*dt*[K]
 	Matrix_f64 coefMat(nodes.size(), nodes.size());
-	
-	//						|	ui (yj - yk) + vi (xk - xj)		ui (yk - yi) + vi (xi - xk)		ui (yi - yj) + vi (xj - xi)	|
-	//[K_element] = 1/6	*	|	uj (yj - yk) + vj (xk - xj)		uj (yk - yi) + vj (xi - xk)		uj (yi - yj) + vj (xj - xi)	|
-	//						|	uk (yj - yk) + vk (xk - xj)		uk (yk - yi) + vk (xi - xk)		uk (yi - yj) + vk (xj - xi)	|
-
-	Matrix_f64 kMat(3, 3);
+	Matrix_f64 kMat;
 	Matrix_f64 cMat(3, 3);
 
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		Vector2D const & i = it->second.Node(0);
-		Vector2D const & j = it->second.Node(1);
-		Vector2D const & k = it->second.Node(2);
+		std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), newHeads),
+											ComputeVelocityComponents(it->second.VertexID(1), newHeads),
+											ComputeVelocityComponents(it->second.VertexID(2), newHeads) };
 
-		auto uvi = ComputeVelocityComponents(it->second.VertexID(0), newHeads);
-		auto uvj = ComputeVelocityComponents(it->second.VertexID(1), newHeads);
-		auto uvk = ComputeVelocityComponents(it->second.VertexID(2), newHeads);
+		kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * params.femOmega / 6.0);
 
-		//uvi.second = uvj.second = uvk.second = (uvi.second + uvj.second + uvk.second) / 3.0;//test
-		//uvi.first = uvj.first = uvk.first = (uvi.first + uvj.first + uvk.first) / 3.0;//test
-
-		kMat[0][0] = uvi.first * (j.y - k.y) + uvi.second * (k.x - j.x);
-		kMat[0][1] = uvi.first * (k.y - i.y) + uvi.second * (i.x - k.x);
-		kMat[0][2] = uvi.first * (i.y - j.y) + uvi.second * (j.x - i.x);
-
-		kMat[1][0] = uvj.first * (j.y - k.y) + uvj.second * (k.x - j.x);
-		kMat[1][1] = uvj.first * (k.y - i.y) + uvj.second * (i.x - k.x);
-		kMat[1][2] = uvj.first * (i.y - j.y) + uvj.second * (j.x - i.x);
-
-		kMat[2][0] = uvk.first * (j.y - k.y) + uvk.second * (k.x - j.x);
-		kMat[2][1] = uvk.first * (k.y - i.y) + uvk.second * (i.x - k.x);
-		kMat[2][2] = uvk.first * (i.y - j.y) + uvk.second * (j.x - i.x);
-
-		kMat *= params.timeStep * params.femOmega / 6.0;
-
-		cMat[0][0] = cMat[1][1] = cMat[2][2] = it->second.Area() / 3.0;
+		cMat[0][0] = cMat[1][1] = cMat[2][2] = (it->second.Area() / 3.0);
 
 		for (int row = 0; row < 3; row++)
 			for (int column = 0; column < 3; column++)
@@ -860,54 +1050,22 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 	//[C] - dt*(1-w)*[K]
 
 	Matrix_f64 condMat(nodes.size(), nodes.size());
-
-	
-		//						|	ui (yj - yk) + vi (xk - xj)		ui (yk - yi) + vi (xi - xk)		ui (yi - yj) + vi (xj - xi)	|
-		//[K_element] = 1/6	*	|	uj (yj - yk) + vj (xk - xj)		uj (yk - yi) + vj (xi - xk)		uj (yi - yj) + vj (xj - xi)	|
-		//						|	uk (yj - yk) + vk (xk - xj)		uk (yk - yi) + vk (xi - xk)		uk (yi - yj) + vk (xj - xi)	|
-
-	Matrix_f64 kMat(3, 3);
+	Matrix_f64 kMat;
 	Matrix_f64 cMat(3, 3);
 
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		Vector2D const & i = it->second.Node(0);
-		Vector2D const & j = it->second.Node(1);
-		Vector2D const & k = it->second.Node(2);
+		std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), heads),
+											ComputeVelocityComponents(it->second.VertexID(1), heads),
+											ComputeVelocityComponents(it->second.VertexID(2), heads) };
 
-		auto uvi = ComputeVelocityComponents(it->second.VertexID(0), heads);
-		auto uvj = ComputeVelocityComponents(it->second.VertexID(1), heads);
-		auto uvk = ComputeVelocityComponents(it->second.VertexID(2), heads);
+		kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
 
-		//uvi.second = uvj.second = uvk.second = (uvi.second + uvj.second + uvk.second) / 3.0;//test
-		//uvi.first = uvj.first = uvk.first = (uvi.first + uvj.first + uvk.first) / 3.0;//test
-
-		kMat[0][0] = uvi.first * (j.y - k.y) + uvi.second * (k.x - j.x);
-		kMat[0][1] = uvi.first * (k.y - i.y) + uvi.second * (i.x - k.x);
-		kMat[0][2] = uvi.first * (i.y - j.y) + uvi.second * (j.x - i.x);
-
-		kMat[1][0] = uvj.first * (j.y - k.y) + uvj.second * (k.x - j.x);
-		kMat[1][1] = uvj.first * (k.y - i.y) + uvj.second * (i.x - k.x);
-		kMat[1][2] = uvj.first * (i.y - j.y) + uvj.second * (j.x - i.x);
-
-		kMat[2][0] = uvk.first * (j.y - k.y) + uvk.second * (k.x - j.x);
-		kMat[2][1] = uvk.first * (k.y - i.y) + uvk.second * (i.x - k.x);
-		kMat[2][2] = uvk.first * (i.y - j.y) + uvk.second * (j.x - i.x);
-
-		kMat *= params.timeStep * (1.0 - params.femOmega) / 6.0;
-
-		cMat[0][0] = cMat[1][1] = cMat[2][2] = it->second.Area() / 3.0;
+		cMat[0][0] = cMat[1][1] = cMat[2][2] = (it->second.Area() / 3.0);
 
 		for (int row = 0; row < 3; row++)
 			for (int column = 0; column < 3; column++)
 				condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
-
-		//if (it->second.id == 5 || it->second.id == 6 || it->second.id == 13 || it->second.id == 14) //test
-		//{
-		//	std::cout << "element: ";
-		//	it->second.DebugPrintDetails();
-		//	kMat.DisplayOnCLI();
-		//}
 	}
 	
 	return condMat;
@@ -934,13 +1092,25 @@ void TestShowValues(ModelParameters const & params)
 			std::fixed << std::setprecision(2) << std::setw(7) << _RHS[i] << std::endl;
 	}
 
-	//std::cout << "\nConductance Matrix:\n";
-	////(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(0);
-	//ComputeGlobalConductanceMatrix(params).DisplayOnCLI(0);
 
-	//std::cout << "\nCoefficients Matrix:\n";
-	////(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(0);
-	//ComputeGlobalCoefficientsMatrix(params, _new_h).DisplayOnCLI();
+	size_t targetRowToShow = 47;
+	std::cout << "\nConductance Matrix:\n";
+	Matrix_f64 _globalConduc = ComputeGlobalConductanceMatrix(params);
+	//(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(0);
+	//ComputeGlobalConductanceMatrix(params).DisplayOnCLI(0);
+	for (size_t i = 0; i < _globalConduc.Columns(); i++)
+		std::cout << std::fixed << std::setprecision(0) << std::setw(2) << _globalConduc[targetRowToShow][i] << " ";
+	std::cout << "\n";
+
+
+	std::cout << "\nCoefficients Matrix:\n";
+	Matrix_f64 _globalCoef = ComputeGlobalCoefficientsMatrix(params, _new_h);
+	//(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(0);
+	//ComputeGlobalCoefficientsMatrix(params, _new_h).DisplayOnCLI(0);
+	for (size_t i = 0; i < _globalCoef.Columns(); i++)
+		std::cout << std::fixed << std::setprecision(0) << std::setw(2) << _globalCoef[targetRowToShow][i] << " ";
+	std::cout << "\n";
+
 
 	std::cout << std::endl;
 }
@@ -950,7 +1120,7 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & 
 {
 	//[GlobalConductanceMat] * {h_0} + precipComponent
 
-	outRHS = ComputeGlobalConductanceMatrix(params) * heads + ComputePreciptationVector(time, params);
+	outRHS = ComputeGlobalConductanceMatrix(params) * heads;// +ComputePreciptationVector(time, params);
 	
 	//test
 	_RHS = outRHS;
@@ -1076,6 +1246,16 @@ bool Simulate(ModelParameters const & params)
 	std::cout << "\n===================================================\n";
 	for (int i = 0; i < params.unitTimeSeries.size; i++)
 		std::cout << params.unitTimeSeries.series[i].first << " - " << params.unitTimeSeries.series[i].second << std::endl;
+	std::cout << "\n===================================================\n";
+	std::cout << "Nodes";
+	std::cout << "\n===================================================\n";
+	size_t nodeIDCounter = 0;
+	for (auto it = nodes.begin(); it != nodes.end(); ++it)
+	{
+		std::cout << nodeIDCounter << "\t - \t" << std::fixed;
+		Print(*it);
+		nodeIDCounter++;
+	}
 
 	std::cout << "\n===================================================\n";
 	std::cout << "Boundery Nodes";
@@ -1087,16 +1267,23 @@ bool Simulate(ModelParameters const & params)
 	std::cout << "Elevations, Slopes, Manning roughness coef";
 	std::cout << "\n===================================================\n";
 
-	std::cout << "node | Elev  |   n  |  Sx  |  Sy\n";
-	for (size_t i = 0; i < nodeSlopeX.Rows(); i++)
-		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | "  << nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << std::endl;
+
+	std::cout << "node | Elev  |   n  |  Sx |  Sy |  FDR  \n";
+	for (size_t i = 0; i < nodes.size(); i++)
+		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | " <<
+		nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << " | "  << nodeFDR[i] << std::endl;
+	/*std::cout << "node | Elev  |   n  |  Slope  |  FDR  \n";
+	for (size_t i = 0; i < nodes.size(); i++)
+		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | "  <<
+					nodeManning[i] << " | " << nodeSlope[i] << " | " << nodeFDR[i]<< std::endl;*/
+	
 	//return false;
 #pragma endregion
 
 	nodeElevation = Vector_f64(nodes.size()); //test
 	heads = nodeElevation;
 
-	//heads[270] += 1.0;//test
+	heads[57] += 2.0;//test
 
 	//Loop from start time to end time
 	double time = params.startTime;
@@ -1130,7 +1317,14 @@ bool Simulate(ModelParameters const & params)
 
 			AdjustForBoundaryConditions(coeffMat, fixedNewH, RHS);
 
-			if (!Solve(coeffMat, RHS, fixedNewH, residuals, params))
+			/*if (!Solve(coeffMat, RHS, fixedNewH, residuals, params))
+			{
+				LogMan::Log("ERROR! Internal solver error.", LOG_ERROR);
+				return false;
+			}*/
+
+			//test
+			if (!SolverSOR(coeffMat, RHS, fixedNewH, residuals, 0.75))
 			{
 				LogMan::Log("ERROR! Internal solver error.", LOG_ERROR);
 				return false;
@@ -1154,15 +1348,15 @@ bool Simulate(ModelParameters const & params)
 			
 			newHeads = fixedNewH;
 		}
-		//TestShowValues(params);
+		TestShowValues(params);
 
 		std::cout << "\n------------------------------------------------------\n";
-		/*std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
+		std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
 		for (size_t i = 0; i < heads.Rows(); i++)
-			std::cout << i << "\t dir: " << std::setprecision(1) << nodeFDR[i]  << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
+			std::cout << i << "\t slopes: " << std::setprecision(4) << nodeSlopeX[i] << " - " << nodeSlopeY[i]  << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
 						std::setprecision(4) << newHeads[i] << "  " <<
 						(newHeads[i] > heads[i] ? "UP" : (newHeads[i] == heads[i] ? "--" : "DN"))<<
-						std::endl;*/
+						std::endl;
 		std::cout << "\n------------------------------------------------------\n";
 		double qx = sqrt(nodeSlopeX[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
 		double qy = sqrt(nodeSlopeY[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
@@ -1176,9 +1370,9 @@ bool Simulate(ModelParameters const & params)
 		time += params.timeStep;
 
 		//test
-		/*std::cout << "Enter to proceed to next step\n";
+		std::cout << "Enter to proceed to next step\n";
 		std::cin.sync();
-		std::cin.get();*/
+		std::cin.get();
 	}
 
 	//test
