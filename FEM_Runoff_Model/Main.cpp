@@ -39,10 +39,10 @@ ModelParameters ModelTestParams()
 	params.useLumpedForm = true;
 	params.femOmega = 0.5;
 	params.solverType = Solver::Auto;
-	params.residualThreshold = 0.00001;
+	params.residualThreshold = 0.000001;
 	params.weight = 0.5;
 	params.maxIterations = 5000;
-	params.internalResidualTreshold = 0.0001;
+	params.internalResidualTreshold = 0.000001;
 	params.maxInternalIterations = 50;
 
 	return params;
@@ -52,10 +52,10 @@ void GenTestMesh()
 {
 	MeshGeneratorParameters meshParams;
 	
-	meshParams.meshType = ElementType::triangle;
+	meshParams.meshType = ElementType::rectangle;
 	meshParams.useCustomNodes = false;
 	//meshParams.inNodesListPath = "Test_Data\\Grid_Nodes.csv";
-	meshParams.inNodesListPath = "Test_Data\\Grid_Nodes_Dense2.csv";
+	//meshParams.inNodesListPath = "Test_Data\\Grid_Nodes_Dense2.csv";
 	meshParams.superTrianglePadding = 1.0;
 
 	//meshParams.resolution = 4;
@@ -109,8 +109,8 @@ int main(int argc, char ** argv)
 	
 	////testing model on CLI directly
 	////TestGenerateSyntheticWatershed();
-	//LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
 	
+	//LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
 	LoadWatershedBoundary("Test_Data\\v2\\Watershed_Boundary.kml");
 	GenTestMesh();
 	Simulate(ModelTestParams());

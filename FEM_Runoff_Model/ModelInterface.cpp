@@ -16,8 +16,8 @@ std::vector<Vector2D> shedBoundary;
 
 //Matrices and Vectors
 Matrix_f64 globalC;
-Vector_f64 nodeSlopeX, nodeSlopeY, nodeManning, nodeFDR; //TODO consider pre-computing sqrt(slope-x)/manning and sqrt(slope-y)/manning and caching them instead
-//Vector_f64 nodeSlope, nodeManning, nodeFDR;
+//Vector_f64 nodeSlopeX, nodeSlopeY, nodeManning, nodeFDR; //TODO consider pre-computing sqrt(slope-x)/manning and sqrt(slope-y)/manning and caching them instead
+Vector_f64 nodeSlope, nodeManning, nodeFDR;
 
 Vector_f64 nodeElevation;
 Vector_f64 heads;
@@ -462,8 +462,23 @@ void GetNodeSamplingSubBoundary_Rect(size_t nodeID, std::vector<Vector2D> & outS
 		if (it->second.ContainsVertex(nodeID))
 			outSubBoundary.push_back(it->second.Centroid());
 	}
+	
+	//The unordered_map impl doesn't guarantee order, but order is important here. Fortuntely, for rect elements (and for our current\
+		impl) we know that they are an x-y alligned grid, and that every non-boundary node has exactly four subBoundary also alligned,\
+		 so we can order them by computing bounds, then assigning on the correct order based on that.
+	//Note that this is only for internal nodes. Boundary nodes (and outlet node) are handled in the else block.
+	if (!IsBoundaryNode(nodeID) && outSubBoundary.size() > 3) 
+	{
+		Vector2D boundSW, boundNE;
+		ComputeBoundingBox(outSubBoundary, boundSW, boundNE);
 
-	if (outSubBoundary.size() < 3) //Assuming the meshing is working properly, all nodes are part of at least one element, so outSubBoundary should have min size of 1.
+		outSubBoundary.clear();
+		outSubBoundary.push_back(boundSW);
+		outSubBoundary.push_back(Vector2D(boundNE.x, boundSW.y));
+		outSubBoundary.push_back(boundNE);
+		outSubBoundary.push_back(Vector2D(boundSW.x, boundNE.y));
+	}
+	else //Assuming the meshing is working properly, all nodes are part of at least one element, so outSubBoundary should have min size of 1.
 	{
 		Vector2D const & pos = nodes[nodeID];
 		
@@ -473,6 +488,7 @@ void GetNodeSamplingSubBoundary_Rect(size_t nodeID, std::vector<Vector2D> & outS
 
 			if (outSubBoundary.size() == 2)
 				outSubBoundary.pop_back(); //because the computations bellow will add it again, but we don't want to complexify the code to check which one does.
+
 
 			outSubBoundary.push_back(Vector2D(pos.x - delta.x, outSubBoundary[0].y));
 			outSubBoundary.push_back(Vector2D(pos.x - delta.x, pos.y - delta.y));
@@ -504,8 +520,9 @@ void GetNodeSamplingSubBoundary_Tri(size_t nodeID, std::vector<Vector2D> & outSu
 			outSubBoundary.push_back(it->second.Centroid());
 	}
 
-	//TODO testing outSubBoundary.size() to determine whether node is boundary or not does not work in the case of Delauney generated elements. Handle this.
-	if (outSubBoundary.size() < 3) 
+	//TODO handle boundary order issues. See GetNodeSamplingSubBoundary_Rect for details.
+	
+	if (IsBoundaryNode(nodeID) || outSubBoundary.size() <= 3)  //the last part for outlet node.
 	{
 		Vector2D const & pos = nodes[nodeID];
 		
@@ -721,8 +738,11 @@ bool SampleAggregatedPixels(size_t nodeID, SpatialSamplingMethod method, Matrix_
 
 	std::vector<double> values;
 
-	if (!SamplePixelsValues(nodeSamplingSubBound, raster, rasterID, values))
+	if (!SamplePixelsValues(nodeSamplingSubBound, raster, rasterID, values) || values.size() < 1)
+	{
+		LogMan::Log("Error in sampling pixel values for node: " + std::to_string(nodeID), LOG_ERROR);
 		return false;
+	}
 
 	std::pair<double, double> result;
 	switch (method)
@@ -850,23 +870,23 @@ bool CacheSlopes(ModelParameters const & params)
 	//TODO revise this method so it creates a polygon connecting the centroids for each triangle that contains each tested vertex,\
 	then sampling for pixels covered by this polygon and averaging the results (after factoring). Same for manning sampling.
 
-	nodeSlopeX = Vector_f64(nodes.size());
-	nodeSlopeY = Vector_f64(nodes.size());
-	//nodeSlope = Vector_f32(nodes.size());
+	//nodeSlopeX = Vector_f64(nodes.size());
+	//nodeSlopeY = Vector_f64(nodes.size());
+	nodeSlope = Vector_f32(nodes.size());
 	nodeFDR = Vector_f64(nodes.size());
 
 	for (size_t i = 0; i < nodes.size(); i++)
 	{
-		std::pair<double, double> newSlopes = SampleAggregatedSlopes(i, SpatialSamplingMethod::average, 0.000001);
+		/*std::pair<double, double> newSlopes = SampleAggregatedSlopes(i, SpatialSamplingMethod::average, 0.000001);
 		nodeSlopeX[i] = newSlopes.first;
-		nodeSlopeY[i] = newSlopes.second;
+		nodeSlopeY[i] = newSlopes.second;*/
+		//std::cout << "sampling for node: " << i << std::endl;
+		if (!SampleAggregatedPixels(i, SpatialSamplingMethod::average, slopes, slopesID, nodeSlope[i]) ||
+			!SampleAggregatedPixels(i, SpatialSamplingMethod::majority, fdr, fdrID, nodeFDR[i]))
+			LogMan::Log("WARNING! Failed to sample slope/FDR for node: " + std::to_string(i), LOG_WARN);
 
-		//if (!SampleAggregatedPixels(i, SpatialSamplingMethod::average, slopes, slopesID, nodeSlope[i]) ||
-		//	!SampleAggregatedPixels(i, SpatialSamplingMethod::majority, fdr, fdrID, nodeFDR[i]))
-		//	LogMan::Log("WARNING! Failed to sample slope/FDR for node: " + std::to_string(i), LOG_WARN);
-
-		////convert the slope from percentage to m/m
-		//nodeSlope[i] = nodeSlope[i] / 100.0;
+		//convert the slope from percentage to m/m
+		nodeSlope[i] = nodeSlope[i] / 100.0;
 	}
 
 	return true;
@@ -973,17 +993,20 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 iteration. newHead velos are then moved to oldHead velos after internal iterations are done.
 std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 waterElevation) //waterElevation = nodeElevation + head
 {
+	//if (IsBoundaryNode(nodeID)) //test
+	//	return std::pair<double, double>(0.0, 0.0); //test
+
 	double head = waterElevation[nodeID] - nodeElevation[nodeID];
 	
-	/*double velocity = 3600.0 * sqrt(nodeSlope[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
+	double velocity = 3600.0 * sqrt(nodeSlope[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 
 	double angle = FDR2Angle(lround(nodeFDR[nodeID]));
 
 	double u = velocity * cos(angle);
-	double v = velocity * sin(angle);*/
+	double v = velocity * sin(angle);
 
-	double u = Sign(nodeSlopeX[nodeID]) * 3600.0 * sqrt(abs(nodeSlopeX[nodeID])) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
-	double v = Sign(nodeSlopeY[nodeID]) *3600.0 * sqrt(abs(nodeSlopeY[nodeID])) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
+	/*double u = Sign(nodeSlopeX[nodeID]) * 3600.0 * sqrt(abs(nodeSlopeX[nodeID])) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
+	double v = Sign(nodeSlopeY[nodeID]) *3600.0 * sqrt(abs(nodeSlopeY[nodeID])) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];*/
 
 	return std::pair<double, double>(u, v);
 }
@@ -1020,26 +1043,157 @@ Matrix_f64 ElementKMatrix_Tri(Triangle const & tri, std::pair<double, double> uv
 	return kMat;
 }
 
+double k_e_x_fixed[4][4]{	{-2, 2, 1, -1},
+							{-2, 2, 1, -1},
+							{-1, 1, 2, -2},
+							{-1, 1, 2, -2} };
+
+double k_e_y_fixed[4][4]{	{-2, -1, 1, 2},
+							{-1, -2, 2, 1},
+							{-1, -2, 2, 1},
+							{-2, -1, 1, 2} };
+
+Matrix_f64 ElementKMatrix_Rect(Rectangle const & rect, std::pair<double, double> uv[4])
+{
+	//[K_element] =	[K_e_x] + [K_e_y]
+	//
+	//								|	ui	0	0	0	|		|	-2	2	1	-1	|
+	//[K_e_x]	=	height/12.0 *	|	0	uj	0	0	|	*	|	-2	2	1	-1	|
+	//								|	0	0	uk	0	|		|	-1	1	2	-2	|
+	//								|	0	0	0	ul	|		|	-1	1	2	-2	|
+	//
+	//								|	vi	0	0	0	|		|	-2	-1	1	2	|
+	//[K_e_y]	=	width/12.0 *	|	0	vj	0	0	|	*	|	-1	-2	2	1	|
+	//								|	0	0	vk	0	|		|	-1	-2	2	1	|
+	//								|	0	0	0	vl	|		|	-2	-1	1	2	|
+	//
+
+	Matrix_f64 kMat_x(4, 4);
+	Matrix_f64 kMat_y(4, 4);
+
+	double h12 = rect.Height() / 12.0;
+	double w12 = rect.Width() / 12.0;
+	double multX, multY;
+
+	for (int i = 0; i < 4; i++)
+	{
+		multX = uv[i].first * h12;
+		multY = uv[i].second * w12;
+		
+		for (int j = 0; j < 4; j++)
+		{
+			kMat_x[i][j] = multX * k_e_x_fixed[i][j];
+			kMat_y[i][j] = multY * k_e_y_fixed[i][j];
+		}
+	}
+
+	//std::cout << "\n//////////////////////////////////////////\n";
+	//std::cout << "element: "; 
+	//rect.DebugPrintDetails();
+	//(kMat_x + kMat_y).DisplayOnCLI(2);//test
+
+	return kMat_x + kMat_y;
+}
+
+Matrix_f64 ElementCMatrixLumped(int size, double areaDivision)
+{
+	//Lumped Capcitance Matrix for both element type defined as a diagonal matrix with diag value equal to element area / number of nodes\
+	i.e. "areaDivision."
+	
+	Matrix_f64 cMat(size, size);
+
+	for (int i = 0; i < size; i++)
+		cMat[i][i] = areaDivision;
+
+	return cMat;
+}
+
+Matrix_f64 ElementCMatrix_Tri(ModelParameters const & params, Triangle const & tri)
+{
+	if (params.useLumpedForm)
+		return ElementCMatrixLumped(3, tri.Area() / 3.0);
+	
+	//else return Constistance capcitance matrix
+
+	Matrix_f64 cMat(3, 3);
+
+	double mult = tri.Area() / 12.0;
+
+	cMat[0][0] = cMat[1][1] = cMat[2][2] = mult * 2.0;
+	cMat[0][1] = cMat[0][2] = cMat[1][0] = cMat[1][2] = cMat[2][0] = cMat[2][1] = mult;
+
+	return cMat;
+}
+
+double c_e_fixed[4][4]{ {4, 2, 1, 2},
+						{2, 4, 2, 1},
+						{1, 2, 4, 2},
+						{2, 1, 2, 4} };
+
+Matrix_f64 ElementCMatrix_Rect(ModelParameters const & params, Rectangle const & rect)
+{
+	if (params.useLumpedForm)	
+		return ElementCMatrixLumped(4, rect.Area() / 4.0);
+
+	//else return Constistance capcitance matrix
+	Matrix_f64 cMat(4, 4);
+	double mult = rect.Area() / 36.0;
+
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			cMat[i][j] = c_e_fixed[i][j] * mult;
+
+	return cMat;
+}
+
 Matrix_f64 ComputeGlobalCoefficientsMatrix(ModelParameters const & params, Vector_f64 const & newHeads)
 {
 	//[C] + w*dt*[K]
 	Matrix_f64 coefMat(nodes.size(), nodes.size());
-	Matrix_f64 kMat;
-	Matrix_f64 cMat(3, 3);
+	Matrix_f64 kMat, cMat;
 
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	if (activeMeshType == ElementType::triangle)
 	{
-		std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), newHeads),
-											ComputeVelocityComponents(it->second.VertexID(1), newHeads),
-											ComputeVelocityComponents(it->second.VertexID(2), newHeads) };
+		for (auto it = triangles.begin(); it != triangles.end(); ++it)
+		{
+			std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), newHeads),
+												ComputeVelocityComponents(it->second.VertexID(1), newHeads),
+												ComputeVelocityComponents(it->second.VertexID(2), newHeads) };
 
-		kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * params.femOmega / 6.0);
+			kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * params.femOmega / 6.0);
+			cMat = ElementCMatrix_Tri(params, it->second);
 
-		cMat[0][0] = cMat[1][1] = cMat[2][2] = (it->second.Area() / 3.0);
+			for (int row = 0; row < 3; row++)
+				for (int column = 0; column < 3; column++)
+					coefMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] + kMat[row][column]);
+		}
+	}
+	else
+	{
+		for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+		{
+			std::pair<double, double> uv[4] = { ComputeVelocityComponents(it->second.VertexID(0), newHeads),
+												ComputeVelocityComponents(it->second.VertexID(1), newHeads),
+												ComputeVelocityComponents(it->second.VertexID(2), newHeads),
+												ComputeVelocityComponents(it->second.VertexID(3), newHeads) };
 
-		for (int row = 0; row < 3; row++)
-			for (int column = 0; column < 3; column++)
-				coefMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] + kMat[row][column]);
+			kMat = ElementKMatrix_Rect(it->second, uv) * (params.timeStep * params.femOmega / 6.0);
+			cMat = ElementCMatrix_Rect(params, it->second);
+
+			cMat[0][0] = cMat[1][1] = cMat[2][2] = cMat[3][3] = (it->second.Area() / 4.0);
+
+			for (int row = 0; row < 4; row++)
+				for (int column = 0; column < 4; column++)
+					coefMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] + kMat[row][column]);
+
+			//test
+			/*if (it->second.ContainsVertex(46))
+			{
+				std::cout << "Inside CoefMatConst\nElem: ";
+				it->second.DebugPrintDetails();
+				kMat.DisplayOnCLI();
+			}*/
+		}
 	}
 
 	return coefMat;
@@ -1051,21 +1205,60 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 
 	Matrix_f64 condMat(nodes.size(), nodes.size());
 	Matrix_f64 kMat;
-	Matrix_f64 cMat(3, 3);
 
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	if (activeMeshType == ElementType::triangle)
 	{
-		std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), heads),
-											ComputeVelocityComponents(it->second.VertexID(1), heads),
-											ComputeVelocityComponents(it->second.VertexID(2), heads) };
+		Matrix_f64 cMat(3, 3);
 
-		kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
+		for (auto it = triangles.begin(); it != triangles.end(); ++it)
+		{
+			std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), heads),
+												ComputeVelocityComponents(it->second.VertexID(1), heads),
+												ComputeVelocityComponents(it->second.VertexID(2), heads) };
 
-		cMat[0][0] = cMat[1][1] = cMat[2][2] = (it->second.Area() / 3.0);
+			kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
 
-		for (int row = 0; row < 3; row++)
-			for (int column = 0; column < 3; column++)
-				condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
+			cMat[0][0] = cMat[1][1] = cMat[2][2] = (it->second.Area() / 3.0);
+
+			for (int row = 0; row < 3; row++)
+				for (int column = 0; column < 3; column++)
+					condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
+		}
+	}
+	else
+	{
+		Matrix_f64 cMat(4, 4);
+
+		for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+		{
+			std::pair<double, double> uv[4] = { ComputeVelocityComponents(it->second.VertexID(0), heads),
+												ComputeVelocityComponents(it->second.VertexID(1), heads),
+												ComputeVelocityComponents(it->second.VertexID(2), heads),
+												ComputeVelocityComponents(it->second.VertexID(3), heads) };
+
+			kMat = ElementKMatrix_Rect(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
+
+			cMat[0][0] = cMat[1][1] = cMat[2][2] = cMat[3][3] = (it->second.Area() / 4.0);
+
+			for (int row = 0; row < 4; row++)
+				for (int column = 0; column < 4; column++)
+					condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
+
+			//test
+			/*if (it->second.ContainsVertex(46))
+			{
+				std::cout << "Inside CondMatConst\nElem: ";
+				it->second.DebugPrintDetails();
+				kMat.DisplayOnCLI();
+			}*/
+
+			//test
+			/*if (!kMat.Determinant() < 0.00001)
+			{
+				std::cout << "ping! at elem:";
+				it->second.DebugPrintDetails();
+			}*/
+		}
 	}
 	
 	return condMat;
@@ -1093,13 +1286,13 @@ void TestShowValues(ModelParameters const & params)
 	}
 
 
-	size_t targetRowToShow = 47;
+	size_t targetRowToShow = 0;
 	std::cout << "\nConductance Matrix:\n";
 	Matrix_f64 _globalConduc = ComputeGlobalConductanceMatrix(params);
 	//(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(0);
 	//ComputeGlobalConductanceMatrix(params).DisplayOnCLI(0);
 	for (size_t i = 0; i < _globalConduc.Columns(); i++)
-		std::cout << std::fixed << std::setprecision(0) << std::setw(2) << _globalConduc[targetRowToShow][i] << " ";
+		std::cout << std::fixed << std::setprecision(0) << std::setw(0) << _globalConduc[targetRowToShow][i] << " ";
 	std::cout << "\n";
 
 
@@ -1108,7 +1301,7 @@ void TestShowValues(ModelParameters const & params)
 	//(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(0);
 	//ComputeGlobalCoefficientsMatrix(params, _new_h).DisplayOnCLI(0);
 	for (size_t i = 0; i < _globalCoef.Columns(); i++)
-		std::cout << std::fixed << std::setprecision(0) << std::setw(2) << _globalCoef[targetRowToShow][i] << " ";
+		std::cout << std::fixed << std::setprecision(0) << std::setw(0) << _globalCoef[targetRowToShow][i] << " ";
 	std::cout << "\n";
 
 
@@ -1120,7 +1313,7 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & 
 {
 	//[GlobalConductanceMat] * {h_0} + precipComponent
 
-	outRHS = ComputeGlobalConductanceMatrix(params) * heads;// +ComputePreciptationVector(time, params);
+	outRHS = ComputeGlobalConductanceMatrix(params) * heads +ComputePreciptationVector(time, params);
 	
 	//test
 	_RHS = outRHS;
@@ -1132,16 +1325,16 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & 
 //[A]{x} = {b}
 void AdjustForBoundaryConditions(Matrix_f64 & aMat, Vector_f64 & xVec, Vector_f64 & bVec)
 {
-	//Using https://finite-element.github.io/7_boundary_conditions.html
-	/*for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-	{
-		bVec[*it] = nodeElevation[*it];
+	////Using https://finite-element.github.io/7_boundary_conditions.html
+	//for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
+	//{
+	//	bVec[*it] = nodeElevation[*it];
 
-		for (size_t i = 0; i < aMat.Columns(); i++)
-			aMat[*it][i] = 0.0;
+	//	for (size_t i = 0; i < aMat.Columns(); i++)
+	//		aMat[*it][i] = 0.0;
 
-		aMat[*it][*it] = 1.0;
-	}*/
+	//	aMat[*it][*it] = 1.0;
+	//}
 
 	//Using Istok's method
 	size_t reducedSystemSize = nodes.size() - boundaryNodes.size();
@@ -1178,8 +1371,8 @@ void AdjustForBoundaryConditions(Matrix_f64 & aMat, Vector_f64 & xVec, Vector_f6
 
 void ReIntroduceBoundaryNodes(Vector_f64 & vec)
 {
-	if (vec.Rows() == nodes.size()) 
-		return;
+	/*if (vec.Rows() == nodes.size()) 
+		return;*/
 
 	Vector_f64 adjustedVec(nodes.size());
 
@@ -1263,15 +1456,13 @@ bool Simulate(ModelParameters const & params)
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 		std::cout << *it << std::endl;
 	
-	std::cout << "\n===================================================\n";
+	/*std::cout << "\n===================================================\n";
 	std::cout << "Elevations, Slopes, Manning roughness coef";
-	std::cout << "\n===================================================\n";
-
-
-	std::cout << "node | Elev  |   n  |  Sx |  Sy |  FDR  \n";
+	std::cout << "\n===================================================\n";*/
+	/*std::cout << "node | Elev  |   n  |  Sx |  Sy |  FDR  \n";
 	for (size_t i = 0; i < nodes.size(); i++)
 		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | " <<
-		nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << " | "  << nodeFDR[i] << std::endl;
+		nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << " | "  << nodeFDR[i] << std::endl;*/
 	/*std::cout << "node | Elev  |   n  |  Slope  |  FDR  \n";
 	for (size_t i = 0; i < nodes.size(); i++)
 		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | "  <<
@@ -1280,10 +1471,27 @@ bool Simulate(ModelParameters const & params)
 	//return false;
 #pragma endregion
 
+	//test
+	//nodeFDR[9] = 4;
+	//nodeFDR[15] = 4;
+	//nodeFDR[20] = 3;
+	//nodeFDR[21] = 3;
+	//nodeFDR[22] = 4;
+	//nodeFDR[32] = 4;
+	//nodeFDR[55] = 3;
+	//nodeFDR[56] = 4;
+	//nodeFDR[63] = 5;
+
+	//endtest
+
+
+
 	nodeElevation = Vector_f64(nodes.size()); //test
 	heads = nodeElevation;
 
-	heads[57] += 2.0;//test
+	//heads[7] += 2.0;//test
+	//heads[57] += 2.0;//test
+	//heads[248] += 2.0;//test
 
 	//Loop from start time to end time
 	double time = params.startTime;
@@ -1324,7 +1532,7 @@ bool Simulate(ModelParameters const & params)
 			}*/
 
 			//test
-			if (!SolverSOR(coeffMat, RHS, fixedNewH, residuals, 0.75))
+			if (!SolverSOR(coeffMat, RHS, fixedNewH, residuals, 0.75, params.residualThreshold, params.maxIterations))
 			{
 				LogMan::Log("ERROR! Internal solver error.", LOG_ERROR);
 				return false;
@@ -1348,20 +1556,33 @@ bool Simulate(ModelParameters const & params)
 			
 			newHeads = fixedNewH;
 		}
-		TestShowValues(params);
+		//TestShowValues(params);
 
 		std::cout << "\n------------------------------------------------------\n";
 		std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
+		double headSum = 0.0, newHeadSum = 0.0;
 		for (size_t i = 0; i < heads.Rows(); i++)
-			std::cout << i << "\t slopes: " << std::setprecision(4) << nodeSlopeX[i] << " - " << nodeSlopeY[i]  << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
-						std::setprecision(4) << newHeads[i] << "  " <<
-						(newHeads[i] > heads[i] ? "UP" : (newHeads[i] == heads[i] ? "--" : "DN"))<<
-						std::endl;
+		{
+				//std::cout << i << "\t slopes: " << std::setprecision(4) << nodeSlopeX[i] << " - " << nodeSlopeY[i] << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
+				std::cout << i << "\t slopes: " << std::setprecision(4) << nodeSlope[i] << " - " << std::setprecision(0) << nodeFDR[i] << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
+				std::setprecision(4) << newHeads[i] << "  " <<
+				(newHeads[i] > heads[i] ? "UP" : (newHeads[i] == heads[i] ? "--" : "DN")) <<
+				std::endl;
+
+			headSum += heads[i];
+			newHeadSum += newHeads[i];
+		}
+		std::cout << "=============== Sum : " << headSum << " --> " << newHeadSum << std::endl;
 		std::cout << "\n------------------------------------------------------\n";
-		double qx = sqrt(nodeSlopeX[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
+		/*double qx = sqrt(nodeSlopeX[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
 		double qy = sqrt(nodeSlopeY[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
-		double q = sqrt(qx * qx + qy * qy);
-		double flowWidth = 2.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //test. 
+		double q = sqrt(qx * qx + qy * qy);*/
+		double q = sqrt(nodeSlope[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
+		double flowWidth;
+		if (activeMeshType == ElementType::triangle)
+			flowWidth = 2.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //test. 
+		else
+			flowWidth = rectangles[0].Width(); //test. 
 		std::cout << "h: " << std::setprecision(7) << heads[params.outletNode]  << "\tQ: "  << std::setprecision(3) << (q * flowWidth) << std::endl;
 		qTS.push_back(std::pair<double, double>(time, q * flowWidth));
 		std::cout << "\n------------------------------------------------------\n";
