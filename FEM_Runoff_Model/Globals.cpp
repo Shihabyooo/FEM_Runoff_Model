@@ -195,6 +195,11 @@ Vector2D & Vector2D::operator= (Vector2D const & vec2)
 	return *this;
 }
 
+bool Vector2D::operator==(Vector2D const & vec2) const
+{
+	return (x == vec2.x) && (y == vec2.y);
+}
+
 Vector2D Vector2D::Normalize(Vector2D const & min, Vector2D const & max) const
 {
 	Vector2D delta = max - min;

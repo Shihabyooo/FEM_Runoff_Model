@@ -454,6 +454,49 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 	return counter % 2 != 0;
 }
 
+//points must be a copy. See usage of this function in GetNodeSamplingSubBoundary_Tri()
+void ConvexHull(std::vector<Vector2D> points, std::vector<Vector2D> & outBoundaryPoints)
+{
+	outBoundaryPoints.clear();
+	std::vector<Vector2D>::const_iterator curNodeIt = nodes.begin();
+
+	for (auto it = nodes.begin(); it != nodes.end(); ++it)
+	{
+		if (it->x < curNodeIt->x)
+			curNodeIt = it;
+	}
+
+	outBoundaryPoints.push_back(*curNodeIt);
+	curNodeIt = nodes.begin();
+
+	Vector2D currentPoint(DBL_MIN, DBL_MAX);
+
+	while (true)
+	{
+		currentPoint = *curNodeIt;
+
+		for (auto it = nodes.begin(); it != nodes.end(); ++it)
+		{
+			Vector2D vec1 = *it - outBoundaryPoints.back();
+			Vector2D vec2 = currentPoint - *it;
+			
+			double crossProd = (vec1.y * vec2.x) - (vec1.x * vec2.y);
+
+			if (crossProd < 0.0)
+				currentPoint = *it;
+		}
+
+		if (currentPoint == outBoundaryPoints.front())
+			break;
+
+		outBoundaryPoints.push_back(currentPoint);
+		
+		++curNodeIt;
+		if (curNodeIt == nodes.end())
+			curNodeIt = nodes.begin();
+	}
+}
+
 void GetNodeSamplingSubBoundary_Rect(size_t nodeID, std::vector<Vector2D> & outSubBoundary, bool sampleOutsideMesh) //sampleOutsideMesh is for boundary nodes.
 {
 	outSubBoundary.clear();
@@ -522,7 +565,11 @@ void GetNodeSamplingSubBoundary_Tri(size_t nodeID, std::vector<Vector2D> & outSu
 
 	//TODO handle boundary order issues. See GetNodeSamplingSubBoundary_Rect for details.
 	
-	if (IsBoundaryNode(nodeID) || outSubBoundary.size() <= 3)  //the last part for outlet node.
+	if (!IsBoundaryNode(nodeID) && outSubBoundary.size() > 3) //Note: second test is for outlet node. This is not guaranteed for delauney tri.
+	{
+		ConvexHull(outSubBoundary, outSubBoundary);
+	}
+	else
 	{
 		Vector2D const & pos = nodes[nodeID];
 		

@@ -52,7 +52,7 @@ void GenTestMesh()
 {
 	MeshGeneratorParameters meshParams;
 	
-	meshParams.meshType = ElementType::rectangle;
+	meshParams.meshType = ElementType::triangle;
 	meshParams.useCustomNodes = false;
 	//meshParams.inNodesListPath = "Test_Data\\Grid_Nodes.csv";
 	//meshParams.inNodesListPath = "Test_Data\\Grid_Nodes_Dense2.csv";
