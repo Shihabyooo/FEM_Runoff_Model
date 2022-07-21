@@ -114,7 +114,7 @@ public:
 		return centroid;
 	}
 
-	void DebugPrintDetails()
+	void DebugPrintDetails() const
 	{
 		std::cout << "Element id: " << id << " - Area: " << area << " - Verts: ";
 

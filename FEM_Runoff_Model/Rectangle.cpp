@@ -125,12 +125,12 @@ double Rectangle::ComputeArea() const
 	return Rect(Vector2D(0, 0), width, height).Area();
 }
 
-double Rectangle::Width()
+double Rectangle::Width() const
 {
 	return rect.Width();
 }
 
-double Rectangle::Height()
+double Rectangle::Height() const
 {
 	return rect.Height();
 }

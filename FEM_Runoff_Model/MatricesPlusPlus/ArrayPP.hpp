@@ -14,7 +14,7 @@
 #define _INDEX size_t
 
 //MINDET is the value bellow which the absolute of the determinant is considered zero (i.e. matrix would be considered singular)
-#define MINDET 0.001F 
+#define MINDET 0.00001
 
 
 #define Alloc(x, y) try\

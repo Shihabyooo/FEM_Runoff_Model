@@ -16,8 +16,8 @@ public:
 	
 	double ComputeArea() const override;
 
-	double Width();
-	double Height();
+	double Width() const;
+	double Height() const;
 
 private:
 	Rect rect; //rect is not exactly of the position of this element, because Rect assumes orientation matching x-y axes, while element may be rotated.
