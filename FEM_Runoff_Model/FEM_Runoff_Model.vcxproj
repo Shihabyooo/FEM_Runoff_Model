@@ -163,9 +163,11 @@
     <ClCompile Include="MatricesPlusPlus\VectorPP_f32.cpp" />
     <ClCompile Include="MatricesPlusPlus\VectorPP_f64.cpp" />
     <ClCompile Include="MeshGenerator.cpp" />
+    <ClCompile Include="ModelImplementation.cpp" />
     <ClCompile Include="ModelInterface.cpp" />
     <ClCompile Include="Rectangle.cpp" />
     <ClCompile Include="Solvers.cpp" />
+    <ClCompile Include="SpatialDataManager.cpp" />
     <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="VectorFilesParsers\KML_Parser.cpp" />
     <ClCompile Include="VectorFilesParsers\SHP_Parser.cpp" />
@@ -183,11 +185,14 @@
     <ClInclude Include="GUI_Handler.hpp" />
     <ClInclude Include="GUI_Requirements.hpp" />
     <ClInclude Include="MeshGenerator.hpp" />
+    <ClInclude Include="ModelGlobals.hpp" />
+    <ClInclude Include="ModelImplementation.hpp" />
     <ClInclude Include="Rectangle.hpp" />
     <ClInclude Include="LogManager.hpp" />
     <ClInclude Include="Main.hpp" />
     <ClInclude Include="ModelInterface.hpp" />
     <ClInclude Include="Solvers.hpp" />
+    <ClInclude Include="SpatialDataManager.hpp" />
     <ClInclude Include="Triangle.hpp" />
     <ClInclude Include="VectorFilesParsers\KML_Parser.h" />
     <ClInclude Include="VectorFilesParsers\SHP_Parser.h" />

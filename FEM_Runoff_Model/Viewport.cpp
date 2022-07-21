@@ -323,11 +323,11 @@ void HandleMouseLeftClick()
 				}
 				else
 				{
-					for (int i = 0; i < nodes.size(); i++)
+					for (int i = 0; i < GetNodes().size(); i++)
 					{
 						//check of within range of node
 						//our range is a circle of centre = node's position and radius = currentPointSize.
-						if (currenViewportHoverPos.WithinCircle(nodes[i], currentPointSize * scale))
+						if (currenViewportHoverPos.WithinCircle(GetNodes()[i], currentPointSize * scale))
 						{
 							//grab node
 							//LogMan::Log("Grabbed node: " + std::to_string(activeNode)); //test
@@ -429,7 +429,7 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//test draw supertriangle
-	if (nodes.size() > 2) 
+	if (GetNodes().size() > 2) 
 	{
 		glUseProgram(triangleShader.program);
 		SetActiveShaderDiffuse(COLOUR_GREEN);
@@ -581,6 +581,8 @@ void UpdateNodes()
 
 	CLEAR_ARRAY(nodesMeshVerts);
 	
+	auto nodes = GetNodes();
+
 	renderVertsCount = nodes.size();
 
 	if (renderVertsCount < 1)
@@ -605,6 +607,7 @@ void UpdateTriangles()
 {
 	CLEAR_ARRAY(trianglesIndices);
 	
+	auto triangles = GetTriangles();
 	renderTrisIndicesCount = triangles.size() * 3;
 	
 	if (triangles.size() < 1)
@@ -626,6 +629,7 @@ void UpdateRectangles()
 {
 	CLEAR_ARRAY(trianglesIndices);
 
+	auto rectangles = GetRectangles();
 	renderTrisIndicesCount = rectangles.size() * 2 * 3;
 
 	if (rectangles.size() < 1)
@@ -652,6 +656,7 @@ void UpdateWatershed()
 {
 	CLEAR_ARRAY(boundaryLineVerts);
 	
+	auto shedBoundary = GetWatershedBoundary();
 	renderBoundVertsCount = shedBoundary.size();
 	if (renderBoundVertsCount < 2)
 	{
@@ -747,9 +752,10 @@ void TestSetupSuperTriangleRender()
 
 void TestUpdateSuperTriangle()
 {
-	if (nodes.size() < 2)
+	if (GetNodes().size() < 2)
 		return;
 
+	auto superTriangles = GetSuperTriangles();
 	Vector2D superVerts[6]{ superTriangles[0], superTriangles[1], superTriangles[2],
 							superTriangles[3], superTriangles[4], superTriangles[5] };
 

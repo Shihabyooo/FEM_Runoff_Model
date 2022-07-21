@@ -105,7 +105,7 @@ int main(int argc, char ** argv)
 	
 	int returnVal = 0;
 	//TODO uncomment this after testing is done.
-	//returnVal = StartUI(1280, 720);
+	returnVal = StartUI(1280, 720);
 	
 	////testing model on CLI directly
 	////TestGenerateSyntheticWatershed();

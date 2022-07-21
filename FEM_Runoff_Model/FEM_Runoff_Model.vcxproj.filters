@@ -43,6 +43,12 @@
     <Filter Include="Source Files\FileIO">
       <UniqueIdentifier>{73a03618-dbed-4ce7-b915-6edb448781fd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\ModelImpl">
+      <UniqueIdentifier>{2688485e-dc5b-4bc4-b3e0-2b37c2e6254f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ModelImpl">
+      <UniqueIdentifier>{0b3053b9-e6f7-4b99-b193-1813567ab93f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -77,9 +83,6 @@
     </ClCompile>
     <ClCompile Include="MatricesPlusPlus\MatrixPP_f32.cpp">
       <Filter>Source Files\MatricesPP</Filter>
-    </ClCompile>
-    <ClCompile Include="ModelInterface.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GUI_Handler.cpp">
       <Filter>Source Files\GUI</Filter>
@@ -138,6 +141,15 @@
     <ClCompile Include="GridMesh.cpp">
       <Filter>Source Files\MeshGeneration</Filter>
     </ClCompile>
+    <ClCompile Include="ModelInterface.cpp">
+      <Filter>Source Files\ModelImpl</Filter>
+    </ClCompile>
+    <ClCompile Include="SpatialDataManager.cpp">
+      <Filter>Source Files\ModelImpl</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelImplementation.cpp">
+      <Filter>Source Files\ModelImpl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.hpp">
@@ -150,9 +162,6 @@
       <Filter>Header Files\MeshGeneration</Filter>
     </ClInclude>
     <ClInclude Include="Globals.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ModelInterface.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GUI_Requirements.hpp">
@@ -202,6 +211,18 @@
     </ClInclude>
     <ClInclude Include="VectorFilesParsers\SHP_Parser.h">
       <Filter>Header Files\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelInterface.hpp">
+      <Filter>Header Files\ModelImpl</Filter>
+    </ClInclude>
+    <ClInclude Include="SpatialDataManager.hpp">
+      <Filter>Header Files\ModelImpl</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelImplementation.hpp">
+      <Filter>Header Files\ModelImpl</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelGlobals.hpp">
+      <Filter>Header Files\ModelImpl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -278,7 +278,8 @@ void DrawLeftPane()
 		if (ImGui::Button("Load Boundary", ImVec2(100, 50)))
 		{
 			LoadWatershedBoundary(shedBound);
-			SetViewBounds(shedSW, shedNE);
+			std::pair<Vector2D const &, Vector2D const &> loadedShedBoundingBox = GetWatershedBoundingBox();
+			SetViewBounds(loadedShedBoundingBox.first, loadedShedBoundingBox.second);
 			UpdateViewport();
 		}
 
@@ -330,7 +331,8 @@ void DrawLeftPane()
 			{
 				//Remember to set the meshType (in GuiRequirements) to set the viewport mode to appropriate renderer.
 				meshType = meshParams.meshType;
-				SetViewBounds(nodesSW, nodesNE);
+				std::pair<Vector2D const &, Vector2D const &> loadedMeshBoundingBox = GetNodesBoundingBox();
+				SetViewBounds(loadedMeshBoundingBox.first, loadedMeshBoundingBox.second);
 				UpdateViewport();
 			}
 		}
