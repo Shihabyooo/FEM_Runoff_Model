@@ -1,4 +1,4 @@
-#include "SpatialDataManager.hpp"
+#include "SpatialDataModule.hpp"
 
 Vector_f64 nodeSlope, nodeManning, nodeFDR;
 Vector_f64 nodeElevation;
