@@ -103,6 +103,13 @@ enum class ElementType
 	undefined = 2
 };
 
+enum class LossModel
+{
+	none = 0,
+	initialConst = 1,
+	scsCN = 2,
+};
+
 struct Vector2;
 struct Vector2Int;
 struct Vector2D;
@@ -316,7 +323,7 @@ public:
 	bool IsValid() const;
 	void AdjustSize(size_t newSize);
 	double HoursToLocalUnits(double time) const;
-	double SampleRate(double timeSinceStart) const;// , double timeSpan, InterpolationType interpolationType) const; //timeSinceStart in hours. Returns rate as mm/hr
+	double SampleRate(double timeSinceStart) const;//, double timeStep) const;// , double timeSpan, InterpolationType interpolationType) const; //timeSinceStart in hours. Returns rate as mm/hr
 
 	size_t size = 0;
 	TimeUnit timeUnit = TimeUnit::hour;
@@ -363,11 +370,15 @@ public:
 								//Any precipitation after 10AM will be assumed zero.
 								//Preciptation between 
 
+	//Temporal intpolertion is unused in current implmenetation.
 	InterpolationType precipitationTemporalInterpolationType = InterpolationType::linear; //should either be linear or cubic. Nearest should never 
 																				//be used unless timeSeries resolution is close to or finer than
 																				//simulation timeStep
 	InterpolationType precipitationSpatialInterpolationType = InterpolationType::nearest;
 
+	LossModel lossModel = LossModel::none;
+
+	void * lossModelParams = NULL;
 	//double fixedPrecipitationValue = -1.0f; //must be positive value > 0.0
 
 	//Hydraulic Parameters
@@ -422,6 +433,13 @@ public:
 	size_t resolution = 10; //must be greater than 2.
 	double internalPadding = 0.001; //must be real, positive value.
 	double rayCastPadding = 1.0; //must be real, positive value.
+};
+
+struct InitialAndConstantParams
+{
+public:
+	double initialLoss = 0.0; //in mm
+	double constRate = 0.0; //in mm/hr
 };
 
 //Helper functions
