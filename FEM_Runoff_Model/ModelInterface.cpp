@@ -2,7 +2,7 @@
 #include "ModelInterface.hpp"
 #include "ModelGlobals.hpp"
 #include "ModelImplementation.hpp"
-#include "SpatialDataManager.hpp"
+#include "SpatialDataModule.hpp"
 
 
 void ComputeBoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Vector2D & max)

@@ -144,10 +144,13 @@
     <ClCompile Include="ModelInterface.cpp">
       <Filter>Source Files\ModelImpl</Filter>
     </ClCompile>
-    <ClCompile Include="SpatialDataManager.cpp">
+    <ClCompile Include="ModelImplementation.cpp">
       <Filter>Source Files\ModelImpl</Filter>
     </ClCompile>
-    <ClCompile Include="ModelImplementation.cpp">
+    <ClCompile Include="SpatialDataModule.cpp">
+      <Filter>Source Files\ModelImpl</Filter>
+    </ClCompile>
+    <ClCompile Include="PrecipitationModule.cpp">
       <Filter>Source Files\ModelImpl</Filter>
     </ClCompile>
   </ItemGroup>
@@ -215,13 +218,16 @@
     <ClInclude Include="ModelInterface.hpp">
       <Filter>Header Files\ModelImpl</Filter>
     </ClInclude>
-    <ClInclude Include="SpatialDataManager.hpp">
-      <Filter>Header Files\ModelImpl</Filter>
-    </ClInclude>
     <ClInclude Include="ModelImplementation.hpp">
       <Filter>Header Files\ModelImpl</Filter>
     </ClInclude>
     <ClInclude Include="ModelGlobals.hpp">
+      <Filter>Header Files\ModelImpl</Filter>
+    </ClInclude>
+    <ClInclude Include="PrecipitationModule.hpp">
+      <Filter>Header Files\ModelImpl</Filter>
+    </ClInclude>
+    <ClInclude Include="SpatialDataModule.hpp">
       <Filter>Header Files\ModelImpl</Filter>
     </ClInclude>
   </ItemGroup>

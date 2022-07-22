@@ -1,5 +1,6 @@
 #pragma once
 #include "ModelImplementation.hpp"
+#include "PrecipitationModule.hpp"
 
 
 //TODO add a cleanup method to clear the allocated memory (superTriangles, rasters) when program closes.
@@ -14,82 +15,6 @@ Vector2D shedSW, shedNE;
 std::vector<Vector2D> shedBoundary;
 
 Vector_f64 heads;
-
-//Precipitation returned as meters per hour.
-//current impl doesn't need triangle, but later it would.
-double GetCurrentPrecipitation(double time, ModelParameters const & params, Element const * element)
-{
-	if (params.variablePrecipitation)
-	{
-		LogMan::Log("Warning! Variable precipitation is not yet implemented!", LOG_WARN);
-		return 0.0;
-	}
-	else
-	{
-		return params.unitTimeSeries.SampleRate(time) / 1000.0;// , params.timeStep, params.precipitationTemporalInterpolationType);
-	}
-}
-
-Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params)
-{
-	//Preciptation Vector is the last term of the RHS of the formulation. i.e. dT * {Beta} * ((1 - omega) * Pe_t + omega * Pe_t+dt)
-
-	//Beta matrix for each element is a 3x1 vector
-	//{Beta_e} = A/3 *	|	1	|
-	//					|	1	|
-	//					|	1	|
-	//Where A is the area of element.
-
-	//zero out outVector before doing anything.
-	Vector_f64 result(nodes.size());
-
-	size_t elementCount = 0;
-	int nodesPerElement = 0;
-
-	switch (activeMeshType)
-	{
-	case ElementType::rectangle:
-		elementCount = rectangles.size();
-		nodesPerElement = 4;
-		break;
-	case ElementType::triangle:
-		elementCount = triangles.size();
-		nodesPerElement = 3;
-		break;
-	}
-
-	for (size_t i = 0; i < elementCount; i++)
-	{
-		Element * element = NULL;
-
-		switch (activeMeshType)
-		{
-		case ElementType::rectangle:
-			element = new Element(rectangles[i]);
-			break;
-		case ElementType::triangle:
-			element = new Element(triangles[i]);
-			break;
-		}
-
-		double newPrecipitation = GetCurrentPrecipitation(time + params.timeStep, params, element);
-		double elementContrib = (element->Area() / 3.0) * ((1.0 - params.femOmega) * element->elementPrecipitation + params.femOmega * newPrecipitation);
-		elementContrib *= params.timeStep;
-		element->elementPrecipitation = newPrecipitation;
-
-		//test
-		/*if (!element->ContainsVertex(1) && !element->ContainsVertex(2) && !element->ContainsVertex(3))
-			elementContrib = 0.0;*/
-			//end test
-
-		for (int intNodeID = 0; intNodeID < element->NodeCount(); intNodeID++)
-			result[element->VertexID(intNodeID)] += elementContrib;
-
-		delete element;
-	}
-
-	return result;
-}
 
 //TODO have to vector_f64 to store computed nodal velocities, and a function to compute the newheads nodal velocities every \
 iteration. newHead velos are then moved to oldHead velos after internal iterations are done.
@@ -506,6 +431,9 @@ bool RunSimulation(ModelParameters const & params)
 	UnloadAllRasters();
 
 	if (!LoadInputRasters(params))
+		return false;
+
+	if (InitializePrecipitationModule(params))
 		return false;
 
 	//Special consideration. Since the boundary node listing includes our exit node, we have to manually remove it.

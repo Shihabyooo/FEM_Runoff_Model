@@ -1,6 +1,6 @@
 #pragma once
 #include "Globals.hpp"
-#include "SpatialDataManager.hpp"
+#include "SpatialDataModule.hpp"
 #include "ModelGlobals.hpp"
 
 bool RunSimulation(ModelParameters const & params);
