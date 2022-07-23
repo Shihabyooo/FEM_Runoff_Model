@@ -156,6 +156,8 @@ char precipRasterDir[260] = "Precipitation Rasters Directory Path";
 char percipTSPath[260] = "Test_Data\\Test_Timeseries.csv";
 char manningFilePath[260] = "Manning Raster File Path";
 
+int outletNode = 0;
+
 char superTriPadding[24] = "1.0";
 int gridMeshResolution = 100;
 char gridMeshPadding[12] = "0.01";
@@ -204,6 +206,8 @@ void FillParametersStruct(ModelParameters & params)
 	params.fdrPath = fdrFilePath;
 	params.topographySamplingMethod = static_cast<InterpolationType>(selectedTopoInterp);
 	params.variablePrecipitation = selectedPrecipInput == 1;
+
+	params.outletNode = outletNode;
 
 	//params.unitTimeSeries = ; 
 	params.precipitationTemporalInterpolationType = static_cast<InterpolationType>(selectedPrecipTempoInterp);
@@ -282,10 +286,13 @@ void DrawLeftPane()
 			SetViewBounds(loadedShedBoundingBox.first, loadedShedBoundingBox.second);
 			UpdateViewport();
 		}
+		
+		ImGui::Text("Outlet Node");
+		ImGui::InputInt("Outlet Node: ", &outletNode, 0);
+		outletNode = Min(static_cast<size_t>(Max(outletNode, 0)), GetNodes().size() - 1); //force between 0 and max node id.
 
 		ImGui::Text("Element Type");
 		ImGui::Combo("##elemType", &selectedElementType, elementType, IM_ARRAYSIZE(elementType));
-		//ImGui::PopItemWidth();
 
 		if (selectedElementType == 0)
 		{
