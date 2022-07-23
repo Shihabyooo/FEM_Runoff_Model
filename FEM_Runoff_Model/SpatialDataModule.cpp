@@ -108,24 +108,22 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 void ConvexHull(std::vector<Vector2D> points, std::vector<Vector2D> & outBoundaryPoints)
 {
 	outBoundaryPoints.clear();
-	std::vector<Vector2D>::const_iterator curNodeIt = nodes.begin();
+	std::vector<Vector2D>::const_iterator curNodeIt = points.begin();
 
-	for (auto it = nodes.begin(); it != nodes.end(); ++it)
+	for (auto it = points.begin(); it != points.end(); ++it)
 	{
 		if (it->x < curNodeIt->x)
 			curNodeIt = it;
 	}
 
 	outBoundaryPoints.push_back(*curNodeIt);
-	curNodeIt = nodes.begin();
+	curNodeIt = points.begin();
 
 	Vector2D currentPoint;
 
 	while (true)
 	{
-		currentPoint = *curNodeIt;
-
-		for (auto it = nodes.begin(); it != nodes.end(); ++it)
+		for (auto it = points.begin(); it != points.end(); ++it)
 		{
 			Vector2D vec1 = *it - outBoundaryPoints.back();
 			Vector2D vec2 = currentPoint - *it;
@@ -142,8 +140,8 @@ void ConvexHull(std::vector<Vector2D> points, std::vector<Vector2D> & outBoundar
 		outBoundaryPoints.push_back(currentPoint);
 
 		++curNodeIt;
-		if (curNodeIt == nodes.end())
-			curNodeIt = nodes.begin();
+		if (curNodeIt == points.end())
+			curNodeIt = points.begin();
 	}
 }
 
@@ -218,6 +216,11 @@ void GetNodeSamplingSubBoundary_Tri(size_t nodeID, std::vector<Vector2D> & outSu
 		//Due to ordering issues with unordered_maps ang mesh generators, the outSubBoundary above may not have its node ordered\
 		in a way that creates perfect boundary of the subRegion we want. So we reorder to do so with a simple convex hull\
 		generating algorithm.
+		/*std::cout << "\n!!!!!!!!!!!!!!!!!!!!!!!\n";
+		for (auto it = outSubBoundary.begin(); it != outSubBoundary.end(); ++it)
+			Print(*it);*/
+		std::cout << "\n\n=========\ntesting for node: " << nodeID << std::endl;
+
 		ConvexHull(outSubBoundary, outSubBoundary);
 	}
 	else
@@ -411,6 +414,13 @@ std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 c
 
 bool SampleAggregatedPixels(size_t nodeID, SpatialSamplingMethod method, Matrix_f64 const * raster, int rasterID, double & outValue, double tolerance = -1.0) //tolereance required only for majority aggregation
 {
+	if (method == SpatialSamplingMethod::nearest)
+	{
+		std::pair<Vector2Int, double> nearestPixel = SampleNearestPixel(nodes[nodeID], raster, rasterID);
+		outValue = nearestPixel.second;
+		return nearestPixel.first.x >= 0.0;
+	}
+
 	//construct a region of influence for node, bu connecting the centroid for all elements that this node is part of.
 	std::vector<Vector2D> nodeSamplingSubBound;
 
@@ -442,7 +452,6 @@ bool SampleAggregatedPixels(size_t nodeID, SpatialSamplingMethod method, Matrix_
 		return false;
 	}
 
-	std::pair<double, double> result;
 	switch (method)
 	{
 	case SpatialSamplingMethod::average:
@@ -460,82 +469,6 @@ bool SampleAggregatedPixels(size_t nodeID, SpatialSamplingMethod method, Matrix_
 	}
 
 	return true;
-}
-
-//returns DBL_MIN values if error
-std::pair<double, double> SampleAggregatedSlopes(size_t nodeID, SpatialSamplingMethod method, double tolerance = -1.0)
-{
-	//construct a region of influence for node, bu connecting the centroid for all elements that this node is part of.
-	std::vector<Vector2D> nodeSamplingSubBound;
-
-	switch (activeMeshType)
-	{
-	case ElementType::triangle:
-	{
-		GetNodeSamplingSubBoundary_Tri(nodeID, nodeSamplingSubBound, true);
-	}
-	break;
-	case ElementType::rectangle:
-	{
-		GetNodeSamplingSubBoundary_Rect(nodeID, nodeSamplingSubBound, true);
-	}
-	break;
-	case ElementType::undefined: //should never reach this point in the code, but still.
-		LogMan::Log("ERROR! Internal error. (Undefined meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
-		return std::pair<double, double>(DBL_MIN, DBL_MIN);
-	default:
-		LogMan::Log("ERROR! Internal error. (Default meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
-		return std::pair<double, double>(DBL_MIN, DBL_MIN);
-	}
-
-	std::vector<double> slopeValues, fdrValues;
-
-	if (!SamplePixelsValues(nodeSamplingSubBound, slopes, slopesID, slopeValues) ||
-		!SamplePixelsValues(nodeSamplingSubBound, fdr, fdrID, fdrValues))
-		return std::pair<double, double>(DBL_MIN, DBL_MIN);
-
-	if (slopeValues.size() != fdrValues.size())
-	{
-		LogMan::Log("ERROR! Mismatched FDR and Slope sampling for nodeID: " + std::to_string(nodeID) + ". Check input rasters.", LOG_ERROR);
-		return std::pair<double, double>(DBL_MIN, DBL_MIN);
-	}
-
-	std::vector<double> slopesX, slopesY;
-
-	if (slopeValues.size() < 1) //implies fdrValues.size() also < 1.
-	{
-		//LogMan::Log("No pixel within subregion for node : " + std::to_string(nodeID) + ". Falling back to nearest neighbour sampling.");
-		slopeValues.push_back(SampleNearestPixel(nodes[nodeID], slopes, slopesID).second);
-		fdrValues.push_back(SampleNearestPixel(nodes[nodeID], fdr, fdrID).second);
-	}
-
-	if (!ComputeSlopesComponents(nodeID, slopeValues, fdrValues, slopesX, slopesY))
-		return std::pair<double, double>(DBL_MIN, DBL_MIN);
-
-	std::pair<double, double> result;
-	switch (method)
-	{
-	case SpatialSamplingMethod::average:
-		result.first = Average(slopesX);
-		result.second = Average(slopesY);
-		break;
-	case SpatialSamplingMethod::median:
-		result.first = Median(slopesX);
-		result.second = Median(slopesY);
-		break;
-	case SpatialSamplingMethod::majority:
-		result.first = Majority(slopesX, tolerance);
-		result.second = Majority(slopesY, tolerance);
-		break;
-	default:
-		LogMan::Log("ERROR! Internal error (Unspecified spatial sampling method in SampleAggregatedPixels())", LOG_ERROR);
-		break;
-	}
-
-	//TODO remove this and fdr vector after removing references to the latter in the rest of the code
-	nodeFDR[nodeID] = lround(Majority(fdrValues));
-
-	return result;
 }
 
 bool CacheManningCoefficients(ModelParameters const & params)
@@ -575,12 +508,8 @@ bool CacheSlopes(ModelParameters const & params)
 
 	for (size_t i = 0; i < nodes.size(); i++)
 	{
-		/*std::pair<double, double> newSlopes = SampleAggregatedSlopes(i, SpatialSamplingMethod::average, 0.000001);
-		nodeSlopeX[i] = newSlopes.first;
-		nodeSlopeY[i] = newSlopes.second;*/
-		//std::cout << "sampling for node: " << i << std::endl;
-		if (!SampleAggregatedPixels(i, SpatialSamplingMethod::average, slopes, slopesID, nodeSlope[i]) ||
-			!SampleAggregatedPixels(i, SpatialSamplingMethod::majority, fdr, fdrID, nodeFDR[i]))
+		if (!SampleAggregatedPixels(i, SpatialSamplingMethod::nearest, slopes, slopesID, nodeSlope[i]) ||
+			!SampleAggregatedPixels(i, SpatialSamplingMethod::nearest, fdr, fdrID, nodeFDR[i]))
 			LogMan::Log("WARNING! Failed to sample slope/FDR for node: " + std::to_string(i), LOG_WARN);
 
 		//convert the slope from percentage to m/m

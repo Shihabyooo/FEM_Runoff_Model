@@ -86,6 +86,7 @@ enum class SpatialSamplingMethod
 	average = 0,
 	median = 1,
 	majority = 2,
+	nearest = 3,
 };
 
 enum class TimeUnit
