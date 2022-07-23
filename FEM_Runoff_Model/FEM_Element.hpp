@@ -22,6 +22,7 @@ public:
 				vertIDs[i] = elem2.vertIDs[i];
 		}
 
+		id = elem2.id;
 		area = elem2.area;
 	}
 
@@ -127,11 +128,7 @@ public:
 	}
 
 public:
-	size_t id; //of the element itself
-	
-	//TODO the value bellow is better stored in a some object in ModelInterface. Leaving it here until I fix the element ID ordering to\
-	be sequential starting from 0.
-	double elementPrecipitation = 0.0; //in m/hr. The precipitation at last pass.	
+	size_t id; //of the element itself	
 protected:
 	
 	int vertCount = 0;
