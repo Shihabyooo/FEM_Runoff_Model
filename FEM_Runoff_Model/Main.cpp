@@ -8,15 +8,16 @@ ModelParameters ModelTestParams()
 {
 	ModelParameters params;
 
-	/*params.demPath = "Test_Data\\DEM.tif";
+	params.demPath = "Test_Data\\DEM.tif";
 	params.slopesPath = "Test_Data\\Slope_Percent.tif";
-	params.fdrPath = "Test_Data\\FDR.tif";*/
-	params.demPath = "Test_Data\\V3\\DEM.tif";
+	params.fdrPath = "Test_Data\\FDR.tif";
+	/*params.demPath = "Test_Data\\V3\\DEM.tif";
 	params.slopesPath = "Test_Data\\V3\\Slope_Percent.tif";
-	params.fdrPath = "Test_Data\\V3\\FDR.tif";
+	params.fdrPath = "Test_Data\\V3\\FDR.tif";*/
 	params.topographySamplingMethod = InterpolationType::linear;
-	//params.outletNode = 22;
-	params.outletNode = 4;
+	params.outletNode = 22;
+	//params.outletNode = 430;
+	//params.outletNode = 4;
 	//params.outletNode = 13;
 
 	params.useLumpedForm = true;
@@ -29,17 +30,17 @@ ModelParameters ModelTestParams()
 	params.precipitationSpatialInterpolationType = InterpolationType::nearest;
 
 	params.variableManningCoefficients = false;
-	params.fixedManningCoeffient = 0.03; //must be positive value > 0.0
+	params.fixedManningCoeffient = 0.05; //must be positive value > 0.0
 	params.manningCoefficientRasterPath = "";
-	params.timeStep = 0.1; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
+	params.timeStep = 0.25; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
 	params.startTime = 0.0; //should be left at 0.0
-	params.endTime = 25.0f; //hours after startTime to end simulation.
+	params.endTime = 20.0f; //hours after startTime to end simulation.
 
 	//params.meshType = ElementType::triangle;
 	params.useLumpedForm = true;
 	params.femOmega = 0.5;
 	params.solverType = Solver::Auto;
-	params.residualThreshold = 0.000001;
+	params.residualThreshold = 0.00001;
 	params.weight = 0.5;
 	params.maxIterations = 5000;
 	params.internalResidualTreshold = 0.000001;
@@ -58,8 +59,9 @@ void GenTestMesh()
 	//meshParams.inNodesListPath = "Test_Data\\Grid_Nodes_Dense2.csv";
 	meshParams.superTrianglePadding = 1.0;
 
-	//meshParams.resolution = 4;
-	meshParams.resolution = 12;
+	meshParams.resolution = 4;
+	//meshParams.resolution = 20;
+	//meshParams.resolution = 12;
 	//meshParams.resolution = 25;
 	meshParams.internalPadding = 0.01;
 	meshParams.rayCastPadding = 10.0;
@@ -105,13 +107,13 @@ int main(int argc, char ** argv)
 	
 	int returnVal = 0;
 	//TODO uncomment this after testing is done.
-	returnVal = StartUI(1280, 720);
+	//returnVal = StartUI(1280, 720);
 	
 	////testing model on CLI directly
 	////TestGenerateSyntheticWatershed();
 	
-	//LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
-	LoadWatershedBoundary("Test_Data\\v2\\Watershed_Boundary.kml");
+	LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
+	//LoadWatershedBoundary("Test_Data\\v2\\Watershed_Boundary.kml");
 	GenTestMesh();
 	Simulate(ModelTestParams());
 

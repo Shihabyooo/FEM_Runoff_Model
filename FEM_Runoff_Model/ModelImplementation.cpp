@@ -52,9 +52,6 @@ Matrix_f64 ElementKMatrix_Tri(Triangle const & tri, std::pair<double, double> uv
 
 	Matrix_f64 kMat(3, 3);
 
-	//uv[0].second = uv[1].second = uv[2].second = (uv[0].second + uv[1].second + uv[2].second) / 3.0;//test
-	//uv[0].first = uv[1].first = uv[2].first = (uv[0].first + uv[2].first + uv[2].first) / 3.0;//test
-
 	kMat[0][0] = uv[0].first * (j.y - k.y) + uv[0].second * (k.x - j.x);
 	kMat[0][1] = uv[0].first * (k.y - i.y) + uv[0].second * (i.x - k.x);
 	kMat[0][2] = uv[0].first * (i.y - j.y) + uv[0].second * (j.x - i.x);
@@ -70,13 +67,23 @@ Matrix_f64 ElementKMatrix_Tri(Triangle const & tri, std::pair<double, double> uv
 	return kMat;
 }
 
-double k_e_x_fixed[4][4]{ {-2, 2, 1, -1},
+//double k_e_x_fixed[4][4]{ {-2, 2, 1, -1},
+//							{-2, 2, 1, -1},
+//							{-1, 1, 2, -2},
+//							{-1, 1, 2, -2} };
+//
+//double k_e_y_fixed[4][4]{ {-2, -1, 1, 2},
+//							{-1, -2, 2, 1},
+//							{-1, -2, 2, 1},
+//							{-2, -1, 1, 2} };
+
+double k_e_x_fixed[4][4]{	{2, -2, -1, 1},
 							{-2, 2, 1, -1},
 							{-1, 1, 2, -2},
-							{-1, 1, 2, -2} };
+							{1, 1, -2, 2} };
 
-double k_e_y_fixed[4][4]{ {-2, -1, 1, 2},
-							{-1, -2, 2, 1},
+double k_e_y_fixed[4][4]{	{2, 1, -1, -2},
+							{1, 2, -2, -1},
 							{-1, -2, 2, 1},
 							{-2, -1, 1, 2} };
 
@@ -98,8 +105,12 @@ Matrix_f64 ElementKMatrix_Rect(Rectangle const & rect, std::pair<double, double>
 	Matrix_f64 kMat_x(4, 4);
 	Matrix_f64 kMat_y(4, 4);
 
-	double h12 = rect.Height() / 12.0;
-	double w12 = rect.Width() / 12.0;
+	/*double h12 = rect.Height() / 12.0;
+	double w12 = rect.Width() / 12.0;*/
+
+	double h12 = rect.Height() / (rect.Width() * 6.0);
+	double w12 = rect.Width() / (rect.Height() * 6.0);
+
 	double multX, multY;
 
 	for (int i = 0; i < 4; i++)
@@ -114,10 +125,6 @@ Matrix_f64 ElementKMatrix_Rect(Rectangle const & rect, std::pair<double, double>
 		}
 	}
 
-	//std::cout << "\n//////////////////////////////////////////\n";
-	//std::cout << "element: "; 
-	//rect.DebugPrintDetails();
-	//(kMat_x + kMat_y).DisplayOnCLI(2);//test
 
 	return kMat_x + kMat_y;
 }
@@ -207,19 +214,9 @@ Matrix_f64 ComputeGlobalCoefficientsMatrix(ModelParameters const & params, Vecto
 			kMat = ElementKMatrix_Rect(it->second, uv) * (params.timeStep * params.femOmega / 6.0);
 			cMat = ElementCMatrix_Rect(params, it->second);
 
-			cMat[0][0] = cMat[1][1] = cMat[2][2] = cMat[3][3] = (it->second.Area() / 4.0);
-
 			for (int row = 0; row < 4; row++)
 				for (int column = 0; column < 4; column++)
 					coefMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] + kMat[row][column]);
-
-			//test
-			/*if (it->second.ContainsVertex(46))
-			{
-				std::cout << "Inside CoefMatConst\nElem: ";
-				it->second.DebugPrintDetails();
-				kMat.DisplayOnCLI();
-			}*/
 		}
 	}
 
@@ -244,8 +241,7 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 												ComputeVelocityComponents(it->second.VertexID(2), heads) };
 
 			kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
-
-			cMat[0][0] = cMat[1][1] = cMat[2][2] = (it->second.Area() / 3.0);
+			cMat = ElementCMatrix_Tri(params, it->second);
 
 			for (int row = 0; row < 3; row++)
 				for (int column = 0; column < 3; column++)
@@ -264,8 +260,7 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 												ComputeVelocityComponents(it->second.VertexID(3), heads) };
 
 			kMat = ElementKMatrix_Rect(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
-
-			cMat[0][0] = cMat[1][1] = cMat[2][2] = cMat[3][3] = (it->second.Area() / 4.0);
+			cMat = ElementCMatrix_Rect(params, it->second);
 
 			for (int row = 0; row < 4; row++)
 				for (int column = 0; column < 4; column++)
@@ -313,8 +308,8 @@ void TestShowValues(ModelParameters const & params)
 	}
 
 
-	size_t targetRowToShow = 0;
-	std::cout << "\nConductance Matrix:\n";
+	size_t targetRowToShow = 22;
+	std::cout << "\nConductance Matrix row for node: " << targetRowToShow << "\n";
 	Matrix_f64 _globalConduc = ComputeGlobalConductanceMatrix(params);
 	//(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(0);
 	//ComputeGlobalConductanceMatrix(params).DisplayOnCLI(0);
@@ -323,7 +318,7 @@ void TestShowValues(ModelParameters const & params)
 	std::cout << "\n";
 
 
-	std::cout << "\nCoefficients Matrix:\n";
+	std::cout << "\nCoefficients Matrix row for node: " << targetRowToShow << "\n";
 	Matrix_f64 _globalCoef = ComputeGlobalCoefficientsMatrix(params, _new_h);
 	//(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(0);
 	//ComputeGlobalCoefficientsMatrix(params, _new_h).DisplayOnCLI(0);
@@ -340,7 +335,7 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & 
 {
 	//[GlobalConductanceMat] * {h_0} + precipComponent
 
-	outRHS = ComputeGlobalConductanceMatrix(params) * heads + ComputePreciptationVector(time, params);
+	outRHS = ComputeGlobalConductanceMatrix(params) * heads +ComputePreciptationVector(time, params);
 
 	//test
 	_RHS = outRHS;
@@ -353,47 +348,45 @@ void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & 
 void AdjustForBoundaryConditions(Matrix_f64 & aMat, Vector_f64 & xVec, Vector_f64 & bVec)
 {
 	////Using https://finite-element.github.io/7_boundary_conditions.html
-	//for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
-	//{
-	//	bVec[*it] = nodeElevation[*it];
-
-	//	for (size_t i = 0; i < aMat.Columns(); i++)
-	//		aMat[*it][i] = 0.0;
-
-	//	aMat[*it][*it] = 1.0;
-	//}
-
-	//Using Istok's method
-	size_t reducedSystemSize = nodes.size() - boundaryNodes.size();
-	Matrix_f64 adjustedAMat(reducedSystemSize, reducedSystemSize);
-	Vector_f64 adjustedXVec(reducedSystemSize);
-	Vector_f64 adjustedBVec(reducedSystemSize);
-
-	size_t rowCounter = 0;
-	size_t columnCounter = 0;
-	for (size_t row = 0; row < aMat.Rows(); row++)
+	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 	{
-		if (IsBoundaryNode(row))
-			continue;
-
-		adjustedBVec[rowCounter] = bVec[row];
-		//adjustedXVec[rowCounter] = xVec[row]; //pointless. xVec is not filled with data yet.
-
-		for (size_t column = 0; column < aMat.Columns(); column++)
-		{
-			if (IsBoundaryNode(column))
-				continue;
-
-			adjustedAMat[rowCounter][columnCounter] = aMat[row][column];
-			columnCounter++;
-		}
-		columnCounter = 0;
-		rowCounter++;
+		bVec[*it] = nodeElevation[*it];
+		for (size_t i = 0; i < aMat.Columns(); i++)
+			aMat[*it][i] = 0.0;
+		aMat[*it][*it] = 1.0;
 	}
 
-	aMat = adjustedAMat;
-	bVec = adjustedBVec;
-	xVec = adjustedXVec;
+	//Using Istok's method
+	//size_t reducedSystemSize = nodes.size() - boundaryNodes.size();
+	//Matrix_f64 adjustedAMat(reducedSystemSize, reducedSystemSize);
+	//Vector_f64 adjustedXVec(reducedSystemSize);
+	//Vector_f64 adjustedBVec(reducedSystemSize);
+
+	//size_t rowCounter = 0;
+	//size_t columnCounter = 0;
+	//for (size_t row = 0; row < aMat.Rows(); row++)
+	//{
+	//	if (IsBoundaryNode(row))
+	//		continue;
+
+	//	adjustedBVec[rowCounter] = bVec[row];
+	//	//adjustedXVec[rowCounter] = xVec[row]; //pointless. xVec is not filled with data yet.
+
+	//	for (size_t column = 0; column < aMat.Columns(); column++)
+	//	{
+	//		if (IsBoundaryNode(column))
+	//			continue;
+
+	//		adjustedAMat[rowCounter][columnCounter] = aMat[row][column];
+	//		columnCounter++;
+	//	}
+	//	columnCounter = 0;
+	//	rowCounter++;
+	//}
+
+	//aMat = adjustedAMat;
+	//bVec = adjustedBVec;
+	//xVec = adjustedXVec;
 }
 
 void ReIntroduceBoundaryNodes(Vector_f64 & vec)
@@ -401,23 +394,23 @@ void ReIntroduceBoundaryNodes(Vector_f64 & vec)
 	/*if (vec.Rows() == nodes.size())
 		return;*/
 
-	Vector_f64 adjustedVec(nodes.size());
+	//Vector_f64 adjustedVec(nodes.size());
 
-	size_t rowCounter = 0;
-	for (size_t i = 0; i < nodes.size(); i++)
-	{
-		if (IsBoundaryNode(i))
-		{
-			adjustedVec[i] = 0.0;
-		}
-		else
-		{
-			adjustedVec[i] = vec[rowCounter];
-			rowCounter++;
-		}
-	}
+	//size_t rowCounter = 0;
+	//for (size_t i = 0; i < nodes.size(); i++)
+	//{
+	//	if (IsBoundaryNode(i))
+	//	{
+	//		adjustedVec[i] = 0.0;
+	//	}
+	//	else
+	//	{
+	//		adjustedVec[i] = vec[rowCounter];
+	//		rowCounter++;
+	//	}
+	//}
 
-	vec = adjustedVec;
+	//vec = adjustedVec;
 }
 
 bool RunSimulation(ModelParameters const & params)
@@ -433,7 +426,7 @@ bool RunSimulation(ModelParameters const & params)
 	if (!LoadInputRasters(params))
 		return false;
 
-	if (InitializePrecipitationModule(params))
+	if (!InitializePrecipitationModule(params))
 		return false;
 
 	//Special consideration. Since the boundary node listing includes our exit node, we have to manually remove it.
@@ -513,8 +506,10 @@ bool RunSimulation(ModelParameters const & params)
 	//nodeFDR[63] = 5;
 
 	//endtest
-
-
+	//test
+	std::cout << "Enter to start simulation\n"; //TODO remove this block
+	std::cin.sync();
+	std::cin.get();
 
 	nodeElevation = Vector_f64(nodes.size()); //test
 	heads = nodeElevation;
@@ -578,7 +573,9 @@ bool RunSimulation(ModelParameters const & params)
 
 			newHeads = fixedNewH;
 		}
-		//TestShowValues(params);
+		TestShowValues(params);
+
+		AppendLastTimeStepPrecipitationVariables();
 
 		std::cout << "\n------------------------------------------------------\n";
 		std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
@@ -599,30 +596,85 @@ bool RunSimulation(ModelParameters const & params)
 		/*double qx = sqrt(nodeSlopeX[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
 		double qy = sqrt(nodeSlopeY[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
 		double q = sqrt(qx * qx + qy * qy);*/
+		//double angle = FDR2Angle(lround(nodeFDR[params.outletNode]));
 		double q = sqrt(nodeSlope[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
-		double flowWidth;
-		if (activeMeshType == ElementType::triangle)
-			flowWidth = 2.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //test. 
-		else
-			flowWidth = rectangles[0].Width(); //test. 
-		std::cout << "h: " << std::setprecision(7) << heads[params.outletNode] << "\tQ: " << std::setprecision(3) << (q * flowWidth) << std::endl;
-		qTS.push_back(std::pair<double, double>(time, q * flowWidth));
+		//double q_x = q * cos(angle);
+		//double q_y = q * sin(angle);
+		//double flowWidth = 0.0;
+		//double flowHeight = 0.0; //not depth.
+		//if (activeMeshType == ElementType::triangle)
+		//{
+		//	//flowWidth = 2.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //test. 
+		//	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+		//		if (it->second.ContainsVertex(params.outletNode))
+		//		{
+		//			std::pair<Vector2D, Vector2D> elemBounds = it->second.BoundingBox();
+		//			flowWidth += (elemBounds.second - elemBounds.first).x;
+		//			flowHeight += (elemBounds.second - elemBounds.first).y;
+		//		}
+		//}	
+		//else
+		//{
+		//	//flowWidth = rectangles[0].Width(); //test. 
+		//	for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
+		//		if (it->second.ContainsVertex(params.outletNode))
+		//		{
+		//			flowWidth += it->second.Width();
+		//			flowHeight += it->second.Height();
+		//		}
+		//}
+		//double Q_x = q_x * flowHeight;
+		//double Q_y = q_y * flowWidth;
+		////double Q = sqrt(Q_x * Q_x + Q_y * Q_y);
+		//
+		static double _sum = 0.0;
+		double Q = 0.0;
+		std::unique_ptr outletCondRow = ComputeGlobalConductanceMatrix(params).GetRow(params.outletNode);
+		//std::unique_ptr outletCoefRow = ComputeGlobalCoefficientsMatrix(params, newHeads).GetRow(params.outletNode);
+		//Vector_f64 tempVec(nodes.size());
+		for (size_t i = 0; i < nodes.size(); i++)
+		{
+			Q += outletCondRow[i] * heads[i];
+			//tempVec[i] = outletCondRow[i] * heads[i];
+		}
+		//Q = outletCondRow[params.outletNode] * heads[params.outletNode];
+		//tempVec.DisplayOnCLI();
+
+		_sum += Q;
+		std::cout << "Sum : " << _sum << " by: " << Q << std::endl;
+		Q = Q / params.timeStep / 3600;
+
+		Q = q * 4.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //test. 
+
+		std::cout << "h: " << std::setprecision(7) << heads[params.outletNode] << "\tQ: " << std::setprecision(3) << Q  << std::endl;
+		qTS.push_back(std::pair<double, double>(time, Q));
 		std::cout << "\n------------------------------------------------------\n";
 
 		heads = newHeads;
 		time += params.timeStep;
 
 		//test
-		std::cout << "Enter to proceed to next step\n";
+		/*std::cout << "Enter to proceed to next step\n";
 		std::cin.sync();
-		std::cin.get();
+		std::cin.get();*/
 	}
 
 	//test
+	double totalInput = GetWatershedCumulativePrecipitationVolume(); //cubic meters.
+	double totalLoss = GetWatershedCumulativeLossVolume(); //cubic meters.
+	double totalOutput = 0.0; //cubic meters.
 	std::cout << " time \t Q (cms)\n";
 	for (auto it = qTS.begin(); it != qTS.end(); ++it)
+	{
 		std::cout << std::setw(6) << std::setfill('0') << std::setprecision(3) << it->first << "\t" << std::setprecision(5) << it->second << std::endl;
+		totalOutput += it->second * params.timeStep * 3600.0;
+	}
 	qTS.clear();
 
+	std::cout << "\n\nTotal Precipitation: " << std::fixed << std::setprecision(1) << totalInput << "cubic meters." << std::endl;
+	std::cout << "\n\nTotal Loss: " << std::fixed << std::setprecision(1) << totalLoss << "cubic meters." << std::endl;
+	std::cout << "\n\nTotal Runoff: " << std::fixed << std::setprecision(1) << totalOutput << "cubic meters." << std::endl;
+
+	
 	return true;
 }
