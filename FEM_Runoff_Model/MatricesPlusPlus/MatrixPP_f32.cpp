@@ -7,6 +7,14 @@ Matrix_f32::Matrix_f32()
 	content = NULL;
 }
 
+Matrix_f32::Matrix_f32(_INDEX _size)
+{
+	Alloc(_size, _size);
+
+	rows = _size;
+	columns = _size;
+}
+
 Matrix_f32::Matrix_f32(_INDEX _rows, _INDEX _columns)
 {
 	Alloc(_rows, _columns);
@@ -23,6 +31,16 @@ Matrix_f32::Matrix_f32(_INDEX _rows, _INDEX _columns, float defaultValue)
 	rows = _rows;
 
 	SetEntireArrayToFixedValue(defaultValue);
+}
+
+Matrix_f32::Matrix_f32(float ** cStyle2DArr, _INDEX _rows, _INDEX _columns)
+{
+	SetArray(cStyle2DArr, _rows, _columns);
+}
+
+Matrix_f32::Matrix_f32(float * cStyle2DArr, _INDEX _rows, _INDEX _columns)
+{
+	SetArray(cStyle2DArr, _rows, _columns);
 }
 
 Matrix_f32::Matrix_f32(const Matrix_f32 & sourceMat)

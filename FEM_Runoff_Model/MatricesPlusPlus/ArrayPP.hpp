@@ -13,8 +13,9 @@
 //can replace size_t with an integer type (e.g. int or unsigned short). Performance gains to be tested
 #define _INDEX size_t
 
-//MINDET is the value bellow which the absolute of the determinant is considered zero (i.e. matrix would be considered singular)
-#define MINDET 0.00001
+//MINDET is the value at or bellow which the absolute of the determinant is considered zero (i.e. matrix would be considered singular)
+//Set to 0.0 for exact determinant matching.
+#define MINDET 0.00001 
 
 
 #define Alloc(x, y) try\
@@ -39,9 +40,12 @@ class Array2D
 public:
 	//constructors and destructors
 	Array2D();
+	Array2D(_INDEX _size); //creates squared array of _size x _size
 	Array2D(_INDEX _rows, _INDEX _columns);
 	Array2D(_INDEX _rows, _INDEX _columns, T defaultValue);
-	Array2D(const Array2D<T> & sourceArr); //copy constructor (Deep copy)
+	Array2D(T ** cStyle2DArr, _INDEX _rows, _INDEX _columns); //cStyle2DArr is T[_rows][_columns]
+	Array2D(T * cStyle2DArr, _INDEX _rows, _INDEX _columns); //cStyle2DArr is T[_rows * _columns], assumed layed out row by row
+	Array2D(Array2D<T> const & sourceArr); //copy constructor (Deep copy)
 	Array2D(Array2D<T> && sourceArr); //move constructor
 	~Array2D();
 
@@ -49,14 +53,18 @@ public:
 	Array2D<T> & operator= (const Array2D<T> & sourceArr);	//array assigment from similar type, performs deep copy of the RHS Array2D content
 	Array2D<T> & operator= (Array2D<T> && sourceArr);	//array assigment from similar type, performs deep copy of the RHS Array2D content
 	//void operator= (std::vector<std::vector<T>> & sourceVec);	//array assignment from a vector<vector<T>>, assumes unequal sub-vectors, allocates for largest one and pads the others with default value for T.
-	bool operator== (const Array2D<T> arr2); //equality check
-	bool operator!= (const Array2D<T> arr2); //non equality check (what?)
-	T & operator() (const _INDEX _row, const _INDEX _column);	//Array like assignment and reading. //TODO force type matching
-	T * const & operator[] (const _INDEX _row);
-	T const * const & operator[] (const _INDEX _row) const;
+	bool operator== (Array2D<T> const & arr2); //equality check
+	bool operator!= (Array2D<T> const & arr2); //non equality check (what?)
+	T & operator() (_INDEX _row, _INDEX _column);
+	T const & operator() (_INDEX _row, _INDEX _column) const;
+	T * const & operator[] (_INDEX _row);
+	T const * const & operator[] (_INDEX _row) const;
 
 	//Setters and Getters
-	void SetValue(_INDEX _row, _INDEX _column, T value);
+	void SetValue(_INDEX _row, _INDEX _column, T const & value);
+	void SetArray(T ** cStyle2DArr, _INDEX _rows, _INDEX _columns); //cStyle2DArr is T[_rows][_columns]
+	void SetArray(T * cStyle2DArr, _INDEX _rows, _INDEX _columns); //cStyle2DArr is T[_rows * _columns], assumed layed out row by row
+	void SetEntireArrayToFixedValue(T value);
 	T GetValue(_INDEX _row, _INDEX _column) const;	//getter, read only.
 	_INDEX Rows() const;	//getter, returns the number of rows of this array, read only.
 	_INDEX Columns() const;	//getter, returns the number of columns of this array, read only.
@@ -66,8 +74,8 @@ public:
 	T * GetRowPtr(_INDEX row); //returns a pointer directly to the row content of this object.
 	T ** GetColumnPtr(_INDEX column); ////returns a pointer directly to the column content of this object. Columns aren't contiguous in memory, so we have to return a T*[rows].
 	
+	
 	//utilities
-	void SetEntireArrayToFixedValue(T value);
 	Array2D<T> GetSubMatrix(_INDEX beginRow, _INDEX noOfRows, _INDEX beginColumn, _INDEX noOfColumns) const;
 	Array2D<T> Transpose() const;	//Returns transpose of this object-array. While it made sense to overload operators for multiplication, addition and inversion, transposing doesn't have a C++ op that we can rationlize equivalence to.
 	void SwapRows(_INDEX firstRow, _INDEX secondRow);

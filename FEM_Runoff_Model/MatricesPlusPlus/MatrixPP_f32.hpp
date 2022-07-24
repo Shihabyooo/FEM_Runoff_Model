@@ -12,8 +12,11 @@ public:
     //using Array2D<float>::Array2D; //To inherit base class constructors.
     //constructors and destructors
 	Matrix_f32();
+	Matrix_f32(_INDEX _size);
 	Matrix_f32(_INDEX _rows, _INDEX _columns);
 	Matrix_f32(_INDEX _rows, _INDEX _columns, float defaultValue);
+	Matrix_f32(float ** cStyle2DArr, _INDEX _rows, _INDEX _columns); //cStyle2DArr is float[_rows][_columns]
+	Matrix_f32(float * cStyle2DArr, _INDEX _rows, _INDEX _columns); //cStyle2DArr is double[_rows * _columns], assumed layed out row by row
 	Matrix_f32(const Matrix_f32 & sourceMat); //Copy constructor (Deep copy)
 	Matrix_f32(Matrix_f32 && sourceMat); //Move constructor
 	~Matrix_f32();

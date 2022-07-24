@@ -14,8 +14,11 @@ public:
 	//using Array2D<double>::Array2D; //To inherit base class constructors.
 	//constructors and destructors
 	Matrix_f64();
+	Matrix_f64(_INDEX _size);
 	Matrix_f64(_INDEX _rows, _INDEX _columns);
 	Matrix_f64(_INDEX _rows, _INDEX _columns, double defaultValue);
+	Matrix_f64(double **  cStyle2DArr, _INDEX _rows, _INDEX _columns); //cStyle2DArr is double[_rows][_columns]
+	Matrix_f64(double *  cStyle2DArr, _INDEX _rows, _INDEX _columns); //cStyle2DArr is double[_rows * _columns], assumed layed out row by row
 	Matrix_f64(const Matrix_f32 & sourceMat); //Copy constructor (Deep copy)
 	Matrix_f64(const Matrix_f64 & sourceMat); //Copy constructor (Deep copy)
 	Matrix_f64(Matrix_f64 && sourceMat); //Move constructor

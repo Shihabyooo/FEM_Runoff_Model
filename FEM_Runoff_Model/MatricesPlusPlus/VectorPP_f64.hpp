@@ -8,6 +8,7 @@ public:
 	Vector_f64();
 	Vector_f64(_INDEX const size);
 	Vector_f64(_INDEX const size, double defaultValue);
+	Vector_f64(double * const cStyle1DArr, _INDEX _rows); //cStyle1DArr is double[_rows]
 	Vector_f64(Vector_f32 const & sourceVec); //Copy constructor (deep copy)
 	Vector_f64(Vector_f64 const & sourceVec); //Copy constructor (deep copy)
 	Vector_f64(Vector_f64 && sourceVec); //Move constructor
@@ -27,8 +28,14 @@ public:
 	double & operator[] (const _INDEX row);
 	double operator[] (const _INDEX row) const;
 	
-	double GetValue(_INDEX row) const;	//getter, read only.
-	double Magnitude();
+	void SetValue(_INDEX row, double value);
+	float SetVector(double * const cStyle1DArr, _INDEX _rows); //cStyle1DArr is double[_rows]
+	double GetValue(_INDEX row) const;
+	std::unique_ptr<double[]> AsCArray() const;
+
+	double Magnitude() const; //returns square root of sum of squares of content.
+	double Sum() const; //returns sum of content
+	double SumAbs() const; //return sum of the absolute values of the content
 	double DotProduct(Vector_f64 const & vec2) const; //Multiplies the transpose of this vector with vec2
 
 	void AddInPlace(Vector_f64 const & vec2); //for use with += overload, avoids allocating a third vector
@@ -63,6 +70,11 @@ private:
 	using Matrix_f64::IsSymmetric;
 	using Matrix_f64::InvertMatrix;
 	using Array2D::GetValue;
+	using Array2D::SetArray;
+	using Array2D::GetRow;
+	using Array2D::GetColumn;
+	using Array2D::GetRowPtr;
+	using Array2D::GetColumnPtr;
 
 	//Vector-specific methods
 	void VectorFromMatrix(Matrix_f64 const & sourceVec, _INDEX column);

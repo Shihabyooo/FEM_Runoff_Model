@@ -7,6 +7,7 @@ public:
 	Vector_f32();
 	Vector_f32(_INDEX const size);
 	Vector_f32(_INDEX const size, float defaultValue);
+	Vector_f32(float * const cStyle1DArr, _INDEX _rows); //cStyle1DArr is float[_rows]
 	Vector_f32(Vector_f32 const & sourceVec); //Copy constructor (deep copy)
 	Vector_f32(Vector_f32 && sourceVec); //Move constructor
 	//explicit Vector_f32(Matrix_f32 const & sourceVec, _INDEX column = 0); //Creates a vector from the column of a matrix.
@@ -24,8 +25,14 @@ public:
 	float & operator[] (const _INDEX row);
 	float operator[] (const _INDEX row) const;
 	
-	float GetValue(_INDEX row) const;	//getter, read only.
-	double Magnitude();
+	float SetValue(_INDEX row, float value);
+	float SetVector(float * const cStyle1DArr, _INDEX _rows); //cStyle1DArr is double[_rows]
+	float GetValue(_INDEX row) const;
+	std::unique_ptr<float[]> AsCArray() const;
+	
+	double Magnitude() const;
+	double Sum() const; //returns sum of content
+	double SumAbs() const; //return sum of the absolute values of the content
 	double DotProduct(Vector_f32 const & vec2) const; //Multiplies the transpose of this vector with vec2
 	
 	void AddInPlace(Vector_f32 const & vec2); //for use with += overload, avoids allocating a third vector
@@ -60,6 +67,11 @@ private:
 	using Matrix_f32::IsSymmetric;
 	using Matrix_f32::InvertMatrix;
 	using Array2D::GetValue;
+	using Array2D::SetArray;
+	using Array2D::GetRow;
+	using Array2D::GetColumn;
+	using Array2D::GetRowPtr;
+	using Array2D::GetColumnPtr;
 
 	//Vector-specific methods
 	void VectorFromMatrix(Matrix_f32 const & sourceVec, _INDEX column);

@@ -8,6 +8,15 @@ Array2D<T>::Array2D()
 	content = NULL;
 }
 
+template<typename T>
+Array2D<T>::Array2D(_INDEX _size)
+{
+	Alloc(_size, _size);
+	
+	rows = _size;
+	columns = _size;
+}
+
 template <typename T>
 Array2D<T>::Array2D(_INDEX _rows, _INDEX _columns)
 {
@@ -28,10 +37,21 @@ Array2D<T>::Array2D(_INDEX _rows, _INDEX _columns, T defaultValue)
 	SetEntireArrayToFixedValue(defaultValue);
 }
 
-template <typename T>
-Array2D<T>::Array2D(const Array2D<T> & sourceArr)
+template<typename T>
+Array2D<T>::Array2D(T ** cStyle2DArr, _INDEX _rows, _INDEX _columns)
 {
-	std::cout << "Copy constructor\n" << std::endl; //test
+	SetArray(cStyle2DArr, _rows, _columns);
+}
+
+template<typename T>
+Array2D<T>::Array2D(T * cStyle2DArr, _INDEX _rows, _INDEX _columns)
+{
+	SetArray(cStyle2DArr, _rows, _columns);
+}
+
+template <typename T>
+Array2D<T>::Array2D(Array2D<T> const & sourceArr)
+{
 	*this = sourceArr;
 }
 
@@ -48,7 +68,7 @@ Array2D<T>::~Array2D()
 }
 
 template <typename T>
-Array2D<T> & Array2D<T>::operator=(const Array2D<T> & sourceArr)
+Array2D<T> & Array2D<T>::operator=(Array2D<T> const & sourceArr)
 {
 	//Before assigning a new conent to current instance of an object, we must first delete its current content, if it exists. The existence check is already done inside DeleteContent().
 	DeleteContent();
@@ -134,7 +154,7 @@ Array2D<T> & Array2D<T>::operator=(Array2D<T>&& sourceArr)
 // }
 
 template <typename T>
-bool Array2D<T>::operator==(const Array2D<T> arr2)
+bool Array2D<T>::operator==(Array2D<T> const & arr2)
 {
 	if (rows != arr2.Rows() || columns != arr2.Columns())
 		return false;
@@ -151,7 +171,7 @@ bool Array2D<T>::operator==(const Array2D<T> arr2)
 }
 
 template <typename T>
-bool Array2D<T>::operator!=(const Array2D<T> arr2)
+bool Array2D<T>::operator!=(Array2D<T> const & arr2)
 {
 	return !(*this == arr2);
 }
@@ -162,8 +182,14 @@ T & Array2D<T>::operator()(_INDEX _row, _INDEX _column)
 	return content[_row][_column];
 }
 
+template<typename T>
+T const & Array2D<T>::operator()(_INDEX _row, _INDEX _column) const
+{
+	return content[_row][_column];
+}
+
 template <typename T>
-T * const & Array2D<T>::operator[] (const _INDEX _row)
+T * const & Array2D<T>::operator[] (_INDEX _row)
 {
 	#ifdef _USE_BOUNDS_CHECK
 	if (content == NULL			//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
@@ -175,7 +201,7 @@ T * const & Array2D<T>::operator[] (const _INDEX _row)
 }
 
 template<typename T>
-T const * const & Array2D<T>::operator[](const _INDEX _row) const
+T const * const & Array2D<T>::operator[](_INDEX _row) const
 {
 #ifdef _USE_BOUNDS_CHECK
 	if (content == NULL			//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
@@ -187,7 +213,7 @@ T const * const & Array2D<T>::operator[](const _INDEX _row) const
 }
 
 template <typename T>
-void Array2D<T>::SetValue(_INDEX _row, _INDEX _column, T value)
+void Array2D<T>::SetValue(_INDEX _row, _INDEX _column, T const & value)
 {
     #ifdef _USE_BOUNDS_CHECK
 	if (content == NULL							//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
@@ -196,6 +222,52 @@ void Array2D<T>::SetValue(_INDEX _row, _INDEX _column, T value)
     #endif
 
 	content[_row][_column] = value;
+}
+
+template<typename T>
+void Array2D<T>::SetArray(T ** cStyle2DArr, _INDEX _rows, _INDEX _columns)
+{
+	DeleteContent();
+	
+	rows = _rows;
+	columns = _columns;
+
+	Alloc(_rows, _columns);
+
+	for (_INDEX row = 0; row < _rows; row++)
+		for (_INDEX column = 0; column < _columns; column++)
+			content[row][column] = cStyle2DArr[row][column];
+	
+}
+
+template<typename T>
+void Array2D<T>::SetArray(T * cStyle2DArr, _INDEX _rows, _INDEX _columns)
+{
+	DeleteContent();
+
+	rows = _rows;
+	columns = _columns;
+
+	Alloc(_rows, _columns);
+
+	for (_INDEX row = 0; row < _rows; row++)
+		for (_INDEX column = 0; column < _columns; column++)
+		{
+			content[row][column] = *cStyle2DArr;
+			cStyle2DArr++;
+		}
+}
+
+template <typename T>
+void Array2D<T>::SetEntireArrayToFixedValue(T value)
+{
+	for (_INDEX i = 0; i < rows; i++)
+	{
+		for (_INDEX j = 0; j < columns; j++)
+		{
+			content[i][j] = value;
+}
+	}
 }
 
 template <typename T>
@@ -275,18 +347,6 @@ T ** Array2D<T>::GetColumnPtr(_INDEX column)
 	}
 
 	return colPtr;
-}
-
-template <typename T>
-void Array2D<T>::SetEntireArrayToFixedValue(T value)
-{
-	for (_INDEX i = 0; i < rows; i++)
-	{
-		for (_INDEX j = 0; j < columns; j++)
-		{
-			content[i][j] = value;
-		}
-	}
 }
 
 template <typename T>
@@ -476,7 +536,7 @@ void Array2D<T>::DisplayOnCLI(unsigned int displayPrecision) const
 	{
 		for (_INDEX j = 0; j < columns; j++)
 		{
-			std::cout << std::fixed << std::setfill('0') << std::setw(displayPrecision + 4) << std::setprecision(displayPrecision) << content[i][j] << " ";
+			std::cout << std::fixed << std::setw(displayPrecision + 4) << std::setprecision(displayPrecision) << content[i][j] << "\t";
 		}
 		std::cout << std::endl;
 	}

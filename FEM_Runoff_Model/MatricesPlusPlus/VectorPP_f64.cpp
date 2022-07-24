@@ -24,6 +24,11 @@ Vector_f64::Vector_f64(_INDEX const size, double defaultValue)
 	SetEntireArrayToFixedValue(defaultValue);
 }
 
+Vector_f64::Vector_f64(double * const cStyle1DArr, _INDEX _rows)
+{
+	SetVector(cStyle1DArr, _rows);
+}
+
 Vector_f64::Vector_f64(Vector_f32 const & sourceVec)
 {
 	*this = sourceVec;
@@ -185,18 +190,75 @@ double Vector_f64::operator[](const _INDEX row) const
 	return content[row][0];
 }
 
+void Vector_f64::SetValue(_INDEX row, double value)
+{
+#ifdef _USE_BOUNDS_CHECK
+	if (content == NULL							//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
+		|| row >= rows)	//Checking out-of-bound writes.
+		throw std::out_of_range("ERROR! Row value out of range or content set to NULL");
+#endif
+
+	content[row][0] = value;
+}
+
+float Vector_f64::SetVector(double * const cStyle1DArr, _INDEX _rows)
+{
+	DeleteContent();
+	Alloc(_rows, 1);
+
+	rows = _rows;
+	columns = 1;
+
+	for (_INDEX row = 0; row < _rows; row++)
+		content[row][0] = cStyle1DArr[row];
+}
 
 double Vector_f64::GetValue(_INDEX row) const
 {
+#ifdef _USE_BOUNDS_CHECK
+	if (content == NULL							//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
+		|| row >= rows)	//Checking out-of-bound writes.
+		throw std::out_of_range("ERROR! Row value out of range or content set to NULL");
+#endif
 	return content[row][0];
 }
 
-double Vector_f64::Magnitude()
+std::unique_ptr<double[]> Vector_f64::AsCArray() const
 {
-	double mag = 0;
+	std::unique_ptr<double[]> copy = std::make_unique<double[]>(rows);
+
+	for (_INDEX i = 0; i < rows; i++)
+		copy[i] = content[i][0];
+
+	return copy;
+}
+
+double Vector_f64::Magnitude() const
+{
+	double mag = 0.0;
 	for (_INDEX i = 0; i < rows; i++)
 		mag += pow(content[i][0], 2);
 	return sqrt(mag);
+}
+
+double Vector_f64::Sum() const
+{
+	double sum = 0.0;
+
+	for (_INDEX i = 0; i < rows; i++)
+		sum += content[i][0];
+
+	return sum;
+}
+
+double Vector_f64::SumAbs() const
+{
+	double sum = 0.0;
+
+	for (_INDEX i = 0; i < rows; i++)
+		sum += fabs(content[i][0]);
+
+	return sum;
 }
 
 double Vector_f64::DotProduct(Vector_f64 const & vec2) const

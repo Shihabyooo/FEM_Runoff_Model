@@ -24,6 +24,11 @@ Vector_f32::Vector_f32(_INDEX const size, float defaultValue)
 	SetEntireArrayToFixedValue(defaultValue);
 }
 
+Vector_f32::Vector_f32(float * const cStyle1DArr, _INDEX _rows)
+{
+	SetVector(cStyle1DArr, _rows);
+}
+
 Vector_f32::Vector_f32(Vector_f32 const & sourceVec)
 {
 	*this = sourceVec;
@@ -155,17 +160,74 @@ float Vector_f32::operator[](const _INDEX row) const
 }
 
 
+float Vector_f32::SetValue(_INDEX row, float value)
+{
+#ifdef _USE_BOUNDS_CHECK
+	if (content == NULL							//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
+		|| row >= rows )	//Checking out-of-bound writes.
+		throw std::out_of_range("ERROR! Row value out of range or content set to NULL");
+#endif
+	content[row][0] = value;
+}
+
+float Vector_f32::SetVector(float * const cStyle1DArr, _INDEX _rows)
+{
+	DeleteContent();
+	Alloc(_rows, 1);
+	
+	rows = _rows;
+	columns = 1;
+
+	for (_INDEX row = 0; row < _rows; row++)
+		content[row][0] = cStyle1DArr[row];
+}
+
 float Vector_f32::GetValue(_INDEX row) const
 {
+#ifdef _USE_BOUNDS_CHECK
+	if (content == NULL							//Checking whether this object is empty. Making an assumption that initializing the first level of the content is automatically followed by init of sublevel.
+		|| row >= rows)	//Checking out-of-bound writes.
+		throw std::out_of_range("ERROR! Row value out of range or content set to NULL");
+#endif
 	return content[row][0];
 }
 
-double Vector_f32::Magnitude()
+std::unique_ptr<float[]> Vector_f32::AsCArray() const
+{
+	std::unique_ptr<float[]> copy = std::make_unique<float[]>(rows);
+
+	for (_INDEX i = 0; i < rows; i++)
+		copy[i] = content[i][0];
+
+	return copy;
+}
+
+double Vector_f32::Magnitude() const
 {
 	double mag = 0;
 	for (_INDEX i = 0; i < rows; i++)
 		mag += pow(content[i][0], 2);
 	return sqrt(mag);
+}
+
+double Vector_f32::Sum() const
+{
+	double sum = 0.0;
+
+	for (_INDEX i = 0; i < rows; i++)
+		sum += static_cast<double>(content[i][0]);
+
+	return sum;
+}
+
+double Vector_f32::SumAbs() const
+{
+	double sum = 0.0;
+
+	for (_INDEX i = 0; i < rows; i++)
+		sum += fabs(static_cast<double>(content[i][0]));
+
+	return sum;
 }
 
 double Vector_f32::DotProduct(Vector_f32 const & vec2) const

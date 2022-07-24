@@ -7,6 +7,14 @@ Matrix_f64::Matrix_f64()
 	content = NULL;
 }
 
+Matrix_f64::Matrix_f64(_INDEX _size)
+{
+	Alloc(_size, _size);
+
+	rows = _size;
+	columns = _size;
+}
+
 Matrix_f64::Matrix_f64(_INDEX _rows, _INDEX _columns)
 {
 	Alloc(_rows, _columns);
@@ -23,6 +31,16 @@ Matrix_f64::Matrix_f64(_INDEX _rows, _INDEX _columns, double defaultValue)
 	rows = _rows;
 
 	SetEntireArrayToFixedValue(defaultValue);
+}
+
+Matrix_f64::Matrix_f64(double **  cStyle2DArr, _INDEX _rows, _INDEX _columns)
+{
+	SetArray(cStyle2DArr, _rows, _columns);
+}
+
+Matrix_f64::Matrix_f64(double * cStyle2DArr, _INDEX _rows, _INDEX _columns)
+{
+	SetArray(cStyle2DArr, _rows, _columns);
 }
 
 Matrix_f64::Matrix_f64(const Matrix_f32 & sourceMat)
@@ -232,7 +250,10 @@ void Matrix_f64::AddInPlace(Matrix_f64 const & mat2)
 {
 #ifdef _USE_BOUNDS_CHECK
 	if (!AreOfSameSize(*this, mat2))
+	{
 		std::cout << "ERROR! Attempting to add arrays of different sizes." << std::endl;
+		return;
+	}
 #endif
 
 	double * a = &content[0][0];
@@ -251,7 +272,10 @@ void Matrix_f64::SubtractInPlace(Matrix_f64 const & mat2)
 {
 #ifdef _USE_BOUNDS_CHECK
 	if (!AreOfSameSize(*this, mat2))
+	{
 		std::cout << "ERROR! Attempting to add arrays of different sizes." << std::endl;
+		return;
+	}
 #endif // _USE_BOUNDS_CHECK
 
 	double * a = &content[0][0];
