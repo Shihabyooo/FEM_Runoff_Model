@@ -115,6 +115,31 @@ public:
 		return centroid;
 	}
 
+	std::vector<size_t> GetOtherVertices(size_t vertexID) //returns other vertices in counter clockwise order
+	{
+		std::vector<size_t> otherPts;
+
+		int internalVertID = -1;
+		for (int i = 0; i < vertCount; i++)
+			if (vertIDs[i] == vertexID)
+			{
+				internalVertID = i;
+				break;
+			}
+
+		if (internalVertID < 0) //vert not part of this element.
+			return otherPts;
+
+		while (otherPts.size() < vertCount - 1)
+		{
+			internalVertID = internalVertID >= (vertCount - 1) ? 0 : internalVertID + 1;
+			otherPts.push_back(vertIDs[internalVertID]);
+		}
+
+		return otherPts;
+	}
+
+	
 	void DebugPrintDetails() const
 	{
 		std::cout << "Element id: " << id << " - Area: " << area << " - Verts: ";
@@ -129,8 +154,9 @@ public:
 
 public:
 	size_t id; //of the element itself	
-protected:
-	
+
+protected: 
+
 	int vertCount = 0;
 	size_t * vertIDs = NULL;
 

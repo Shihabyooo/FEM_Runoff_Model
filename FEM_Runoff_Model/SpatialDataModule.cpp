@@ -104,6 +104,7 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 	return counter % 2 != 0;
 }
 
+//TODO this function breaks for some nodes. See synthetic watershed when sampling is not nearest neighbour
 //points must be a copy. See usage of this function in GetNodeSamplingSubBoundary_Tri()
 void ConvexHull(std::vector<Vector2D> points, std::vector<Vector2D> & outBoundaryPoints)
 {

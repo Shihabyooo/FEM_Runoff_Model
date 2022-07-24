@@ -15,14 +15,12 @@ Vector2D shedSW, shedNE;
 std::vector<Vector2D> shedBoundary;
 
 Vector_f64 heads;
+std::vector<std::pair<double, double>> outputTimeSeries; //Time series for resulting head at outlet
 
 //TODO have to vector_f64 to store computed nodal velocities, and a function to compute the newheads nodal velocities every \
 iteration. newHead velos are then moved to oldHead velos after internal iterations are done.
 std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 waterElevation) //waterElevation = nodeElevation + head
 {
-	//if (IsBoundaryNode(nodeID)) //test
-	//	return std::pair<double, double>(0.0, 0.0); //test
-
 	double head = waterElevation[nodeID] - nodeElevation[nodeID];
 
 	double velocity = 3600.0 * sqrt(nodeSlope[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
@@ -31,9 +29,6 @@ std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 wa
 
 	double u = velocity * cos(angle);
 	double v = velocity * sin(angle);
-
-	/*double u = Sign(nodeSlopeX[nodeID]) * 3600.0 * sqrt(abs(nodeSlopeX[nodeID])) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
-	double v = Sign(nodeSlopeY[nodeID]) *3600.0 * sqrt(abs(nodeSlopeY[nodeID])) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];*/
 
 	return std::pair<double, double>(u, v);
 }
@@ -286,66 +281,8 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 	return condMat;
 }
 
-#pragma region Test
-
-Vector_f64 _new_h, _precipComp, _RHS;
-std::vector<std::pair<double, double>> qTS;
-void TestShowValues(ModelParameters const & params)
-{
-	std::cout << "\n  id     |  head | newH |||  |||   u0   |    v0   |   u1    |   v1    |  precip  |  RHS\n";
-	for (size_t i = 0; i < nodes.size(); i++)
-	{
-		auto uv0 = ComputeVelocityComponents(i, heads);
-		auto uv1 = ComputeVelocityComponents(i, _new_h);
-
-		std::cout << std::setw(4) << i << " " << (IsBoundaryNode(i) ? "[B]" : "   ") << " | " <<
-			std::fixed << std::setprecision(2) << std::setw(5) << heads[i] << " | " << std::setw(5) << _new_h[i] <<
-			"|||" << (heads[i] < _new_h[i] ? "UP" : (heads[i] > _new_h[i] ? "DN" : "--")) << "|||" <<
-			std::fixed << std::setprecision(2) << std::setw(7) << uv0.first << " | " << std::setw(7) << uv0.second << " | " <<
-			std::fixed << std::setprecision(2) << std::setw(7) << uv1.first << " | " << std::setw(7) << uv1.second << " | " <<
-			std::fixed << std::setprecision(2) << std::setw(7) << _precipComp[i] << " | " <<
-			std::fixed << std::setprecision(2) << std::setw(7) << _RHS[i] << std::endl;
-	}
-
-
-	size_t targetRowToShow = 22;
-	std::cout << "\nConductance Matrix row for node: " << targetRowToShow << "\n";
-	Matrix_f64 _globalConduc = ComputeGlobalConductanceMatrix(params);
-	//(globalC -  ComputeGlobalConductanceMatrix(params) ).DisplayOnCLI(0);
-	//ComputeGlobalConductanceMatrix(params).DisplayOnCLI(0);
-	for (size_t i = 0; i < _globalConduc.Columns(); i++)
-		std::cout << std::fixed << std::setprecision(0) << std::setw(0) << _globalConduc[targetRowToShow][i] << " ";
-	std::cout << "\n";
-
-
-	std::cout << "\nCoefficients Matrix row for node: " << targetRowToShow << "\n";
-	Matrix_f64 _globalCoef = ComputeGlobalCoefficientsMatrix(params, _new_h);
-	//(ComputeGlobalCoefficientsMatrix(params, _new_h) - globalC).DisplayOnCLI(0);
-	//ComputeGlobalCoefficientsMatrix(params, _new_h).DisplayOnCLI(0);
-	for (size_t i = 0; i < _globalCoef.Columns(); i++)
-		std::cout << std::fixed << std::setprecision(0) << std::setw(0) << _globalCoef[targetRowToShow][i] << " ";
-	std::cout << "\n";
-
-
-	std::cout << std::endl;
-}
-#pragma endregion
-
-void ComputeRHSVector(double time, ModelParameters const & params, Vector_f64 & outRHS)
-{
-	//[GlobalConductanceMat] * {h_0} + precipComponent
-
-	outRHS = ComputeGlobalConductanceMatrix(params) * heads +ComputePreciptationVector(time, params);
-
-	//test
-	_RHS = outRHS;
-	_precipComp = ComputePreciptationVector(time, params);
-
-	//TestShowValues(params);
-}
-
 //[A]{x} = {b}
-void AdjustForBoundaryConditions(Matrix_f64 & aMat, Vector_f64 & xVec, Vector_f64 & bVec)
+void AdjustForBoundaryConditions(Matrix_f64 & aMat, Vector_f64 & bVec)
 {
 	////Using https://finite-element.github.io/7_boundary_conditions.html
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
@@ -355,62 +292,6 @@ void AdjustForBoundaryConditions(Matrix_f64 & aMat, Vector_f64 & xVec, Vector_f6
 			aMat[*it][i] = 0.0;
 		aMat[*it][*it] = 1.0;
 	}
-
-	//Using Istok's method
-	//size_t reducedSystemSize = nodes.size() - boundaryNodes.size();
-	//Matrix_f64 adjustedAMat(reducedSystemSize, reducedSystemSize);
-	//Vector_f64 adjustedXVec(reducedSystemSize);
-	//Vector_f64 adjustedBVec(reducedSystemSize);
-
-	//size_t rowCounter = 0;
-	//size_t columnCounter = 0;
-	//for (size_t row = 0; row < aMat.Rows(); row++)
-	//{
-	//	if (IsBoundaryNode(row))
-	//		continue;
-
-	//	adjustedBVec[rowCounter] = bVec[row];
-	//	//adjustedXVec[rowCounter] = xVec[row]; //pointless. xVec is not filled with data yet.
-
-	//	for (size_t column = 0; column < aMat.Columns(); column++)
-	//	{
-	//		if (IsBoundaryNode(column))
-	//			continue;
-
-	//		adjustedAMat[rowCounter][columnCounter] = aMat[row][column];
-	//		columnCounter++;
-	//	}
-	//	columnCounter = 0;
-	//	rowCounter++;
-	//}
-
-	//aMat = adjustedAMat;
-	//bVec = adjustedBVec;
-	//xVec = adjustedXVec;
-}
-
-void ReIntroduceBoundaryNodes(Vector_f64 & vec)
-{
-	/*if (vec.Rows() == nodes.size())
-		return;*/
-
-	//Vector_f64 adjustedVec(nodes.size());
-
-	//size_t rowCounter = 0;
-	//for (size_t i = 0; i < nodes.size(); i++)
-	//{
-	//	if (IsBoundaryNode(i))
-	//	{
-	//		adjustedVec[i] = 0.0;
-	//	}
-	//	else
-	//	{
-	//		adjustedVec[i] = vec[rowCounter];
-	//		rowCounter++;
-	//	}
-	//}
-
-	//vec = adjustedVec;
 }
 
 bool RunSimulation(ModelParameters const & params)
@@ -448,14 +329,10 @@ bool RunSimulation(ModelParameters const & params)
 	if (!CacheElevations())
 		return false;
 
+	outputTimeSeries.clear();
 #pragma endregion
 
 #pragma region Test
-	/*std::cout << "\n===================================================\n";
-	std::cout << "Global Capacitance";
-	std::cout << "\n===================================================\n";
-	globalC.DisplayOnCLI(0);*/
-
 	std::cout << "\n===================================================\n";
 	std::cout << "Time series";
 	std::cout << "\n===================================================\n";
@@ -479,37 +356,15 @@ bool RunSimulation(ModelParameters const & params)
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 		std::cout << *it << std::endl;
 
-	/*std::cout << "\n===================================================\n";
+	std::cout << "\n===================================================\n";
 	std::cout << "Elevations, Slopes, Manning roughness coef";
-	std::cout << "\n===================================================\n";*/
-	/*std::cout << "node | Elev  |   n  |  Sx |  Sy |  FDR  \n";
+	std::cout << "\n===================================================\n";
+	std::cout << "node | Elev  |   n  |  Slope  |  FDR  \n";
 	for (size_t i = 0; i < nodes.size(); i++)
-		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | " <<
-		nodeManning[i] << " | " << nodeSlopeX[i] << " | " << nodeSlopeY[i] << " | "  << nodeFDR[i] << std::endl;*/
-		/*std::cout << "node | Elev  |   n  |  Slope  |  FDR  \n";
-		for (size_t i = 0; i < nodes.size(); i++)
-			std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | "  <<
-						nodeManning[i] << " | " << nodeSlope[i] << " | " << nodeFDR[i]<< std::endl;*/
+		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | "  <<
+					nodeManning[i] << " | " << nodeSlope[i] << " | " << nodeFDR[i]<< std::endl;
 
-						//return false;
 #pragma endregion
-
-	//test
-	//nodeFDR[9] = 4;
-	//nodeFDR[15] = 4;
-	//nodeFDR[20] = 3;
-	//nodeFDR[21] = 3;
-	//nodeFDR[22] = 4;
-	//nodeFDR[32] = 4;
-	//nodeFDR[55] = 3;
-	//nodeFDR[56] = 4;
-	//nodeFDR[63] = 5;
-
-	//endtest
-	//test
-	std::cout << "Enter to start simulation\n"; //TODO remove this block
-	std::cin.sync();
-	std::cin.get();
 
 	nodeElevation = Vector_f64(nodes.size()); //test
 	heads = nodeElevation;
@@ -520,6 +375,11 @@ bool RunSimulation(ModelParameters const & params)
 
 	//Loop from start time to end time
 	double time = params.startTime;
+
+	//to compute some statistics about error.
+	std::vector<double> internalResidualsLog;
+	std::vector<double> solverResidualsLog;
+
 	LogMan::Log("Starting simulation loop");
 
 	while (time <= params.endTime)
@@ -537,17 +397,13 @@ bool RunSimulation(ModelParameters const & params)
 		//internal loop
 		for (size_t i = 0; i <= params.maxInternalIterations; i++)
 		{
-			_new_h = newHeads; //test
-
-			Vector_f64 RHS;
-			ComputeRHSVector(time, params, RHS);
+			//RHS = [GlobalConductanceMat] * {h_0} + precipComponent
+			Vector_f64 RHS = ComputeGlobalConductanceMatrix(params) * heads + ComputePreciptationVector(time, params);;
+			Matrix_f64 coeffMat = ComputeGlobalCoefficientsMatrix(params, newHeads);
+			AdjustForBoundaryConditions(coeffMat, RHS);
 
 			Vector_f64 residuals; //needed by solver
 			Vector_f64 fixedNewH;
-
-			Matrix_f64 coeffMat = ComputeGlobalCoefficientsMatrix(params, newHeads);
-
-			AdjustForBoundaryConditions(coeffMat, fixedNewH, RHS);
 
 			if (!Solve(coeffMat, RHS, fixedNewH, residuals, params))
 			{
@@ -559,11 +415,10 @@ bool RunSimulation(ModelParameters const & params)
 			for (size_t j = 0; j < fixedNewH.Rows(); j++)
 				fixedNewH[j] = Max(fixedNewH[j], nodeElevation[j]);
 
-			ReIntroduceBoundaryNodes(fixedNewH);
+			solverResidualsLog.push_back(residuals.SumAbs());
+			internalResidualsLog.push_back((newHeads - fixedNewH).SumAbs());
 
-			std::cout << "Solver residual: " << std::fixed << std::setprecision(10) << residuals.Magnitude() << std::endl; //test
-			std::cout << "current Internal Residual: " << std::fixed << std::setprecision(10) << (newHeads - fixedNewH).Magnitude() << std::endl; //test
-			if ((newHeads - fixedNewH).Magnitude() <= params.internalResidualTreshold)
+			if (internalResidualsLog.back() <= params.internalResidualTreshold)
 			{
 				newHeads = fixedNewH;
 				break;
@@ -573,16 +428,13 @@ bool RunSimulation(ModelParameters const & params)
 
 			newHeads = fixedNewH;
 		}
-		TestShowValues(params);
 
 		AppendLastTimeStepPrecipitationVariables();
 
-		std::cout << "\n------------------------------------------------------\n";
-		std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
+		/*std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
 		double headSum = 0.0, newHeadSum = 0.0;
 		for (size_t i = 0; i < heads.Rows(); i++)
 		{
-			//std::cout << i << "\t slopes: " << std::setprecision(4) << nodeSlopeX[i] << " - " << nodeSlopeY[i] << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
 			std::cout << i << "\t slopes: " << std::setprecision(4) << nodeSlope[i] << " - " << std::setprecision(0) << nodeFDR[i] << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
 				std::setprecision(4) << newHeads[i] << "  " <<
 				(newHeads[i] > heads[i] ? "UP" : (newHeads[i] == heads[i] ? "--" : "DN")) <<
@@ -591,64 +443,12 @@ bool RunSimulation(ModelParameters const & params)
 			headSum += heads[i];
 			newHeadSum += newHeads[i];
 		}
-		std::cout << "=============== Sum : " << headSum << " --> " << newHeadSum << std::endl;
-		std::cout << "\n------------------------------------------------------\n";
-		/*double qx = sqrt(nodeSlopeX[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
-		double qy = sqrt(nodeSlopeY[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
-		double q = sqrt(qx * qx + qy * qy);*/
-		//double angle = FDR2Angle(lround(nodeFDR[params.outletNode]));
+		std::cout << "=============== Sum : " << headSum << " --> " << newHeadSum << std::endl;*/
+		
 		double q = sqrt(nodeSlope[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
-		//double q_x = q * cos(angle);
-		//double q_y = q * sin(angle);
-		//double flowWidth = 0.0;
-		//double flowHeight = 0.0; //not depth.
-		//if (activeMeshType == ElementType::triangle)
-		//{
-		//	//flowWidth = 2.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //test. 
-		//	for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		//		if (it->second.ContainsVertex(params.outletNode))
-		//		{
-		//			std::pair<Vector2D, Vector2D> elemBounds = it->second.BoundingBox();
-		//			flowWidth += (elemBounds.second - elemBounds.first).x;
-		//			flowHeight += (elemBounds.second - elemBounds.first).y;
-		//		}
-		//}	
-		//else
-		//{
-		//	//flowWidth = rectangles[0].Width(); //test. 
-		//	for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
-		//		if (it->second.ContainsVertex(params.outletNode))
-		//		{
-		//			flowWidth += it->second.Width();
-		//			flowHeight += it->second.Height();
-		//		}
-		//}
-		//double Q_x = q_x * flowHeight;
-		//double Q_y = q_y * flowWidth;
-		////double Q = sqrt(Q_x * Q_x + Q_y * Q_y);
-		//
-		static double _sum = 0.0;
-		double Q = 0.0;
-		std::unique_ptr outletCondRow = ComputeGlobalConductanceMatrix(params).GetRow(params.outletNode);
-		//std::unique_ptr outletCoefRow = ComputeGlobalCoefficientsMatrix(params, newHeads).GetRow(params.outletNode);
-		//Vector_f64 tempVec(nodes.size());
-		for (size_t i = 0; i < nodes.size(); i++)
-		{
-			Q += outletCondRow[i] * heads[i];
-			//tempVec[i] = outletCondRow[i] * heads[i];
-		}
-		//Q = outletCondRow[params.outletNode] * heads[params.outletNode];
-		//tempVec.DisplayOnCLI();
-
-		_sum += Q;
-		std::cout << "Sum : " << _sum << " by: " << Q << std::endl;
-		Q = Q / params.timeStep / 3600;
-
-		Q = q * 4.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //test. 
-
-		std::cout << "h: " << std::setprecision(7) << heads[params.outletNode] << "\tQ: " << std::setprecision(3) << Q  << std::endl;
-		qTS.push_back(std::pair<double, double>(time, Q));
-		std::cout << "\n------------------------------------------------------\n";
+		std::string timeStepResults = "Head = " + std::to_string(heads[params.outletNode]) + "m - q = " + std::to_string(q) + "m2/s";
+		LogMan::Log(timeStepResults);
+		outputTimeSeries.push_back(std::pair<double, double>(time, heads[params.outletNode]));
 
 		heads = newHeads;
 		time += params.timeStep;
@@ -659,22 +459,26 @@ bool RunSimulation(ModelParameters const & params)
 		std::cin.get();*/
 	}
 
-	//test
+	LogMan::Log("Finished simulation!", LOG_SUCCESS);
+
+
 	double totalInput = GetWatershedCumulativePrecipitationVolume(); //cubic meters.
 	double totalLoss = GetWatershedCumulativeLossVolume(); //cubic meters.
 	double totalOutput = 0.0; //cubic meters.
+	double flowWidth = 4.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //TODO improve flow width computations.
+
 	std::cout << " time \t Q (cms)\n";
-	for (auto it = qTS.begin(); it != qTS.end(); ++it)
+	for (auto it = outputTimeSeries.begin(); it != outputTimeSeries.end(); ++it)
 	{
-		std::cout << std::setw(6) << std::setfill('0') << std::setprecision(3) << it->first << "\t" << std::setprecision(5) << it->second << std::endl;
-		totalOutput += it->second * params.timeStep * 3600.0;
+		double q = sqrt(nodeSlope[params.outletNode]) * pow(it->second, 5.0 / 3.0) / nodeManning[params.outletNode];
+		double Q = q * flowWidth;
+		std::cout << std::setw(6) << std::setfill('0') << std::setprecision(3) << it->first << "\t" << std::setprecision(5) << Q << std::endl;
+		totalOutput += Q * params.timeStep * 3600.0;
 	}
-	qTS.clear();
-
-	std::cout << "\n\nTotal Precipitation: " << std::fixed << std::setprecision(1) << totalInput << "cubic meters." << std::endl;
-	std::cout << "\n\nTotal Loss: " << std::fixed << std::setprecision(1) << totalLoss << "cubic meters." << std::endl;
-	std::cout << "\n\nTotal Runoff: " << std::fixed << std::setprecision(1) << totalOutput << "cubic meters." << std::endl;
-
 	
+	LogMan::Log("Total precipitation: " + std::to_string(totalInput) + " cubic meters.");
+	LogMan::Log("Total loss: " + std::to_string(totalLoss) + " cubic meters.");
+	LogMan::Log("Total runoff: " + std::to_string(totalOutput) + " cubic meters.");
+
 	return true;
 }

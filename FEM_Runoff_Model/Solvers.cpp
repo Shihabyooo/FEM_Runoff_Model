@@ -127,7 +127,7 @@ bool SolverJacobi(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector
 		outXVector = static_cast<Vector_f64>((diagInv * (bVector - static_cast<Vector_f64>(LU * tempX))) * weight) + (tempX * (1.0F - weight));
 
 		ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
-		if (outResiduals.Magnitude() <= threshold)
+		if (outResiduals.SumAbs() <= threshold)
 		{
 			//LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
 			return true;
@@ -171,7 +171,7 @@ bool SolverSOR(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f6
 		}
 
 		ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
-		if (outResiduals.Magnitude() <= threshold)
+		if (outResiduals.SumAbs() <= threshold)
 		{
 			//LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
 			return true;
@@ -422,7 +422,7 @@ bool SolverCGS(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f6
 		//p = u + beta * (q + beta * p)
 		p = u + (q + p * beta) * beta;
 
-		if (outResiduals.Magnitude() <= threshold)
+		if (outResiduals.SumAbs() <= threshold)
 		{
 			LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
 			return true;
