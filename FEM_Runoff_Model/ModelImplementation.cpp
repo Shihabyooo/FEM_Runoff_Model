@@ -395,7 +395,7 @@ bool RunSimulation(ModelParameters const & params)
 				newHeads[i] = heads[i] + 0.001;
 
 		//internal loop
-		for (size_t i = 0; i <= params.maxInternalIterations; i++)
+		for (size_t i = 0; i <= params.maxExternalIterations; i++)
 		{
 			//RHS = [GlobalConductanceMat] * {h_0} + precipComponent
 			Vector_f64 RHS = ComputeGlobalConductanceMatrix(params) * heads + ComputePreciptationVector(time, params);;
@@ -418,12 +418,12 @@ bool RunSimulation(ModelParameters const & params)
 			solverResidualsLog.push_back(residuals.SumAbs());
 			internalResidualsLog.push_back((newHeads - fixedNewH).SumAbs());
 
-			if (internalResidualsLog.back() <= params.internalResidualTreshold)
+			if (internalResidualsLog.back() <= params.externalResidualTreshold)
 			{
 				newHeads = fixedNewH;
 				break;
 			}
-			else if (i >= params.maxInternalIterations)
+			else if (i >= params.maxExternalIterations)
 				LogMan::Log("Reached maxInternalIterations without reaching appropriate h", LOG_WARN);
 
 			newHeads = fixedNewH;

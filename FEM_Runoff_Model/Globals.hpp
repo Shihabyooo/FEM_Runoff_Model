@@ -409,8 +409,8 @@ public:
 	double residualThreshold = -1.0; //Negative value -> use default threshold. Only for iterative solvers.
 	double weight = -1.0; //Negative value -> use default weight. Only for weighted solvers.
 	size_t maxIterations = 0; //0 -> Use default value. Only for iterative solvers.
-	double internalResidualTreshold = 0.00001;
-	size_t maxInternalIterations = 1000; //for internal loop.
+	double externalResidualTreshold = 0.00001;
+	size_t maxExternalIterations = 1000; //for internal loop.
 	
 	//output
 	int nthDurationToOutput = 1; //as in output every nth simulation frame to disk. >=1 means output all simulated from. 2 means output every other frame, etc.

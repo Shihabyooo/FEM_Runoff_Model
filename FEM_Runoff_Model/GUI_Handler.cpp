@@ -193,8 +193,8 @@ int selectedElementType = 1;
 char solverResidual[12] = "0.0001";
 char solverWeight[12] = "0.5";
 int solverMaxIteration = 1000;
-char internalResidual[12] = "0.0001";
-int internalMaxIteration = 100;
+char externalResidual[12] = "0.0001";
+int externalMaxIteration = 100;
 
 
 void FillParametersStruct(ModelParameters & params)
@@ -231,8 +231,8 @@ void FillParametersStruct(ModelParameters & params)
 	params.residualThreshold = atof(solverResidual);
 	params.weight = atof(solverWeight);
 	params.maxIterations = solverMaxIteration < 0 ? 0 : solverMaxIteration;
-	params.internalResidualTreshold = atof(internalResidual);
-	params.maxInternalIterations = internalMaxIteration;
+	params.externalResidualTreshold = atof(externalResidual);
+	params.maxExternalIterations = externalMaxIteration;
 
 	params.unitTimeSeries = inputTS;
 	params.unitTimeSeries.timeUnit = static_cast<TimeUnit>(selectedTimeUnit);
@@ -503,12 +503,12 @@ void DrawLeftPane()
 		ImGui::SameLine();
 		ImGui::InputInt("##iterations", &solverMaxIteration);
 	
-		ImGui::Text("Max residual (Internal):");
+		ImGui::Text("Max residual (External):");
 		ImGui::SameLine();
-		ImGui::InputText("##residualInternal", internalResidual, 12, ImGuiInputTextFlags_CharsDecimal);
-		ImGui::Text("Max iterations (Internal):");
+		ImGui::InputText("##residualExternal", externalResidual, 12, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::Text("Max iterations (External):");
 		ImGui::SameLine();
-		ImGui::InputInt("##iterationsInteral", &internalMaxIteration);
+		ImGui::InputInt("##iterationsExternal", &externalMaxIteration);
 
 
 
