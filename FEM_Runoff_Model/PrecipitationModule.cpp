@@ -166,28 +166,38 @@ double ComputeInitConstPe(double precipRate, double timeStep, InitialAndConstant
 	double mcDeficit = Max(params->initialLoss - soilMC.at(element->id), 0.0);
 	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
 
-	tempSoilMC.at(element->id) = totalPrecip - remainingPrecip;
+	//tempSoilMC.at(element->id) =  totalPrecip - remainingPrecip;
+	tempSoilMC.at(element->id) = soilMC.at(element->id) + totalPrecip - remainingPrecip;
 
 	//recompute rate, subtract const rate and return result
 	return Max((remainingPrecip / timeStep) - params->constRate, 0.0);
 }
 
 //return Pe rate in m/hr.
-double ComputeSCSCNPe(double cummulativePrecip, ModelParameters const & params, Element const * element)
+double ComputeSCSCNPe(double time, ModelParameters const & params, Element const * element)
 {
 	//Pe = (P - 0.2 S)^2 / ( P + 0.8 S)
 	//S = (25400 - 254 CN) / CN
+	//This is only carried out if P > initial loss
+
+	double totalPrecip = GetPrecipitationRateAtTime(time, params, element) * params.timeStep; //TODO total precip rate already computed in calling function. Why compute again?
 
 	double s = (25400.0 - 254.0 * static_cast<double>(params.scsCN)) / static_cast<double>(params.scsCN);
+	double initialLoss = 0.2 * s;
+
+	double mcDeficit = Max(initialLoss - soilMC.at(element->id), 0.0);
+	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
+
+	if (remainingPrecip <= 0.0)
+		return 0.0;
+
+	double cummulativePrecip = GetCummulativePrecipitationAtTime(time, params, element);
 	double pe = (cummulativePrecip - 0.2 * s) / (cummulativePrecip + 0.8 * s);
+	tempTotalDirectRunoff.at(element->id) = pe;
 
 	//the incremental precipitation = Pe computed above - Pe up to last timeStep.
 	//The second term is stored in the totalDirectRunoff map.
-
 	double rate = Max(pe - totalDirectRunoff.at(element->id), 0.0) / params.timeStep;
-
-	tempTotalDirectRunoff.at(element->id) = pe;
-
 	return rate;
 }
 
@@ -234,7 +244,7 @@ double ComputeEffectivePreciptationAtTime(double time, ModelParameters const & p
 		effectiveRate = ComputeInitConstPe(currentPrecipRate, params.timeStep, (InitialAndConstantParams *)params.lossModelParams, element);
 		break;
 	case LossModel::scsCN:
-		effectiveRate = ComputeSCSCNPe(GetCummulativePrecipitationAtTime(time, params, element), params,  element);
+		effectiveRate = ComputeSCSCNPe(time, params,  element);
 		break;
 	default: //shouldn't happen
 		break;
