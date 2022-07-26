@@ -323,11 +323,14 @@ public:
 
 	bool IsValid() const;
 	void AdjustSize(size_t newSize);
+	void ComputeSum();
 	double HoursToLocalUnits(double time) const;
-	double SampleRate(double timeSinceStart) const;//, double timeStep) const;// , double timeSpan, InterpolationType interpolationType) const; //timeSinceStart in hours. Returns rate as mm/hr
+	double SampleRate(double timeSinceStart) const; //timeSinceStart in hours. Returns rate as mm/hr
+	double SampleCummulativePreciptation(double timeSinceStart) const; //timeSinceStart in hours. Returns cummulative (total) precipitation up to that time in mm.
 
 	size_t size = 0;
 	TimeUnit timeUnit = TimeUnit::hour;
+	double precipitationSum = 0.0; 
 	//probably would make more sense to use a vector...
 	std::pair<size_t, double> * series = NULL;
 };
@@ -380,6 +383,7 @@ public:
 	LossModel lossModel = LossModel::none;
 
 	void * lossModelParams = NULL;
+	int scsCN = 0; //This is placeholder, untill proper solution that supports gridded SCS is implemented.
 	//double fixedPrecipitationValue = -1.0f; //must be positive value > 0.0
 
 	//Hydraulic Parameters

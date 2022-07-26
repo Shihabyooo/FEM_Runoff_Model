@@ -537,12 +537,14 @@ TimeSeries::TimeSeries()
 {
 	size = 2;
 	series = new std::pair<size_t, double>[size]();
+	ComputeSum();
 }
 
 TimeSeries::TimeSeries(size_t _size)
 {
 	size = Max(_size, static_cast<size_t>(2));
 	series = new std::pair<size_t, double>[size](); 
+	ComputeSum();
 }
 
 TimeSeries::TimeSeries(std::vector<std::pair<size_t, double>> const & ts)
@@ -559,6 +561,8 @@ TimeSeries::TimeSeries(std::vector<std::pair<size_t, double>> const & ts)
 
 	for (int i = 0; i < size; i++)
 		series[i] = ts[i];
+
+	ComputeSum();
 }
 
 TimeSeries::~TimeSeries()
@@ -576,6 +580,8 @@ void TimeSeries::operator=(TimeSeries const & ts)
 
 	for (int i = 0; i < size; i++)
 		series[i] = ts.series[i];
+
+	ComputeSum();
 }
 
 bool TimeSeries::IsValid() const
@@ -618,6 +624,19 @@ void TimeSeries::AdjustSize(size_t newSize)
 	size = newSize;
 }
 
+void TimeSeries::ComputeSum()
+{
+	precipitationSum = 0.0;
+
+	if (series == NULL)
+		return;
+	
+	for (size_t i = 0; i < size; i++)
+	{
+		precipitationSum += series[i].second;
+	}
+}
+
 double TimeSeries::HoursToLocalUnits(double time) const
 {
 	switch (timeUnit)
@@ -658,6 +677,40 @@ double TimeSeries::SampleRate(double timeSinceStart) const // , double timeStep)
 	}
 
 	return HoursToLocalUnits(1.0) * series[upperBound].second / static_cast<double>(series[upperBound].first - series[upperBound - 1].first);
+}
+
+double TimeSeries::SampleCummulativePreciptation(double timeSinceStart) const
+{
+	//convert timeSinceStart (in hours) to TS units
+	double adjustedTimeSinceStart = HoursToLocalUnits(timeSinceStart);
+
+	if (adjustedTimeSinceStart >= series[size - 1].first)
+		return precipitationSum;
+	else if (timeSinceStart < 0.0)
+		return 0.0;
+
+	size_t upperBound = size - 1;
+	for (size_t i = 1; i < size; i++)
+	{
+		if (series[i].first >= adjustedTimeSinceStart)
+		{
+			upperBound = i;
+			break;
+		}
+	}
+
+	//Now, we sum the total from 0 to upperBound - 1, then subdivide the span upperBound - 1 to upperBound based on
+	//the time, and add part of depth before time to sum.
+	double sum = 0.0;
+
+	for (size_t i = 0; i < upperBound; i++)
+		sum += series[i].second;
+
+	double relativeTime = (adjustedTimeSinceStart - static_cast<double>(series[upperBound - 1].first)) / static_cast<double>(series[upperBound].first - series[upperBound - 1].first);
+
+	sum += relativeTime * series[upperBound].second;
+
+	return sum;
 }
 
 #pragma endregion

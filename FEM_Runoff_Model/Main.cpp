@@ -44,7 +44,7 @@ ModelParameters ModelTestParams()
 	params.weight = 0.5;
 	params.maxIterations = 5000;
 	params.externalResidualTreshold = 0.000001;
-	params.maxInternalIterations = 50;
+	params.maxExternalIterations = 50;
 
 	return params;
 }
