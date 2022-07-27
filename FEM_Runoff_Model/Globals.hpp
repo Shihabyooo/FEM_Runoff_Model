@@ -383,7 +383,7 @@ public:
 	LossModel lossModel = LossModel::none;
 
 	void * lossModelParams = NULL;
-	int scsCN = 0; //This is placeholder, untill proper solution that supports gridded SCS is implemented.
+	unsigned int scsCN = 0; //This is placeholder, untill proper solution that supports gridded SCS is implemented.
 	//double fixedPrecipitationValue = -1.0f; //must be positive value > 0.0
 
 	//Hydraulic Parameters

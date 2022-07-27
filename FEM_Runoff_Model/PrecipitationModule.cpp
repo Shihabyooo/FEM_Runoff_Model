@@ -157,50 +157,6 @@ void AppendLastTimeStepPrecipitationVariables()
 	}
 }
 
-//return Pe rate in m/hr.
-double ComputeInitConstPe(double precipRate, double timeStep, InitialAndConstantParams const * params, Element const * element)
-{
-	double totalPrecip = precipRate * timeStep;
-
-	//initial loss
-	double mcDeficit = Max(params->initialLoss - soilMC.at(element->id), 0.0);
-	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
-
-	//tempSoilMC.at(element->id) =  totalPrecip - remainingPrecip;
-	tempSoilMC.at(element->id) = soilMC.at(element->id) + totalPrecip - remainingPrecip;
-
-	//recompute rate, subtract const rate and return result
-	return Max((remainingPrecip / timeStep) - params->constRate, 0.0);
-}
-
-//return Pe rate in m/hr.
-double ComputeSCSCNPe(double time, ModelParameters const & params, Element const * element)
-{
-	//Pe = (P - 0.2 S)^2 / ( P + 0.8 S)
-	//S = (25400 - 254 CN) / CN
-	//This is only carried out if P > initial loss
-
-	double totalPrecip = GetPrecipitationRateAtTime(time, params, element) * params.timeStep; //TODO total precip rate already computed in calling function. Why compute again?
-
-	double s = (25400.0 - 254.0 * static_cast<double>(params.scsCN)) / static_cast<double>(params.scsCN);
-	double initialLoss = 0.2 * s;
-
-	double mcDeficit = Max(initialLoss - soilMC.at(element->id), 0.0);
-	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
-
-	if (remainingPrecip <= 0.0)
-		return 0.0;
-
-	double cummulativePrecip = GetCummulativePrecipitationAtTime(time, params, element);
-	double pe = (cummulativePrecip - 0.2 * s) / (cummulativePrecip + 0.8 * s);
-	tempTotalDirectRunoff.at(element->id) = pe;
-
-	//the incremental precipitation = Pe computed above - Pe up to last timeStep.
-	//The second term is stored in the totalDirectRunoff map.
-	double rate = Max(pe - totalDirectRunoff.at(element->id), 0.0) / params.timeStep;
-	return rate;
-}
-
 //Precipitation returned as meters per hour. This is the "total" preciptation , before loss is subtracted.
 //current impl doesn't need element, but later it would.
 double GetPrecipitationRateAtTime(double time, ModelParameters const & params, Element const * element)
@@ -228,6 +184,58 @@ double GetCummulativePrecipitationAtTime(double time, ModelParameters const & pa
 	{
 		return params.unitTimeSeries.SampleCummulativePreciptation(time) / 1000.0;
 	}
+}
+
+//return Pe rate in m/hr.
+double ComputeInitConstPe(double precipRate, double timeStep, InitialAndConstantParams const * params, Element const * element)
+{
+	double totalPrecip = precipRate * timeStep * 1000.0; //convert back to mm
+
+	//initial loss
+	double mcDeficit = Max(params->initialLoss - soilMC.at(element->id), 0.0);
+	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
+
+	//tempSoilMC.at(element->id) =  totalPrecip - remainingPrecip;
+	tempSoilMC.at(element->id) = soilMC.at(element->id) + totalPrecip - remainingPrecip;
+
+	//recompute rate, subtract const rate and return result
+	return Max((remainingPrecip / timeStep) - params->constRate, 0.0) / 1000.0;
+}
+
+//return Pe rate in m/hr.
+double ComputeSCSCNPe(double time, ModelParameters const & params, Element const * element)
+{
+	//Pe = (P - 0.2 S)^2 / ( P + 0.8 S)
+	//S = (25400 - 254 CN) / CN
+	//This is only carried out if P > initial loss.
+
+	double totalPrecip = GetPrecipitationRateAtTime(time, params, element) * params.timeStep * 1000.0; //TODO total precip rate already computed in calling function. Why compute again?
+
+	double s = (25400.0 - 254.0 * static_cast<double>(params.scsCN)) / static_cast<double>(params.scsCN);
+	double initialLoss = 0.2 * s;
+
+	double mcDeficit = Max(initialLoss - soilMC.at(element->id), 0.0);
+	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
+	tempSoilMC.at(element->id) = soilMC.at(element->id) + totalPrecip - remainingPrecip;
+
+	if (element->id == 0)
+		std::cout << "totalPrecip: " << totalPrecip << " mcDeficit: " << mcDeficit << " remainPrecip: " << remainingPrecip << std::endl;
+
+	if (remainingPrecip <= 0.0)
+		return 0.0;
+
+	double cummulativePrecip = GetCummulativePrecipitationAtTime(time, params, element) * 1000.0;
+	double pe = pow(cummulativePrecip - 0.2 * s, 2.0) / (cummulativePrecip + 0.8 * s);
+	tempTotalDirectRunoff.at(element->id) = pe;
+
+	//the incremental precipitation = Pe computed above - Pe up to last timeStep.
+	//The second term is stored in the totalDirectRunoff map.
+	double rate = Max(pe - totalDirectRunoff.at(element->id), 0.0) / params.timeStep / 1000.0;
+
+	if (element->id == 0)
+		std::cout << "cummPrecips: " << cummulativePrecip << " pe: " << pe << " rate: " << rate << std::endl;
+
+	return rate;
 }
 
 double ComputeEffectivePreciptationAtTime(double time, ModelParameters const & params, Element const * element)

@@ -29,8 +29,11 @@ ModelParameters ModelTestParams()
 	params.precipitationTemporalInterpolationType = InterpolationType::linear;
 	params.precipitationSpatialInterpolationType = InterpolationType::nearest;
 
+	params.lossModel = LossModel::scsCN;
+	params.scsCN = 75;
+
 	params.variableManningCoefficients = false;
-	params.fixedManningCoeffient = 0.05; //must be positive value > 0.0
+	params.fixedManningCoeffient = 0.03; //must be positive value > 0.0
 	params.manningCoefficientRasterPath = "";
 	params.timeStep = 0.25; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
 	params.startTime = 0.0; //should be left at 0.0
