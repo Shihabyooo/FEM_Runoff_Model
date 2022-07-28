@@ -65,22 +65,9 @@ bool InitializePrecipitationModule(ModelParameters const & params)
 
 	ClearData();
 
-	switch (activeMeshType)
-	{
-	case ElementType::triangle:
-		for (auto it = triangles.begin(); it != triangles.end(); ++it)
-			if (!InitElementEntries(it->second.id))
-				LogMan::Log("WARNING! Failed to create precipitation/moisture tracking entry for element " + std::to_string(it->second.id), LOG_WARN);
-		break;
-	case ElementType::rectangle:
-		for (auto it = rectangles.begin(); it != rectangles	.end(); ++it)
-			if (!InitElementEntries(it->second.id))
-				LogMan::Log("WARNING! Failed to create precipitation/moisture  content tracking entry for element " + std::to_string(it->second.id), LOG_WARN);
-		break;
-	default: //shouldn't happen
-		LogMan::Log("ERROR! Undefined mesh type in InitializePrecipitationModule()", LOG_ERROR);
-		return false;
-	}
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+		if (!InitElementEntries(it->second.id))
+			LogMan::Log("WARNING! Failed to create precipitation/moisture tracking entry for element " + std::to_string(it->second.id), LOG_WARN);
 	
 	return true;
 }
@@ -128,38 +115,23 @@ double GetElementCumulativeLossVolume(size_t elementID)
 
 void AppendLastTimeStepPrecipitationVariables()
 {
-
-	size_t elementCount = 0;
-
-	//Can't loop over elements using iterators, so get the number of elements based on activeMeshType, the loop using standard for loops.
-	switch (activeMeshType)
-	{
-	case ElementType::rectangle:
-		elementCount = rectangles.size();
-		break;
-	case ElementType::triangle:
-		elementCount = triangles.size();
-		break;
-	}
-
-	//Note: This assumes the meshing algorithms produced output that is id'ed sequentially from zero to size()-1.
-	for (size_t i = 0; i < elementCount; i++)
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
 		//This one is not cummulative.
-		currentPrecipitationRate.at(i) = tempCurrentPrecipRate.at(i);
-		
-		//This one's accumulation is handled by functions that use it.
-		totalDirectRunoff.at(i) = tempTotalDirectRunoff.at(i);
+		currentPrecipitationRate.at(it->second.id) = tempCurrentPrecipRate.at(it->second.id);
 
-		totalPrecipitation.at(i) += tempTotalPrecipitation.at(i);
-		totalLoss.at(i) += tempTotalLoss.at(i);
-		soilMC.at(i) += tempSoilMC.at(i);
+		//This one's accumulation is handled by functions that use it.
+		totalDirectRunoff.at(it->second.id) = tempTotalDirectRunoff.at(it->second.id);
+
+		totalPrecipitation.at(it->second.id) += tempTotalPrecipitation.at(it->second.id);
+		totalLoss.at(it->second.id) += tempTotalLoss.at(it->second.id);
+		soilMC.at(it->second.id) += tempSoilMC.at(it->second.id);
 	}
 }
 
 //Precipitation returned as meters per hour. This is the "total" preciptation , before loss is subtracted.
 //current impl doesn't need element, but later it would.
-double GetPrecipitationRateAtTime(double time, ModelParameters const & params, Element const * element)
+double GetPrecipitationRateAtTime(double time, ModelParameters const & params, Triangle const & element)
 {
 	if (params.variablePrecipitation)
 	{
@@ -173,7 +145,7 @@ double GetPrecipitationRateAtTime(double time, ModelParameters const & params, E
 }
 
 //returns cummulative precip in meters
-double GetCummulativePrecipitationAtTime(double time, ModelParameters const & params, Element const * element)
+double GetCummulativePrecipitationAtTime(double time, ModelParameters const & params, Triangle const & element)
 {
 	if (params.variablePrecipitation)
 	{
@@ -187,23 +159,23 @@ double GetCummulativePrecipitationAtTime(double time, ModelParameters const & pa
 }
 
 //return Pe rate in m/hr.
-double ComputeInitConstPe(double precipRate, double timeStep, InitialAndConstantParams const * params, Element const * element)
+double ComputeInitConstPe(double precipRate, double timeStep, InitialAndConstantParams const * params, Triangle const & element)
 {
 	double totalPrecip = precipRate * timeStep * 1000.0; //convert back to mm
 
 	//initial loss
-	double mcDeficit = Max(params->initialLoss - soilMC.at(element->id), 0.0);
+	double mcDeficit = Max(params->initialLoss - soilMC.at(element.id), 0.0);
 	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
 
 	//tempSoilMC.at(element->id) =  totalPrecip - remainingPrecip;
-	tempSoilMC.at(element->id) = soilMC.at(element->id) + totalPrecip - remainingPrecip;
+	tempSoilMC.at(element.id) = soilMC.at(element.id) + totalPrecip - remainingPrecip;
 
 	//recompute rate, subtract const rate and return result
 	return Max((remainingPrecip / timeStep) - params->constRate, 0.0) / 1000.0;
 }
 
 //return Pe rate in m/hr.
-double ComputeSCSCNPe(double time, ModelParameters const & params, Element const * element)
+double ComputeSCSCNPe(double time, ModelParameters const & params, Triangle const & element)
 {
 	//Pe = (P - 0.2 S)^2 / ( P + 0.8 S)
 	//S = (25400 - 254 CN) / CN
@@ -214,31 +186,25 @@ double ComputeSCSCNPe(double time, ModelParameters const & params, Element const
 	double s = (25400.0 - 254.0 * static_cast<double>(params.scsCN)) / static_cast<double>(params.scsCN);
 	double initialLoss = 0.2 * s;
 
-	double mcDeficit = Max(initialLoss - soilMC.at(element->id), 0.0);
+	double mcDeficit = Max(initialLoss - soilMC.at(element.id), 0.0);
 	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
-	tempSoilMC.at(element->id) = soilMC.at(element->id) + totalPrecip - remainingPrecip;
-
-	if (element->id == 0)
-		std::cout << "totalPrecip: " << totalPrecip << " mcDeficit: " << mcDeficit << " remainPrecip: " << remainingPrecip << std::endl;
+	tempSoilMC.at(element.id) = soilMC.at(element.id) + totalPrecip - remainingPrecip;
 
 	if (remainingPrecip <= 0.0)
 		return 0.0;
 
 	double cummulativePrecip = GetCummulativePrecipitationAtTime(time, params, element) * 1000.0;
 	double pe = pow(cummulativePrecip - 0.2 * s, 2.0) / (cummulativePrecip + 0.8 * s);
-	tempTotalDirectRunoff.at(element->id) = pe;
+	tempTotalDirectRunoff.at(element.id) = pe;
 
 	//the incremental precipitation = Pe computed above - Pe up to last timeStep.
 	//The second term is stored in the totalDirectRunoff map.
-	double rate = Max(pe - totalDirectRunoff.at(element->id), 0.0) / params.timeStep / 1000.0;
-
-	if (element->id == 0)
-		std::cout << "cummPrecips: " << cummulativePrecip << " pe: " << pe << " rate: " << rate << std::endl;
+	double rate = Max(pe - totalDirectRunoff.at(element.id), 0.0) / params.timeStep / 1000.0;
 
 	return rate;
 }
 
-double ComputeEffectivePreciptationAtTime(double time, ModelParameters const & params, Element const * element)
+double ComputeEffectivePreciptationAtTime(double time, ModelParameters const & params, Triangle const & element)
 {
 	double currentPrecipRate = GetPrecipitationRateAtTime(time, params, element);
 	double effectiveRate = 0.0;
@@ -259,13 +225,9 @@ double ComputeEffectivePreciptationAtTime(double time, ModelParameters const & p
 	}
 
 	//Update total precip and loss (after converting it back from rate to depth)
-	tempTotalPrecipitation.at(element->id) = currentPrecipRate * element->Area() * params.timeStep;
-	tempTotalLoss.at(element->id) = (currentPrecipRate - effectiveRate) * element->Area() * params.timeStep;
+	tempTotalPrecipitation.at(element.id) = currentPrecipRate * element.Area() * params.timeStep;
+	tempTotalLoss.at(element.id) = (currentPrecipRate - effectiveRate) * element.Area() * params.timeStep;
 	
-	//test
-	/*if (element->id == 0)
-		std::cout << "totalPrecip for elem: " << element->id << " = " << totalPrecipitation.at(element->id) << std::endl;*/
-
 	return effectiveRate;
 }
 
@@ -282,57 +244,18 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 	//init outVector to zeroes before doing anything.
 	Vector_f64 result(nodes.size());
 
-	size_t elementCount = 0;
-
-	//Can't loop over elements using iterators, so get the number of elements based on activeMeshType, the loop using standard for loops.
-	switch (activeMeshType)
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-	case ElementType::rectangle:
-		elementCount = rectangles.size();
-		break;
-	case ElementType::triangle:
-		elementCount = triangles.size();
-		break;
-	}
-
-	//Note: This assumes the meshing algorithms produced output that is id'ed sequentially from zero to size()-1.
-	for (size_t i = 0; i < elementCount; i++)
-	{
-		Element const * element = NULL;
-		double mult = 0.0;
-		
-		switch (activeMeshType)
-		{
-		case ElementType::rectangle:
-			element = new Element(rectangles[i]); 
-			mult = element->Area() / 4.0;
-			break;
-		case ElementType::triangle:
-			element = new Element(triangles[i]);
-			mult = element->Area() / 3.0;
-
-			//test
-			/*double denom = 0.0;
-			for (int i = 0; i < 3; i++)
-				if (!IsBoundaryNode(element->VertexID(i)))
-					denom += 1.0;
-			mult = element->Area() / denom;
-			std::cout << "elem: " << element->id << " - area deno: " << denom << std::endl;*/
-			break;
-		}
-
-		double newPrecipitation = ComputeEffectivePreciptationAtTime(time + params.timeStep, params, element);
-		double elementContrib = mult * ((1.0 - params.femOmega) * currentPrecipitationRate[element->id] + params.femOmega * newPrecipitation);
+		double newPrecipitation = ComputeEffectivePreciptationAtTime(time + params.timeStep, params, it->second);
+		double elementContrib = (it->second.Area() / 3.0)  * ((1.0 - params.femOmega) * currentPrecipitationRate[it->second.id] + params.femOmega * newPrecipitation);
 		elementContrib *= params.timeStep;
-		
-		tempCurrentPrecipRate.at(element->id) = newPrecipitation;
+
+		tempCurrentPrecipRate.at(it->second.id) = newPrecipitation;
 		//tempTotalDirectRunoff.at(element->id) = newPrecipitation * element->Area() * params.timeStep;
 
 		//Add element's contribution to the global vector.
-		for (int intNodeID = 0; intNodeID < element->NodeCount(); intNodeID++)
-			result[element->VertexID(intNodeID)] += elementContrib;
-
-		delete element;
+		for (int intNodeID = 0; intNodeID < 3; intNodeID++)
+			result[it->second.VertexID(intNodeID)] += elementContrib;
 	}
 
 	return result;

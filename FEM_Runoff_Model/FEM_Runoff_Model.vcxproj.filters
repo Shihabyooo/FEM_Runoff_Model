@@ -111,9 +111,6 @@
     <ClCompile Include="Globals.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Solvers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MatricesPlusPlus\VectorPP_f32.cpp">
       <Filter>Source Files\MatricesPP</Filter>
     </ClCompile>
@@ -153,6 +150,9 @@
     <ClCompile Include="PrecipitationModule.cpp">
       <Filter>Source Files\ModelImpl</Filter>
     </ClCompile>
+    <ClCompile Include="Solvers.cpp">
+      <Filter>Source Files\ModelImpl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.hpp">
@@ -187,9 +187,6 @@
     </ClInclude>
     <ClInclude Include="GeoTIFF-Parser\Decompressor.h">
       <Filter>Header Files\GeoTIFF-Parser</Filter>
-    </ClInclude>
-    <ClInclude Include="Solvers.hpp">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GridMesh.hpp">
       <Filter>Header Files\MeshGeneration</Filter>
@@ -228,6 +225,9 @@
       <Filter>Header Files\ModelImpl</Filter>
     </ClInclude>
     <ClInclude Include="SpatialDataModule.hpp">
+      <Filter>Header Files\ModelImpl</Filter>
+    </ClInclude>
+    <ClInclude Include="Solvers.hpp">
       <Filter>Header Files\ModelImpl</Filter>
     </ClInclude>
   </ItemGroup>

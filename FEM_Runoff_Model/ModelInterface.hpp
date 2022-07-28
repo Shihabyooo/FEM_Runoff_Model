@@ -12,9 +12,7 @@ bool Simulate(ModelParameters const & params);
 
 //Getters (mostly for GUI)
 std::vector<Vector2D> const & GetNodes();
-std::unordered_map<size_t, Rectangle> const & GetRectangles();
 std::unordered_map<size_t, Triangle> const & GetTriangles();
-Vector2D const * GetSuperTriangles();
 std::vector<size_t> const & GetBoundaryNodes();
 std::pair<Vector2D const &, Vector2D const &> GetNodesBoundingBox();
 std::pair<Vector2D const &, Vector2D const &> GetWatershedBoundingBox();

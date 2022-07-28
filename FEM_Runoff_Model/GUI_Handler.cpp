@@ -141,9 +141,6 @@ void RecomputeWindowElementsDimensions()// int newMainWinWidth, int newMainWinHe
 //char shedBound[260] = "Watershed Boundary";
 char shedBound[260] = "Test_Data\\Watershed_Boundary.kml";
 
-//char meshNodes[260] = "Mesh Nodes Coordinates File Path";
-//char meshNodes[260] = "Test_Nodes_G.csv";
-char meshNodes[260] = "Test_Data\\Grid_Nodes.csv";
 //char demFilePath[260] = "DEM Raster Path";
 char demFilePath[260] = "Test_Data\\DEM.tif";
 //char slopeFilePath[260] = "Slopes Raster Path";
@@ -158,10 +155,9 @@ char manningFilePath[260] = "Manning Raster File Path";
 
 int outletNode = 0;
 
-char superTriPadding[24] = "1.0";
-int gridMeshResolution = 100;
-char gridMeshPadding[12] = "0.01";
-char gridMeshRaycastPadding[12] = " 5.0";
+int gridMeshResolution = 10;
+char gridMeshPadding[12] = "0.001";
+//char gridMeshRaycastPadding[12] = " 5.0";
 
 int timeSeriesSize = 3;
 TimeSeries inputTS;
@@ -178,17 +174,23 @@ bool useLumped = true;
 
 const char* solvers[] = { "Auto", "Simple", "Gaussian", "Jacobi", "SOR", "PCG", "BiCG", "CGS" };// , "GMRES" };
 const char* precipitationInput[] = {"Single Time-Series", "Gridded Time-Series" };
-const char* interpMethods1D[] = {"Nearest", "Linear", "Cubic"};
-const char* interpMethods2D[] = { "Nearest", "Bilinear", "Bicubic" };
+//const char* interpMethods1D[] = {"Nearest", "Linear", "Cubic"};
+//const char* interpMethods2D[] = { "Nearest", "Bilinear", "Bicubic" };
 const char* timeUnits[] = { "Seconds", "Minutes", "Hours", "Days" };
 const char* elementType[] = { "Triangles", "Rectangles" };
+const char* lossModel[] = {"none", "Initial and Constant", "SCS Curve-Number"};
 int selectedPrecipInput = 0;
-int selectedPrecipTempoInterp = 1;
-int selectedPrecipSpaceInterp = 1;
-int selectedTopoInterp = 1;
+//int selectedPrecipTempoInterp = 1;
+//int selectedPrecipSpaceInterp = 1;
+//int selectedTopoInterp = 1;
 int selectedTimeUnit = 1;
 int selectedSolver = 0;
-int selectedElementType = 1;
+int selectedLossModel = 0;
+//int selectedElementType = 1;
+
+int curveNumber = 50;
+char initLoss[12] = "0.0";
+char constRateLoss[12] = "0.0";
 
 char solverResidual[12] = "0.0001";
 char solverWeight[12] = "0.5";
@@ -204,21 +206,39 @@ void FillParametersStruct(ModelParameters & params)
 	params.demPath = demFilePath;
 	params.slopesPath = slopeFilePath;
 	params.fdrPath = fdrFilePath;
-	params.topographySamplingMethod = static_cast<InterpolationType>(selectedTopoInterp);
 	params.variablePrecipitation = selectedPrecipInput == 1;
 
 	params.outletNode = outletNode;
 
-	//params.unitTimeSeries = ; 
-	params.precipitationTemporalInterpolationType = static_cast<InterpolationType>(selectedPrecipTempoInterp);
-	params.precipitationSpatialInterpolationType = static_cast<InterpolationType>(selectedPrecipSpaceInterp);
 	params.variableManningCoefficients = !useFixedManning;
 	params.fixedManningCoeffient = atof(fixedManningCoef);
 	params.manningCoefficientRasterPath = manningFilePath;
 
-	//params.useBuiltInLossModel = ;
-	//params.useHydrologicClassGrid = ; //if true, hydrologic class raster must be set
-	//params.hydrologicClassRaster = ;
+	params.lossModel = static_cast<LossModel> (selectedLossModel);
+	switch (params.lossModel)
+	{
+	case LossModel::initialConst:
+	{
+		if (params.lossModelParams != NULL)
+		{
+			delete params.lossModelParams;
+			params.lossModelParams = NULL;
+		}
+
+		InitialAndConstantParams * lossParams = new InitialAndConstantParams();
+		lossParams->initialLoss = atof(initLoss);
+		lossParams->constRate = atof(constRateLoss);
+
+		params.lossModelParams = lossParams;
+	}
+		break;
+	case LossModel::scsCN:
+		params.scsCN = curveNumber;
+		break;
+	default:
+		break;
+	}
+
 	params.timeStep = atof(deltaTime);
 	params.startTime = atof(startTime);
 	params.endTime = atof(endTime);
@@ -226,7 +246,6 @@ void FillParametersStruct(ModelParameters & params)
 	params.useLumpedForm = useLumped;
 	params.femOmega = atof(femOmega);
 
-	//params.meshType = static_cast<ElementType>(selectedElementType);
 	params.solverType = static_cast<Solver>(selectedSolver);
 	params.residualThreshold = atof(solverResidual);
 	params.weight = atof(solverWeight);
@@ -291,53 +310,20 @@ void DrawLeftPane()
 		ImGui::InputInt("Outlet Node: ", &outletNode, 0);
 		outletNode = Min(static_cast<size_t>(Max(outletNode, 0)), GetNodes().size() - 1); //force between 0 and max node id.
 
-		ImGui::Text("Element Type");
-		ImGui::Combo("##elemType", &selectedElementType, elementType, IM_ARRAYSIZE(elementType));
-
-		if (selectedElementType == 0)
-		{
-			ImGui::Text("Mesh Nodes");
-			ImGui::InputText("Mesh Nodes", meshNodes, IM_ARRAYSIZE(meshNodes));
-
-			if (ImGui::Button("Browse##nodes"))
-			{
-				//TODO spawn file browser here
-			}
-
-			ImGui::Text("SuperTriangle padding");
-			ImGui::SameLine();
-			ImGui::InputText("##superTriPad", superTriPadding, 24, ImGuiInputTextFlags_CharsDecimal);
-		}
-		//else if (selectedElementType == 1)
-		{
-			ImGui::InputInt("Resolution", &gridMeshResolution);
-			ImGui::Text("Internal padding");
-			ImGui::SameLine();
-			ImGui::InputText("##intPad", gridMeshPadding, 12, ImGuiInputTextFlags_CharsDecimal);
-			ImGui::Text("Raycast padding");
-			ImGui::SameLine();
-			ImGui::InputText("##rayPad", gridMeshRaycastPadding, 12, ImGuiInputTextFlags_CharsDecimal);
-		}
+		ImGui::InputInt("Resolution", &gridMeshResolution);
+		ImGui::Text("Internal padding");
+		ImGui::SameLine();
+		ImGui::InputText("##intPad", gridMeshPadding, 12, ImGuiInputTextFlags_CharsDecimal);
 
 		if (ImGui::Button("Generate Mesh", ImVec2(100, 50)))
 		{
-			bool success = false;
-			
-			//It's easer to just set everything. The reciever will sort out what is needed.
 			//params.boundary is set at ModelInterface.
 			MeshGeneratorParameters meshParams;
-			meshParams.useCustomNodes = false; //to do expose option to set this in GUI.
-			meshParams.inNodesListPath = meshNodes;
-			meshParams.superTrianglePadding = atof(superTriPadding);
 			meshParams.resolution = gridMeshResolution;
 			meshParams.internalPadding = atof(gridMeshPadding);
-			meshParams.rayCastPadding = atof(gridMeshRaycastPadding);
 		
-			meshParams.meshType = static_cast<ElementType>(selectedElementType);
 			if (GenerateMesh(meshParams))
 			{
-				//Remember to set the meshType (in GuiRequirements) to set the viewport mode to appropriate renderer.
-				meshType = meshParams.meshType;
 				std::pair<Vector2D const &, Vector2D const &> loadedMeshBoundingBox = GetNodesBoundingBox();
 				SetViewBounds(loadedMeshBoundingBox.first, loadedMeshBoundingBox.second);
 				UpdateViewport();
@@ -362,8 +348,6 @@ void DrawLeftPane()
 		if (ImGui::Button("Browse##fdr"))
 			LogMan::Log("Not yet impltemented!", LOG_WARN);
 
-		ImGui::Text("Spatial interpolation method");
-		ImGui::Combo("##InterpT2D", &selectedTopoInterp, interpMethods2D, IM_ARRAYSIZE(interpMethods2D));
 		ImGui::PopItemWidth();
 	}
 
@@ -380,8 +364,6 @@ void DrawLeftPane()
 		{
 			ImGui::InputInt("Series length", &timeSeriesSize);
 			timeSeriesSize = Max(timeSeriesSize, 2);
-			ImGui::Text("Time-series temporal interpolation method");
-			ImGui::Combo("##InterpP1D", &selectedPrecipTempoInterp, interpMethods1D, IM_ARRAYSIZE(interpMethods1D));
 
 			ImGui::Text("Time-series time units");
 			ImGui::Combo("##tsTimeUnits", &selectedTimeUnit, timeUnits, IM_ARRAYSIZE(timeUnits));
@@ -440,12 +422,34 @@ void DrawLeftPane()
 		{
 			ImGui::Text("Precipitation rasters directories");
 			ImGui::InputText("##precipRasDir", precipRasterDir, IM_ARRAYSIZE(precipRasterDir));
-			ImGui::Text("Time-series temporal interpolation method");
-			ImGui::Combo("##InterpP1D", &selectedPrecipTempoInterp, interpMethods1D, IM_ARRAYSIZE(interpMethods1D));
-
-			ImGui::Text("Precipitation spatial interpolation method");
-			ImGui::Combo("##InterpP2D", &selectedPrecipSpaceInterp, interpMethods2D, IM_ARRAYSIZE(interpMethods2D));
 		}
+		ImGui::PopItemWidth();
+	}
+
+	ImGui::NewLine();
+	ImGui::Separator();
+
+
+	if (ImGui::CollapsingHeader("Loss Model"))
+	{
+		ImGui::PushItemWidth(-1);
+
+		ImGui::Text("Loss Model Type");
+		ImGui::Combo("##lossType", &selectedLossModel, lossModel, IM_ARRAYSIZE(lossModel));
+
+		if (selectedLossModel == 1)
+		{
+			ImGui::Text("Initial Loss (mm)");
+			ImGui::InputText("##initLossIn", initLoss, IM_ARRAYSIZE(initLoss));
+			ImGui::Text("Constant loss rate (mm/hr)");
+			ImGui::InputText("##constRateIn", constRateLoss, IM_ARRAYSIZE(constRateLoss));
+		}
+		else if (selectedLossModel == 2)
+		{
+			ImGui::InputInt("Curve-Number", &curveNumber);
+			curveNumber = Min(Max(curveNumber, 1), 100);
+		}
+
 		ImGui::PopItemWidth();
 	}
 

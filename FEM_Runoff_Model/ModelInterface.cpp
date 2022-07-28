@@ -12,26 +12,18 @@ void ComputeBoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Ve
 
 	for (auto it = points.begin(); it < points.end(); it++)
 	{
-		//Print(*it);
 		min.x = Min(it->x, min.x);
 		min.y = Min(it->y, min.y);
 		max.x = Max(it->x, max.x);
 		max.y = Max(it->y, max.y);
 	}
-
-	/*LogMan::Log("Loaded data with bounds: "
-				+ std::to_string(min.x) + ", " + std::to_string(min.y) + " and "
-				+ std::to_string(max.x) + ", " + std::to_string(max.y));*/
 }
 
-void ResetMeshs()
+void ResetMeshes()
 {
 	nodes.clear();
 	triangles.clear();
-	rectangles.clear();
 	boundaryNodes.clear();
-	
-	activeMeshType = ElementType::undefined;
 }
 
 bool LoadWatershedBoundary(std::string const & boundaryPath)
@@ -41,7 +33,6 @@ bool LoadWatershedBoundary(std::string const & boundaryPath)
 		return false;
 	}
 
-	//test
 	ComputeBoundingBox(shedBoundary, shedSW, shedNE);
 
 	return true;
@@ -50,7 +41,7 @@ bool LoadWatershedBoundary(std::string const & boundaryPath)
 bool GenerateMesh(MeshGeneratorParameters & params)
 {
 	LogMan::Log("Attempting to generate FEM mesh");
-	ResetMeshs();
+	ResetMeshes();
 
 	if (!MeshGen::ValidateParameters(params))
 	{
@@ -62,31 +53,12 @@ bool GenerateMesh(MeshGeneratorParameters & params)
 
 	void * elementsContainerPtr = NULL;
 	
-	switch (params.meshType)
-	{
-	case ElementType::rectangle:
-		elementsContainerPtr = static_cast<void *>(&rectangles);
-		break;
-	case ElementType::triangle:
-		if (params.useCustomNodes)
-		{
-			if (!FileIO::LoadCoordinatePairsCSV(params.inNodesListPath, nodes))
-				return false;
-			params.inNodesList = &nodes;
-		}
-		elementsContainerPtr = static_cast<void *>(&triangles);
-		break;
-	}
-
-	bool status = MeshGen::GenerateMesh(params, elementsContainerPtr, &nodes, &boundaryNodes);
+	bool status = MeshGen::GenerateMesh(params, triangles, &nodes, &boundaryNodes);
 
 	if (status)
-	{
 		ComputeBoundingBox(nodes, nodesSW, nodesNE);
-		activeMeshType = params.meshType;
-	}
 	else
-		ResetMeshs();
+		ResetMeshes();
 
 	return status;
 }
@@ -144,30 +116,10 @@ bool CheckParameters(ModelParameters const & params)
 	//Check fails
 	//TODO for raster file checks, check also that they are georeffed rasters and inclusive of the mesh boundary.
 	
-	switch (activeMeshType)
+	if (triangles.size() < 1) //existence of tris implies existence of nodes (though I probably need to protect both from change outside this file)
 	{
-	case ElementType::undefined:
-		LogMan::Log("ERROR! No loaded mesh. (state: Undefined)", LOG_ERROR);
+		LogMan::Log("ERROR! No loaded mesh.", LOG_ERROR);
 		status = false;
-		break;
-	case ElementType::rectangle:
-		if (rectangles.size() < 1) //existence of tris implies existence of nodes (though I probably need to protect both from change outside this file)
-		{
-			LogMan::Log("ERROR! No loaded mesh.", LOG_ERROR);
-			status = false;
-		}
-		break;
-	case ElementType::triangle:
-		if (triangles.size() < 1) //existence of tris implies existence of nodes (though I probably need to protect both from change outside this file)
-		{
-			LogMan::Log("ERROR! No loaded mesh.", LOG_ERROR);
-			status = false;
-		}
-		break;
-	default:
-		LogMan::Log("ERROR! Undefined mesh type (state: default).", LOG_ERROR);
-		status = false;
-		break;
 	}
 
 	if (!FileIO::FileExists(params.demPath))
@@ -239,19 +191,9 @@ std::vector<Vector2D> const & GetNodes()
 	return nodes;
 }
 
-std::unordered_map<size_t, Rectangle> const & GetRectangles()
-{
-	return rectangles;
-}
-
 std::unordered_map<size_t, Triangle> const & GetTriangles()
 {
 	return triangles;
-}
-
-Vector2D const * GetSuperTriangles()
-{
-	return superTriangles;
 }
 
 std::vector<size_t> const & GetBoundaryNodes()

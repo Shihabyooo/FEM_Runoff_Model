@@ -14,7 +14,7 @@ ModelParameters ModelTestParams()
 	/*params.demPath = "Test_Data\\V3\\DEM.tif";
 	params.slopesPath = "Test_Data\\V3\\Slope_Percent.tif";
 	params.fdrPath = "Test_Data\\V3\\FDR.tif";*/
-	params.topographySamplingMethod = InterpolationType::linear;
+	//params.topographySamplingMethod = InterpolationType::linear;
 	params.outletNode = 22;
 	//params.outletNode = 430;
 	//params.outletNode = 4;
@@ -26,14 +26,14 @@ ModelParameters ModelTestParams()
 	params.unitTimeSeries;
 	LoadTimeSeries("Test_Data\\Test_Timeseries.csv", params.unitTimeSeries);
 	params.unitTimeSeries.timeUnit = TimeUnit::minute;
-	params.precipitationTemporalInterpolationType = InterpolationType::linear;
-	params.precipitationSpatialInterpolationType = InterpolationType::nearest;
+	/*params.precipitationTemporalInterpolationType = InterpolationType::linear;
+	params.precipitationSpatialInterpolationType = InterpolationType::nearest;*/
 
 	params.lossModel = LossModel::scsCN;
-	params.scsCN = 75;
+	params.scsCN = 80;
 
 	params.variableManningCoefficients = false;
-	params.fixedManningCoeffient = 0.03; //must be positive value > 0.0
+	params.fixedManningCoeffient = 0.04; //must be positive value > 0.0
 	params.manningCoefficientRasterPath = "";
 	params.timeStep = 0.25; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
 	params.startTime = 0.0; //should be left at 0.0
@@ -56,12 +56,6 @@ void GenTestMesh()
 {
 	MeshGeneratorParameters meshParams;
 	
-	meshParams.meshType = ElementType::triangle;
-	meshParams.useCustomNodes = false;
-	//meshParams.inNodesListPath = "Test_Data\\Grid_Nodes.csv";
-	//meshParams.inNodesListPath = "Test_Data\\Grid_Nodes_Dense2.csv";
-	meshParams.superTrianglePadding = 1.0;
-
 	meshParams.resolution = 4;
 	//meshParams.resolution = 20;
 	//meshParams.resolution = 12;
@@ -110,7 +104,7 @@ int main(int argc, char ** argv)
 	
 	int returnVal = 0;
 	//TODO uncomment this after testing is done.
-	//returnVal = StartUI(1280, 720);
+	returnVal = StartUI(1280, 720);
 	
 	////testing model on CLI directly
 	////TestGenerateSyntheticWatershed();

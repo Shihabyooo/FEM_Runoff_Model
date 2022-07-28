@@ -9,7 +9,7 @@ namespace MeshGen {
 	bool ValidateParameters(MeshGeneratorParameters const & params);
 
 	bool GenerateMesh(	MeshGeneratorParameters const & params,
-						void * outElements,
+						std::unordered_map<size_t, Triangle> & outTriangles,
 						::std::vector<Vector2D> * outNodes,
 						::std::vector<size_t> * outBoundaryNodes);
 }

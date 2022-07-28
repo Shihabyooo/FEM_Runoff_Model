@@ -4,8 +4,6 @@
 
 
 //TODO add a cleanup method to clear the allocated memory (superTriangles, rasters) when program closes.
-ElementType activeMeshType = ElementType::undefined;
-std::unordered_map<size_t, Rectangle> rectangles;
 std::unordered_map<size_t, Triangle> triangles;
 Vector2D superTriangles[6];
 std::vector<Vector2D> nodes;
@@ -33,7 +31,7 @@ std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 wa
 	return std::pair<double, double>(u, v);
 }
 
-Matrix_f64 ElementKMatrix_Tri(Triangle const & tri, std::pair<double, double> uv[3])
+Matrix_f64 ElementKMatrix(Triangle const & tri, std::pair<double, double> uv[3])
 {
 	//						|	ui (yj - yk) + vi (xk - xj)		ui (yk - yi) + vi (xi - xk)		ui (yi - yj) + vi (xj - xi)	|
 	//[K_element] = 1/6	*	|	uj (yj - yk) + vj (xk - xj)		uj (yk - yi) + vj (xi - xk)		uj (yi - yj) + vj (xj - xi)	|
@@ -62,68 +60,6 @@ Matrix_f64 ElementKMatrix_Tri(Triangle const & tri, std::pair<double, double> uv
 	return kMat;
 }
 
-//double k_e_x_fixed[4][4]{ {-2, 2, 1, -1},
-//							{-2, 2, 1, -1},
-//							{-1, 1, 2, -2},
-//							{-1, 1, 2, -2} };
-//
-//double k_e_y_fixed[4][4]{ {-2, -1, 1, 2},
-//							{-1, -2, 2, 1},
-//							{-1, -2, 2, 1},
-//							{-2, -1, 1, 2} };
-
-double k_e_x_fixed[4][4]{	{2, -2, -1, 1},
-							{-2, 2, 1, -1},
-							{-1, 1, 2, -2},
-							{1, 1, -2, 2} };
-
-double k_e_y_fixed[4][4]{	{2, 1, -1, -2},
-							{1, 2, -2, -1},
-							{-1, -2, 2, 1},
-							{-2, -1, 1, 2} };
-
-Matrix_f64 ElementKMatrix_Rect(Rectangle const & rect, std::pair<double, double> uv[4])
-{
-	//[K_element] =	[K_e_x] + [K_e_y]
-	//
-	//								|	ui	0	0	0	|		|	-2	2	1	-1	|
-	//[K_e_x]	=	height/12.0 *	|	0	uj	0	0	|	*	|	-2	2	1	-1	|
-	//								|	0	0	uk	0	|		|	-1	1	2	-2	|
-	//								|	0	0	0	ul	|		|	-1	1	2	-2	|
-	//
-	//								|	vi	0	0	0	|		|	-2	-1	1	2	|
-	//[K_e_y]	=	width/12.0 *	|	0	vj	0	0	|	*	|	-1	-2	2	1	|
-	//								|	0	0	vk	0	|		|	-1	-2	2	1	|
-	//								|	0	0	0	vl	|		|	-2	-1	1	2	|
-	//
-
-	Matrix_f64 kMat_x(4, 4);
-	Matrix_f64 kMat_y(4, 4);
-
-	/*double h12 = rect.Height() / 12.0;
-	double w12 = rect.Width() / 12.0;*/
-
-	double h12 = rect.Height() / (rect.Width() * 6.0);
-	double w12 = rect.Width() / (rect.Height() * 6.0);
-
-	double multX, multY;
-
-	for (int i = 0; i < 4; i++)
-	{
-		multX = uv[i].first * h12;
-		multY = uv[i].second * w12;
-
-		for (int j = 0; j < 4; j++)
-		{
-			kMat_x[i][j] = multX * k_e_x_fixed[i][j];
-			kMat_y[i][j] = multY * k_e_y_fixed[i][j];
-		}
-	}
-
-
-	return kMat_x + kMat_y;
-}
-
 Matrix_f64 ElementCMatrixLumped(int size, double areaDivision)
 {
 	//Lumped Capcitance Matrix for both element type defined as a diagonal matrix with diag value equal to element area / number of nodes\
@@ -137,7 +73,7 @@ Matrix_f64 ElementCMatrixLumped(int size, double areaDivision)
 	return cMat;
 }
 
-Matrix_f64 ElementCMatrix_Tri(ModelParameters const & params, Triangle const & tri)
+Matrix_f64 ElementCMatrix(ModelParameters const & params, Triangle const & tri)
 {
 	if (params.useLumpedForm)
 		return ElementCMatrixLumped(3, tri.Area() / 3.0);
@@ -154,65 +90,24 @@ Matrix_f64 ElementCMatrix_Tri(ModelParameters const & params, Triangle const & t
 	return cMat;
 }
 
-double c_e_fixed[4][4]{ {4, 2, 1, 2},
-						{2, 4, 2, 1},
-						{1, 2, 4, 2},
-						{2, 1, 2, 4} };
-
-Matrix_f64 ElementCMatrix_Rect(ModelParameters const & params, Rectangle const & rect)
-{
-	if (params.useLumpedForm)
-		return ElementCMatrixLumped(4, rect.Area() / 4.0);
-
-	//else return Constistance capcitance matrix
-	Matrix_f64 cMat(4, 4);
-	double mult = rect.Area() / 36.0;
-
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-			cMat[i][j] = c_e_fixed[i][j] * mult;
-
-	return cMat;
-}
-
 Matrix_f64 ComputeGlobalCoefficientsMatrix(ModelParameters const & params, Vector_f64 const & newHeads)
 {
 	//[C] + w*dt*[K]
 	Matrix_f64 coefMat(nodes.size(), nodes.size());
 	Matrix_f64 kMat, cMat;
 
-	if (activeMeshType == ElementType::triangle)
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		{
-			std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), newHeads),
-												ComputeVelocityComponents(it->second.VertexID(1), newHeads),
-												ComputeVelocityComponents(it->second.VertexID(2), newHeads) };
+		std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), newHeads),
+											ComputeVelocityComponents(it->second.VertexID(1), newHeads),
+											ComputeVelocityComponents(it->second.VertexID(2), newHeads) };
 
-			kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * params.femOmega / 6.0);
-			cMat = ElementCMatrix_Tri(params, it->second);
+		kMat = ElementKMatrix(it->second, uv) * (params.timeStep * params.femOmega / 6.0);
+		cMat = ElementCMatrix(params, it->second);
 
-			for (int row = 0; row < 3; row++)
-				for (int column = 0; column < 3; column++)
-					coefMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] + kMat[row][column]);
-		}
-	}
-	else
-	{
-		for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
-		{
-			std::pair<double, double> uv[4] = { ComputeVelocityComponents(it->second.VertexID(0), newHeads),
-												ComputeVelocityComponents(it->second.VertexID(1), newHeads),
-												ComputeVelocityComponents(it->second.VertexID(2), newHeads),
-												ComputeVelocityComponents(it->second.VertexID(3), newHeads) };
-
-			kMat = ElementKMatrix_Rect(it->second, uv) * (params.timeStep * params.femOmega / 6.0);
-			cMat = ElementCMatrix_Rect(params, it->second);
-
-			for (int row = 0; row < 4; row++)
-				for (int column = 0; column < 4; column++)
-					coefMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] + kMat[row][column]);
-		}
+		for (int row = 0; row < 3; row++)
+			for (int column = 0; column < 3; column++)
+				coefMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] + kMat[row][column]);
 	}
 
 	return coefMat;
@@ -223,60 +118,22 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 	//[C] - dt*(1-w)*[K]
 
 	Matrix_f64 condMat(nodes.size(), nodes.size());
-	Matrix_f64 kMat;
+	Matrix_f64 kMat, cMat;
 
-	if (activeMeshType == ElementType::triangle)
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
 	{
-		Matrix_f64 cMat(3, 3);
+		std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), heads),
+											ComputeVelocityComponents(it->second.VertexID(1), heads),
+											ComputeVelocityComponents(it->second.VertexID(2), heads) };
 
-		for (auto it = triangles.begin(); it != triangles.end(); ++it)
-		{
-			std::pair<double, double> uv[3] = { ComputeVelocityComponents(it->second.VertexID(0), heads),
-												ComputeVelocityComponents(it->second.VertexID(1), heads),
-												ComputeVelocityComponents(it->second.VertexID(2), heads) };
+		kMat = ElementKMatrix(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
+		cMat = ElementCMatrix(params, it->second);
 
-			kMat = ElementKMatrix_Tri(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
-			cMat = ElementCMatrix_Tri(params, it->second);
-
-			for (int row = 0; row < 3; row++)
-				for (int column = 0; column < 3; column++)
-					condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
-		}
+		for (int row = 0; row < 3; row++)
+			for (int column = 0; column < 3; column++)
+				condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
 	}
-	else
-	{
-		Matrix_f64 cMat(4, 4);
 
-		for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
-		{
-			std::pair<double, double> uv[4] = { ComputeVelocityComponents(it->second.VertexID(0), heads),
-												ComputeVelocityComponents(it->second.VertexID(1), heads),
-												ComputeVelocityComponents(it->second.VertexID(2), heads),
-												ComputeVelocityComponents(it->second.VertexID(3), heads) };
-
-			kMat = ElementKMatrix_Rect(it->second, uv) * (params.timeStep * (1.0 - params.femOmega) / 6.0);
-			cMat = ElementCMatrix_Rect(params, it->second);
-
-			for (int row = 0; row < 4; row++)
-				for (int column = 0; column < 4; column++)
-					condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
-
-			//test
-			/*if (it->second.ContainsVertex(46))
-			{
-				std::cout << "Inside CondMatConst\nElem: ";
-				it->second.DebugPrintDetails();
-				kMat.DisplayOnCLI();
-			}*/
-
-			//test
-			/*if (!kMat.Determinant() < 0.00001)
-			{
-				std::cout << "ping! at elem:";
-				it->second.DebugPrintDetails();
-			}*/
-		}
-	}
 
 	return condMat;
 }

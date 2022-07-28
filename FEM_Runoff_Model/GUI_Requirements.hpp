@@ -196,8 +196,6 @@ extern int maxLogPaneHeight;
 extern int fixedToolBarHeight;
 extern int fixedStatusBarHeight;
 
-extern ElementType meshType;
-
 namespace PointShader
 {
 	static const char* vertex_shader_text =

@@ -146,64 +146,7 @@ void ConvexHull(std::vector<Vector2D> points, std::vector<Vector2D> & outBoundar
 	}
 }
 
-void GetNodeSamplingSubBoundary_Rect(size_t nodeID, std::vector<Vector2D> & outSubBoundary, bool sampleOutsideMesh) //sampleOutsideMesh is for boundary nodes.
-{
-	outSubBoundary.clear();
-	for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
-	{
-		if (it->second.ContainsVertex(nodeID))
-			outSubBoundary.push_back(it->second.Centroid());
-	}
-
-	//The unordered_map impl doesn't guarantee order, but order is important here. Fortuntely, for rect elements (and for our current\
-		impl) we know that they are an x-y alligned grid, and that every non-boundary node has exactly four subBoundary also alligned,\
-		 so we can order them by computing bounds, then assigning on the correct order based on that.
-	//Note that this is only for internal nodes. Boundary nodes (and outlet node) are handled in the else block.
-	if (!IsBoundaryNode(nodeID) && outSubBoundary.size() > 3)
-	{
-		Vector2D boundSW, boundNE;
-		ComputeBoundingBox(outSubBoundary, boundSW, boundNE);
-
-		outSubBoundary.clear();
-		outSubBoundary.push_back(boundSW);
-		outSubBoundary.push_back(Vector2D(boundNE.x, boundSW.y));
-		outSubBoundary.push_back(boundNE);
-		outSubBoundary.push_back(Vector2D(boundSW.x, boundNE.y));
-	}
-	else //Assuming the meshing is working properly, all nodes are part of at least one element, so outSubBoundary should have min size of 1.
-	{
-		Vector2D const & pos = nodes[nodeID];
-
-		if (sampleOutsideMesh)
-		{
-			Vector2D delta = outSubBoundary[0] - pos;
-
-			if (outSubBoundary.size() == 2)
-				outSubBoundary.pop_back(); //because the computations bellow will add it again, but we don't want to complexify the code to check which one does.
-
-
-			outSubBoundary.push_back(Vector2D(pos.x - delta.x, outSubBoundary[0].y));
-			outSubBoundary.push_back(Vector2D(pos.x - delta.x, pos.y - delta.y));
-			outSubBoundary.push_back(Vector2D(outSubBoundary[0].x, pos.y - delta.y));
-		}
-		else
-		{
-			if (outSubBoundary.size() == 2)
-			{
-				outSubBoundary.push_back(outSubBoundary[0].x == outSubBoundary[1].x ? Vector2D(nodes[nodeID].x, outSubBoundary[1].y) : Vector2D(outSubBoundary[1].x, nodes[nodeID].y));
-				outSubBoundary.push_back(outSubBoundary[0].x == outSubBoundary[1].x ? Vector2D(nodes[nodeID].x, outSubBoundary[0].y) : Vector2D(outSubBoundary[0].x, nodes[nodeID].y));
-			}
-			else
-			{
-				outSubBoundary.push_back(Vector2D(outSubBoundary[0].x, pos.y));
-				outSubBoundary.push_back(Vector2D(pos.x, pos.y));
-				outSubBoundary.push_back(Vector2D(pos.x, outSubBoundary[0].y));
-			}
-		}
-	}
-}
-
-void GetNodeSamplingSubBoundary_Tri(size_t nodeID, std::vector<Vector2D> & outSubBoundary, bool sampleOutsideMesh) //sampleOutsideMesh is for boundary nodes.
+void GetNodeSamplingSubBoundary(size_t nodeID, std::vector<Vector2D> & outSubBoundary, bool sampleOutsideMesh) //sampleOutsideMesh is for boundary nodes.
 {
 	outSubBoundary.clear();
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
@@ -425,25 +368,7 @@ bool SampleAggregatedPixels(size_t nodeID, SpatialSamplingMethod method, Matrix_
 	//construct a region of influence for node, bu connecting the centroid for all elements that this node is part of.
 	std::vector<Vector2D> nodeSamplingSubBound;
 
-	switch (activeMeshType)
-	{
-	case ElementType::triangle:
-	{
-		GetNodeSamplingSubBoundary_Tri(nodeID, nodeSamplingSubBound, true);
-	}
-	break;
-	case ElementType::rectangle:
-	{
-		GetNodeSamplingSubBoundary_Rect(nodeID, nodeSamplingSubBound, true);
-	}
-	break;
-	case ElementType::undefined: //should never reach this point in the code, but still.
-		LogMan::Log("ERROR! Internal error. (Undefined meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
-		return false;
-	default:
-		LogMan::Log("ERROR! Internal error. (Default meshtype in SampleSpatialAveragedPixels().", LOG_ERROR);
-		return false;
-	}
+	GetNodeSamplingSubBoundary(nodeID, nodeSamplingSubBound, true);
 
 	std::vector<double> values;
 

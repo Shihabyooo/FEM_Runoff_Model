@@ -15,8 +15,6 @@ int renderBoundVertsCount = 0;
 
 std::unordered_map <int, Layer>  layers;
 Shader triangleShader, pointShader, lineShader;
-float superTriMeshVerts[18];
-ElementType meshType = ElementType::undefined;
 
 Vector2D lastViewportSize;
 Vector2D viewBounds[2];
@@ -48,15 +46,12 @@ void RenderViewport();
 void UpdateContent();
 void UpdateNodes();
 void UpdateTriangles();
-void UpdateRectangles();
 void UpdateWatershed();
 void UpdateViewBounds();
 void UpdateCoordinateProjectionParameters();
 Vector2D NormalizeCoordinates(Vector2D & point);
 Vector2D ScreenToWorldSpace(Vector2D screenCoordinates);
 void PanView(Vector2D posDelta);
-void TestSetupSuperTriangleRender();
-void TestUpdateSuperTriangle();
 #pragma endregion
 
 //Create vertex buffer (VBO), vertex array object (VAO) and vertex array element object, store id in targetGLData struct. \
@@ -78,6 +73,7 @@ void UpdateMesh(MeshData * targetGLData, float const * mesh, unsigned int vertic
 {
 	if (mesh == NULL || verticesCount < 1)
 		return;
+
 	glBindVertexArray(targetGLData->vertexArrayObject);
 	glBindBuffer(GL_ARRAY_BUFFER, targetGLData->vertexArrayObject);
 	glBindBuffer(GL_ARRAY_BUFFER, targetGLData->vertexBufferObject);
@@ -381,19 +377,6 @@ void UpdateGrabbedNode()
 //called by RenderViewport Only.
 void RenderMesh()
 {
-	switch (meshType)
-	{
-	case ElementType::undefined:
-		break;
-	case ElementType::triangle:
-		
-		break;
-	case ElementType::rectangle:
-		break;
-	default:
-		break;
-	}
-	
 	//Switch to FEM mesh
 		//The nodes and triangles share the same vertices, we use the same vertex object for both, but we glDrawArrays the point, and for
 		//the elements we use glDrawElements.
@@ -427,20 +410,6 @@ void RenderViewport() //Renders viewport content to an offscreen buffer.
 
 	glClearColor(viewportBGColour.x, viewportBGColour.y, viewportBGColour.z, viewportBGColour.w);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	//test draw supertriangle
-	if (GetNodes().size() > 2) 
-	{
-		glUseProgram(triangleShader.program);
-		SetActiveShaderDiffuse(COLOUR_GREEN);
-		glBindVertexArray(layers[10].meshData.vertexArrayObject);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, layers[10].meshData.vertexArrayElementObject);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Wireframe only
-		SetActiveShaderDiffuse(COLOUR_BLACK);
-		glDrawArrays(GL_TRIANGLES, 0, 6); //stupid solution to draw line on top of tri.
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //return to normal filled render mode.
-	}
 
 	RenderMesh();
 
@@ -532,7 +501,6 @@ bool InitViewport()
 	//Check and push any errors that may have resulted thus far to the log.
 	GLErrorCheck();
 
-	TestSetupSuperTriangleRender(); //test
 	return true;
 }
 
@@ -549,27 +517,11 @@ void UpdateViewport()
 void UpdateContent()
 {
 	UpdateNodes();
-	
-	switch (meshType)
-	{
-	case ElementType::undefined:
-		break;
-	case ElementType::triangle:
-		UpdateTriangles();
-		break;
-	case ElementType::rectangle:
-		UpdateRectangles();
-		break;
-	default:
-		break;
-	}
-	
+	UpdateTriangles();
 	UpdateWatershed();
 
 	UpdateMesh(&(layers[1].meshData), nodesMeshVerts, renderVertsCount, trianglesIndices, renderTrisIndicesCount);
 	UpdateMesh(&(layers[2].meshData), boundaryLineVerts, renderBoundVertsCount, NULL, 0);
-
-	TestUpdateSuperTriangle();
 }
 
 //Recomputes the viewport-space positions of nodes as stored in the ModelInterface. If nodes count is less than 1, this function \
@@ -622,33 +574,6 @@ void UpdateTriangles()
 		trianglesIndices[counter + 1] = it->second.VertexID(1);
 		trianglesIndices[counter + 2] = it->second.VertexID(2);
 		counter += 3;
-	}
-}
-
-void UpdateRectangles()
-{
-	CLEAR_ARRAY(trianglesIndices);
-
-	auto rectangles = GetRectangles();
-	renderTrisIndicesCount = rectangles.size() * 2 * 3;
-
-	if (rectangles.size() < 1)
-		return;
-
-	trianglesIndices = new unsigned int[renderTrisIndicesCount];
-
-	int counter = 0;
-	for (auto it = rectangles.begin(); it != rectangles.end(); ++it)
-	{
-		trianglesIndices[counter] = it->second.VertexID(0);
-		trianglesIndices[counter + 1] = it->second.VertexID(1);
-		trianglesIndices[counter + 2] = it->second.VertexID(3);
-
-		trianglesIndices[counter + 3] = it->second.VertexID(1);
-		trianglesIndices[counter + 4] = it->second.VertexID(2);
-		trianglesIndices[counter + 5] = it->second.VertexID(3);
-
-		counter += 6;
 	}
 }
 
@@ -740,37 +665,4 @@ void PanView(Vector2D posDelta)
 {
 	SetViewBounds(viewBounds[0] + posDelta, viewBounds[1] + posDelta);
 	UpdateContent();
-}
-
-void TestSetupSuperTriangleRender()
-{
-	//SetupShaders(&testSuperTriShader, vertex_shader_text, fragment_shader_text);
-	layers.insert({ 10, Layer("SuperTriangle", MeshData(), 10) });
-
-	TestUpdateSuperTriangle();
-}
-
-void TestUpdateSuperTriangle()
-{
-	if (GetNodes().size() < 2)
-		return;
-
-	auto superTriangles = GetSuperTriangles();
-	Vector2D superVerts[6]{ superTriangles[0], superTriangles[1], superTriangles[2],
-							superTriangles[3], superTriangles[4], superTriangles[5] };
-
-	int counter = 0;
-	for (int i = 0; i < 18; i += 3)
-	{
-		Vector2D relativePos = NormalizeCoordinates(superVerts[counter]);
-
-		superTriMeshVerts[i] = relativePos.x;
-		superTriMeshVerts[i + 1] = relativePos.y;
-		superTriMeshVerts[i + 2] = 0.0f;
-
-		counter++;
-	}
-
-	SetupMesh(&(layers[10].meshData), superTriMeshVerts, 18, NULL, 0);
-	GLErrorCheck();
 }
