@@ -19,7 +19,7 @@ std::vector<std::pair<double, double>> outputTimeSeries; //Time series for resul
 iteration. newHead velos are then moved to oldHead velos after internal iterations are done.
 std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 waterElevation) //waterElevation = nodeElevation + head
 {
-	double head = waterElevation[nodeID] - nodeElevation[nodeID];
+	double head = waterElevation[nodeID];
 
 	double velocity = 3600.0 * sqrt(nodeSlope[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
 
@@ -142,9 +142,10 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 void AdjustForBoundaryConditions(Matrix_f64 & aMat, Vector_f64 & bVec)
 {
 	////Using https://finite-element.github.io/7_boundary_conditions.html
+	////Or Method 2 in Rao 2018.
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 	{
-		bVec[*it] = nodeElevation[*it];
+		bVec[*it] = 0.0;
 		for (size_t i = 0; i < aMat.Columns(); i++)
 			aMat[*it][i] = 0.0;
 		aMat[*it][*it] = 1.0;
@@ -183,9 +184,6 @@ bool RunSimulation(ModelParameters const & params)
 	if (!CacheSlopes(params))
 		return false;
 
-	if (!CacheElevations())
-		return false;
-
 	outputTimeSeries.clear();
 #pragma endregion
 
@@ -216,15 +214,14 @@ bool RunSimulation(ModelParameters const & params)
 	std::cout << "\n===================================================\n";
 	std::cout << "Elevations, Slopes, Manning roughness coef";
 	std::cout << "\n===================================================\n";
-	std::cout << "node | Elev  |   n  |  Slope  |  FDR  \n";
+	std::cout << "node |   n  |  Slope  |  FDR  \n";
 	for (size_t i = 0; i < nodes.size(); i++)
-		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " << nodeElevation[i] << " | "  <<
+		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " <<
 					nodeManning[i] << " | " << nodeSlope[i] << " | " << nodeFDR[i]<< std::endl;
 
 #pragma endregion
 
-	nodeElevation = Vector_f64(nodes.size()); //test
-	heads = nodeElevation;
+	heads = Vector_f64(nodes.size());
 
 	//heads[7] += 2.0;//test
 	//heads[57] += 2.0;//test
@@ -270,7 +267,7 @@ bool RunSimulation(ModelParameters const & params)
 
 			//force computed newHeads to be positive (not sure about this)
 			for (size_t j = 0; j < fixedNewH.Rows(); j++)
-				fixedNewH[j] = Max(fixedNewH[j], nodeElevation[j]);
+				fixedNewH[j] = Max(fixedNewH[j], 0.0);
 
 			solverResidualsLog.push_back(residuals.SumAbs());
 			internalResidualsLog.push_back((newHeads - fixedNewH).SumAbs());

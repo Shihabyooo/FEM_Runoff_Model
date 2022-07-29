@@ -1,11 +1,10 @@
 #include "SpatialDataModule.hpp"
 
 Vector_f64 nodeSlope, nodeManning, nodeFDR;
-Vector_f64 nodeElevation;
 
-Matrix_f64 const * dem = NULL, *manningRaster = NULL, *slopes = NULL, *fdr = NULL;
+Matrix_f64 const *manningRaster = NULL, *slopes = NULL, *fdr = NULL;
 
-int demID, manningRasterID, slopesID, fdrID;
+int manningRasterID, slopesID, fdrID;
 
 bool LoadInputRasters(ModelParameters const & params)
 {
@@ -21,7 +20,6 @@ bool LoadInputRasters(ModelParameters const & params)
 
 	bool status = true;
 
-	status = status && FileIO::LoadRaster(params.demPath, &demID, &dem);
 	status = status && FileIO::LoadRaster(params.slopesPath, &slopesID, &slopes);
 	status = status && FileIO::LoadRaster(params.fdrPath, &fdrID, &fdr);
 
@@ -30,7 +28,6 @@ bool LoadInputRasters(ModelParameters const & params)
 
 	if (!status) //error already logged with the function calls above.
 	{
-		FileIO::UnloadRaster(demID);
 		FileIO::UnloadRaster(slopesID);
 		if (params.variableManningCoefficients)
 			FileIO::UnloadRaster(manningRasterID);
@@ -41,10 +38,6 @@ bool LoadInputRasters(ModelParameters const & params)
 
 void UnloadAllRasters()
 {
-	if (dem != NULL)
-		FileIO::UnloadRaster(demID);
-	dem = NULL;
-
 	if (manningRaster != NULL)
 		FileIO::UnloadRaster(manningRasterID);
 	manningRaster = NULL;
@@ -440,27 +433,6 @@ bool CacheSlopes(ModelParameters const & params)
 
 		//convert the slope from percentage to m/m
 		nodeSlope[i] = nodeSlope[i] / 100.0;
-	}
-
-	return true;
-}
-
-bool CacheElevations()
-{
-	//TODO similar to CacheSlopes()
-
-	nodeElevation = Vector_f64(nodes.size());
-	size_t counter = 0;
-	for (auto it = nodes.begin(); it != nodes.end(); ++it)
-	{
-		std::pair<Vector2Int, double> nearestPixel = SampleNearestPixel(*it, dem, demID);
-		if (nearestPixel.first.x < 0)
-		{
-			LogMan::Log("ERROR! No elevation sampled for node: " + std::to_string(counter), LOG_ERROR);
-			return false;
-		}
-		nodeElevation[counter] = nearestPixel.second;
-		counter++;
 	}
 
 	return true;
