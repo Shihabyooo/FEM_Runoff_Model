@@ -46,7 +46,8 @@ void DrawViewport(); //IMGUI painting commands for viewport window
 bool InitViewport();
 
 void UpdateViewport();
-void SetViewBounds(Vector2D swCorner, Vector2D nwCorner);
+void SetViewBounds(Vector2D const & swCorner, Vector2D const & neCorner);
+void CentreOnObject(Vector2D const & swCorner, Vector2D const & neCorner);
 
 ToolMode GetActiveTool();
 void SwitchActiveTool(ToolMode newTool);

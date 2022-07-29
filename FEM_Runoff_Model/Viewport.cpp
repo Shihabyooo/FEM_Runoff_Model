@@ -49,8 +49,8 @@ void UpdateTriangles();
 void UpdateWatershed();
 void UpdateViewBounds();
 void UpdateCoordinateProjectionParameters();
-Vector2D NormalizeCoordinates(Vector2D & point);
-Vector2D ScreenToWorldSpace(Vector2D screenCoordinates);
+Vector2D NormalizeCoordinates(Vector2D const & point);
+Vector2D ScreenToWorldSpace(Vector2D const & screenCoordinates);
 void PanView(Vector2D posDelta);
 #pragma endregion
 
@@ -620,22 +620,51 @@ void UpdateViewBounds()
 //Forces the viewportbounds to specific coordinates. SW bound is set as provided, NW corner is clamped to be at least \
 MIN_VIEWPORT_DELTA north and east (each) of the SW corner. New NW corner is adjusted to maintain current window aspect ratio. \
 Updates scale and delta.
-void SetViewBounds(Vector2D swCorner, Vector2D nwCorner)
+void SetViewBounds(Vector2D const & swCorner, Vector2D const & neCorner)
 {
+	//Sanitize the viewbounds before doing anything (viewBounds can't be flipped, and can't be the same).
 	viewBounds[0] = swCorner;
-	viewBounds[1] = Vector2D(Max(static_cast<double>(nwCorner.x), swCorner.x + MIN_VIEWPORT_DELTA),
-							Max(static_cast<double>(nwCorner.y), swCorner.y + MIN_VIEWPORT_DELTA));
+	viewBounds[1] = Vector2D(Max(static_cast<double>(neCorner.x), swCorner.x + MIN_VIEWPORT_DELTA),
+							Max(static_cast<double>(neCorner.y), swCorner.y + MIN_VIEWPORT_DELTA));
 
-	//adjust NW bound to maintain the current aspect ratio.
+	//adjust NE bound to maintain the current aspect ratio.
+	delta = viewBounds[1] - viewBounds[0]; //unadjusted delta
+	delta = Vector2D(Max(static_cast<double>(delta.x), delta.y * screenAspectRatio),
+					Max(static_cast<double>(delta.y), delta.x / screenAspectRatio));
+
+	viewBounds[1] = viewBounds[0] + delta;
+	UpdateCoordinateProjectionParameters(); //Although it reduntatly recomputes delta...
+	UpdateContent();
+}
+
+void CentreOnObject(Vector2D const & swCorner, Vector2D const & neCorner)
+{
+	//Sanitize the viewbounds before doing anything (viewBounds can't be flipped, and can't be the same).
+	viewBounds[0] = swCorner;
+	viewBounds[1] = Vector2D(Max(static_cast<double>(neCorner.x), swCorner.x + MIN_VIEWPORT_DELTA),
+							Max(static_cast<double>(neCorner.y), swCorner.y + MIN_VIEWPORT_DELTA));
+
+	//Code bellow will handle fixing aspect ratio.	
+	viewBounds[0].x -= VIEW_CENTRE_PADDING * scale;
+	viewBounds[0].y -= VIEW_CENTRE_PADDING * scale;
+	viewBounds[1].x += VIEW_CENTRE_PADDING * scale;
+	viewBounds[1].y += VIEW_CENTRE_PADDING * scale;
+
+
+	//adjust NE bound to maintain the current aspect ratio.
 	delta = viewBounds[1] - viewBounds[0]; //unadjusted delta
 	delta = Vector2D(Max(static_cast<double>(delta.x), delta.y * screenAspectRatio),
 					Max(static_cast<double>(delta.y), delta.x / screenAspectRatio));
 
 	viewBounds[1] = viewBounds[0] + delta;
 
-	scale = delta.x / static_cast<double>(viewportDimensions.width);
+	Vector2D addedPadding = viewBounds[1] - neCorner;
 
-	scaleChangeTicks = 0.1 * scale;
+	viewBounds[0] = viewBounds[0] - addedPadding * 0.5;
+	viewBounds[1] = viewBounds[1] - addedPadding * 0.5;
+
+	UpdateCoordinateProjectionParameters(); //Although it reduntatly recomputes delta...
+	UpdateContent();
 }
 
 void UpdateCoordinateProjectionParameters()
@@ -643,10 +672,11 @@ void UpdateCoordinateProjectionParameters()
 	delta = viewBounds[1] - viewBounds[0];
 	screenAspectRatio = static_cast<double>(viewportDimensions.width) / static_cast<double>(viewportDimensions.height);
 	scale = delta.x / static_cast<double>(viewportDimensions.width);
+	scaleChangeTicks = 0.1 * scale;
 }
 
 //returns normalized coordinates (-1.0f to 1.0f) for a supplied point depending on the current projection parameters 
-Vector2D NormalizeCoordinates(Vector2D & point)
+Vector2D NormalizeCoordinates(Vector2D const & point)
 {
 	Vector2D normPos(2.0f * ((point.x - viewBounds[0].x) / scale) / viewportDimensions.width  - 1.0f,
 					2.0f * ((point.y - viewBounds[0].y) / scale) / viewportDimensions.height - 1.0f);
@@ -654,7 +684,7 @@ Vector2D NormalizeCoordinates(Vector2D & point)
 	return normPos;
 }
 
-Vector2D ScreenToWorldSpace(Vector2D screenCoordinates)
+Vector2D ScreenToWorldSpace(Vector2D const & screenCoordinates)
 {
 	return Vector2D(viewBounds[0].x + (screenCoordinates.x * scale),
 					viewBounds[1].y - (screenCoordinates.y * scale));

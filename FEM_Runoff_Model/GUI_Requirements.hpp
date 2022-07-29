@@ -13,7 +13,8 @@
 #include "FileIO.hpp"
 #include "Globals.hpp"
 
-#define MIN_VIEWPORT_DELTA 1.0
+#define MIN_VIEWPORT_DELTA 1.0 //in world-space units
+#define VIEW_CENTRE_PADDING 30 //in pixels. 
 
 #define CLEAR_ARRAY(x)\
 	if (x != NULL)\

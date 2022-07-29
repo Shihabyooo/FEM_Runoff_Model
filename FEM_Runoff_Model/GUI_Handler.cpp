@@ -302,8 +302,8 @@ void DrawLeftPane()
 		{
 			LoadWatershedBoundary(shedBound);
 			std::pair<Vector2D const &, Vector2D const &> loadedShedBoundingBox = GetWatershedBoundingBox();
-			SetViewBounds(loadedShedBoundingBox.first, loadedShedBoundingBox.second);
-			UpdateViewport();
+			CentreOnObject(loadedShedBoundingBox.first, loadedShedBoundingBox.second);
+			//UpdateViewport();
 		}
 		
 		ImGui::Text("Outlet Node");
@@ -325,8 +325,8 @@ void DrawLeftPane()
 			if (GenerateMesh(meshParams))
 			{
 				std::pair<Vector2D const &, Vector2D const &> loadedMeshBoundingBox = GetNodesBoundingBox();
-				SetViewBounds(loadedMeshBoundingBox.first, loadedMeshBoundingBox.second);
-				UpdateViewport();
+				CentreOnObject(loadedMeshBoundingBox.first, loadedMeshBoundingBox.second);
+				//UpdateViewport();
 			}
 		}
 		
