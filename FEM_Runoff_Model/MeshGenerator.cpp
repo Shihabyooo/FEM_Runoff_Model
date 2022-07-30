@@ -5,9 +5,7 @@ bool MeshGen::ValidateParameters(MeshGeneratorParameters const & params)
 {
 	bool status = true;
 
-
 	//TODO reimplement this.
-
 
 	return status;
 }
@@ -18,9 +16,8 @@ bool GriddedTriangulation(MeshGeneratorParameters const & params, std::unordered
 
 	//generate a temporary rectangular grid, then subdivide it into triangles.
 	std::unordered_map<size_t, Rectangle> tempRectElements;
-	bool status = GenerateGrid(*params.boundary, outNodes, &tempRectElements, outBoundaryNodes, params.resolution, params.internalPadding, params.rayCastPadding);
 
-	if (!status)
+	if (!GenerateGrid(*params.boundary, outNodes, &tempRectElements, outBoundaryNodes, params.resolution, params.internalPadding, params.rayCastPadding))
 		return false;
 
 	size_t idCounter = 0;

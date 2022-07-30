@@ -1,7 +1,6 @@
 #include "SpatialDataModule.hpp"
 
 Vector_f64 nodeSlope, nodeManning, nodeFDR;
-
 Matrix_f64 const *manningRaster = NULL, *slopes = NULL, *fdr = NULL;
 
 int manningRasterID, slopesID, fdrID;
@@ -9,7 +8,7 @@ int manningRasterID, slopesID, fdrID;
 bool LoadInputRasters(ModelParameters const & params)
 {
 	LogMan::Log("Loading rasters");
-	//Note Variable Precipitation rasters are not loaded initially, but loaded at runtime. A pass should, however, be carried initially
+	//Note Variable Precipitation rasters are not loaded initially, but loaded during model execution. A pass should, however, be carried initially
 	//to create the time column of the time series vs raster path (so whe can tell when to load which raster). Caveats of this approach is
 	//that, due to inefficient GeoTIFF parser, this would signifcantly lower the performance.
 	//An alternative would be to preload a timeseries for each node (loop over rasters for each pair of coords). Caveats is that this would
@@ -77,11 +76,8 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 		double denominator = dX * dY2 - dY * dX2;
 
 		if (denominator == 0.0)
-		{
-			//std::cout << "!!!!!!!! Caught zero denominator!\n"; //test
 			continue;
-		}
-
+		
 		double dX3 = point.x - segment.first->x;
 		double dY3 = point.y - segment.first->y;
 
@@ -98,7 +94,7 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 }
 
 //TODO this function breaks for some nodes. See synthetic watershed when sampling is not nearest neighbour
-//points must be a copy. See usage of this function in GetNodeSamplingSubBoundary_Tri()
+//points must be a copy. See usage of this function in GetNodeSamplingSubBoundary()
 void ConvexHull(std::vector<Vector2D> points, std::vector<Vector2D> & outBoundaryPoints)
 {
 	outBoundaryPoints.clear();
@@ -153,10 +149,6 @@ void GetNodeSamplingSubBoundary(size_t nodeID, std::vector<Vector2D> & outSubBou
 		//Due to ordering issues with unordered_maps ang mesh generators, the outSubBoundary above may not have its node ordered\
 		in a way that creates perfect boundary of the subRegion we want. So we reorder to do so with a simple convex hull\
 		generating algorithm.
-		/*std::cout << "\n!!!!!!!!!!!!!!!!!!!!!!!\n";
-		for (auto it = outSubBoundary.begin(); it != outSubBoundary.end(); ++it)
-			Print(*it);*/
-		std::cout << "\n\n=========\ntesting for node: " << nodeID << std::endl;
 
 		ConvexHull(outSubBoundary, outSubBoundary);
 	}
@@ -174,22 +166,16 @@ void GetNodeSamplingSubBoundary(size_t nodeID, std::vector<Vector2D> & outSubBou
 		avgDist = avgDist / static_cast<double>(outSubBoundary.size());
 		outSubBoundary.clear();
 
-		/*if (sampleOutsideMesh)
-		{*/
 		outSubBoundary.push_back(pos + Vector2D(avgDist, avgDist));
 		outSubBoundary.push_back(pos + Vector2D(avgDist, -1.0 * avgDist));
 		outSubBoundary.push_back(pos + Vector2D(-1.0 * avgDist, -1.0 * avgDist));
 		outSubBoundary.push_back(pos + Vector2D(-1.0 * avgDist, avgDist));
-		/*}
-		else
-		{
-
-		}*/
 	}
 }
 
 double FDR2Angle(int fdr) //return angle in radians. Assumes AgNPS fdr format
 {
+	//agnps fdr format: 1 = north, 2 = NE, 3 = East, 4 = SE, 5 = South, 6 = SW, 7 = West, 8 = NW
 	switch (fdr)
 	{
 	case 1: //90 degrees
@@ -223,11 +209,8 @@ bool SamplePixelsValues(std::vector<Vector2D> const & samplingRegion, Matrix_f64
 	int samples;
 
 	if (!FileIO::GetRasterMappingParameters(rasterID, dimensions, samples, isUTM, &tiePoints, &pixelScale))
-	{
-		//Error already logged in GetRasterMappingParameters();
-		return false;
-	}
-
+		return false; //Error already logged in GetRasterMappingParameters();
+	
 	Vector2D anchorNE(tiePoints[1][0] + (pixelScale[0] / 2.0), tiePoints[1][1] - (pixelScale[1] / 2.0));
 
 	Vector2D subRegionSW, subRegionNE;
@@ -242,7 +225,6 @@ bool SamplePixelsValues(std::vector<Vector2D> const & samplingRegion, Matrix_f64
 
 			//To avoid having to ray cast for all pixels of raster, we do a simple bounds check by testing whether\
 			pixel centroid falls within boundary, if true, then we proceed to the finer (and more expensive) raycast test.
-
 			if (subRegionRect.ContainsInclusive(pixelPos))
 			{
 				Vector2D rayStart(subRegionSW.x - 10.0f, pixelPos.y);
@@ -260,42 +242,6 @@ bool SamplePixelsValues(std::vector<Vector2D> const & samplingRegion, Matrix_f64
 	return true;
 }
 
-bool ComputeSlopesComponents(size_t nodeID,
-	std::vector<double> const & slopeValues,
-	std::vector<double> const & fdrValues,
-	std::vector<double> & outSlopesX,
-	std::vector<double> & outSlopesY)
-{
-
-	outSlopesX.clear();
-	outSlopesY.clear();
-
-	for (size_t i = 0; i < slopeValues.size(); i++)
-	{
-		if (isnan(fdrValues[i]) || isnan(slopeValues[i]))
-		{
-			LogMan::Log("WARNING! Caught NaN values for FDR or Slopes for node: " + std::to_string(nodeID), LOG_WARN);
-			continue;
-		}
-
-		int dir = lround(fdrValues[i]);
-
-		if (dir < 1 || dir > 7)
-		{
-			LogMan::Log("WARNING! Caught invalid FDR code sampling for nodeID: " + std::to_string(nodeID), LOG_WARN);
-			continue;
-		}
-
-		double angle = FDR2Angle(dir);
-
-		outSlopesX.push_back(slopeValues[i] * cos(angle) / 100.0);
-		outSlopesY.push_back(slopeValues[i] * sin(angle) / 100.0);
-	}
-
-	return true;
-}
-
-//TODO add NearestNeighbour as option for SpatialSamplingMethod and merge this with SampleAggregatedSlopes
 //returns negative valued VectorInt if error
 std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 const * raster, int rasterID)
 {
@@ -307,12 +253,9 @@ std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 c
 	int samples;
 
 	if (!FileIO::GetRasterMappingParameters(rasterID, dimensions, samples, isUTM, &tiePoints, &pixelScale))
-	{
-		//Error already logged in GetRasterMappingParameters();
-		return std::pair<Vector2Int, double>(Vector2Int(-1, -1), 0.0);
-	}
-
-	size_t _row, _column;
+		return std::pair<Vector2Int, double>(Vector2Int(-1, -1), 0.0); //Error already logged in GetRasterMappingParameters();
+	
+	size_t _row = 0, _column = 0;
 	double minDist = DBL_MAX;
 
 	Vector2D anchorNE(tiePoints[1][0] + (pixelScale[0] / 2.0), tiePoints[1][1] - (pixelScale[1] / 2.0));
@@ -323,7 +266,6 @@ std::pair<Vector2Int, double> SampleNearestPixel(Vector2D position, Matrix_f64 c
 				anchorNE.y - row * pixelScale[1]);
 
 			double distanceToCentroid = pixelPos.DistanceTo(position);
-
 			if (distanceToCentroid < minDist)
 			{
 				_row = row;
@@ -398,15 +340,12 @@ bool CacheManningCoefficients(ModelParameters const & params)
 	for (auto it = nodes.begin(); it != nodes.end(); ++it)
 	{
 		if (!params.variableManningCoefficients)
-		{
 			nodeManning[counter] = params.fixedManningCoeffient;
-		}
 		else
 		{
 			LogMan::Log("ERROR! Variable manning input not yet implemented.", LOG_ERROR);
 			return false;
 		}
-
 		counter++;
 	}
 
@@ -415,13 +354,6 @@ bool CacheManningCoefficients(ModelParameters const & params)
 
 bool CacheSlopes(ModelParameters const & params)
 {
-	//agnps fdr format: 1 = north, 2 = NE, 3 = East, 4 = SE, 5 = South, 6 = SW, 7 = West, 8 = NW
-
-	//TODO revise this method so it creates a polygon connecting the centroids for each triangle that contains each tested vertex,\
-	then sampling for pixels covered by this polygon and averaging the results (after factoring). Same for manning sampling.
-
-	//nodeSlopeX = Vector_f64(nodes.size());
-	//nodeSlopeY = Vector_f64(nodes.size());
 	nodeSlope = Vector_f32(nodes.size());
 	nodeFDR = Vector_f64(nodes.size());
 

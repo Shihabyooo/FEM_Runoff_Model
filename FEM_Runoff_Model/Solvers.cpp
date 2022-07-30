@@ -2,7 +2,6 @@
 #include "Solvers.hpp"
 #include "LogManager.hpp"
 
-
 double ComputeThreshold(Vector_f64 const & bVector)
 {
 	double minValue = FLT_MAX;
@@ -35,7 +34,6 @@ bool Solve(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & 
 	switch (params.solverType)
 	{
 	case Solver::Auto: //TODO implement automatic solver selection here
-		//return SolverJacobi(aMatrix, bVector, outXVector, outResiduals, params.weight, params.residualThreshold, params.maxIterations);
 		return SolverSOR(aMatrix, bVector, outXVector, outResiduals, params.weight, params.residualThreshold, params.maxIterations);
 	case Solver::BiCG:
 		return false;
@@ -182,8 +180,7 @@ bool SolverSOR(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f6
 	return true;
 }
 
-//TODO double, triple and quadruple check this method. It was translated from text around coup time, and I don't really remember how the hell\
-it worked...
+//TODO this algorithm doesn't work properly.
 bool SolverPCG(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double threshold, size_t maxIterations)
 {
 	LogMan::Log("Using Preconditioned Conjugate Gradients solver.");
@@ -202,8 +199,6 @@ bool SolverPCG(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f6
 	size_t systemSize = bVector.Rows();
 	//init xVector
 	outXVector = Vector_f64(systemSize, INITIAL_X_VALUE);
-	/*outXVector[0] = bVector.GetValue(0);
-	outXVector[systemSize - 1] = bVector.GetValue(systemSize - 1);*/
 
 	ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
 
@@ -250,6 +245,7 @@ bool SolverPCG(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f6
 	return true;
 }
 
+//TODO this algorithm doesn't work properly.
 bool SolverBiCG(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double threshold, size_t maxIterations)
 {
 	LogMan::Log("Using Bi-Conjugate Gradients solver.");
@@ -307,10 +303,6 @@ bool SolverBiCG(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f
 		d = outResiduals + d * beta;
 		d2 = residuals2 + d2 * beta;
 
-		//test orthogonality relations:
-		//std::cout << "r'T * r: " <<  residuals2.DotProduct(outResiduals) << std::endl; //test
-		//std::cout << "p'T A p: " << d2.DotProduct(q) << std::endl; //test
-
 		if (abs(delta) < allowableTolerance)
 		{
 			LogMan::Log("Reached acceptable residual in " + std::to_string(i) + " iterations.", LOG_SUCCESS);
@@ -323,38 +315,7 @@ bool SolverBiCG(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f
 	return true;
 }
 
-//bool SolverGMRES(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double threshold, size_t maxIterations)
-//{
-//	LogMan::Log("Using Generalized Minimal Residual solver.");
-//
-//	if (!CheckSystem(aMatrix, bVector))
-//		return false;
-//
-//	if (threshold < MIN_CONVERGENCE_THRESHOLD)
-//		threshold = ComputeThreshold(bVector);
-//
-//	size_t systemSize = bVector.Rows();
-//	//init xVector
-//	outXVector = Vector_f64(systemSize, INITIAL_X_VALUE);
-//
-//	for (int i = 0; i < maxIterations; i++)
-//	{
-//		// r = b - Ax
-//		ComputeResiduals(aMatrix, bVector, outXVector, outResiduals);
-//
-//		//v = r / ||r||2
-//		//s = ||r||2 e1
-//
-//		//loop
-//			//w = Av
-//			//loop
-//				//h =
-//	}
-//
-//	LogMan::Log("Reached final iteration without converging on an acceptible solution.", LOG_WARN);
-//	return true;
-//}
-
+//TODO this algorithm doesn't work properly.
 bool SolverCGS(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 & outXVector, Vector_f64 & outResiduals, double threshold, size_t maxIterations)
 {
 	LogMan::Log("Using Conjugate Gradients Squared solver.");
@@ -435,6 +396,5 @@ bool SolverCGS(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f6
 
 void ComputeResiduals(Matrix_f64 const & aMatrix, Vector_f64 const & bVector, Vector_f64 const & xVector, Vector_f64 & outResiduals)
 {
-	//LogMan::Log("Residual computation not implemented yet.", LOG_WARN);
 	outResiduals = bVector - aMatrix * xVector;
 }

@@ -11,14 +11,7 @@ ModelParameters ModelTestParams()
 	params.demPath = "Test_Data\\DEM.tif";
 	params.slopesPath = "Test_Data\\Slope_Percent.tif";
 	params.fdrPath = "Test_Data\\FDR.tif";
-	/*params.demPath = "Test_Data\\V3\\DEM.tif";
-	params.slopesPath = "Test_Data\\V3\\Slope_Percent.tif";
-	params.fdrPath = "Test_Data\\V3\\FDR.tif";*/
-	//params.topographySamplingMethod = InterpolationType::linear;
 	params.outletNode = 22;
-	//params.outletNode = 430;
-	//params.outletNode = 4;
-	//params.outletNode = 13;
 
 	params.useLumpedForm = true;
 
@@ -26,8 +19,6 @@ ModelParameters ModelTestParams()
 	params.unitTimeSeries;
 	LoadTimeSeries("Test_Data\\Test_Timeseries.csv", params.unitTimeSeries);
 	params.unitTimeSeries.timeUnit = TimeUnit::minute;
-	/*params.precipitationTemporalInterpolationType = InterpolationType::linear;
-	params.precipitationSpatialInterpolationType = InterpolationType::nearest;*/
 
 	params.lossModel = LossModel::scsCN;
 	params.scsCN = 80;
@@ -39,7 +30,6 @@ ModelParameters ModelTestParams()
 	params.startTime = 0.0; //should be left at 0.0
 	params.endTime = 20.0f; //hours after startTime to end simulation.
 
-	//params.meshType = ElementType::triangle;
 	params.useLumpedForm = true;
 	params.femOmega = 0.5;
 	params.solverType = Solver::Auto;
@@ -57,45 +47,11 @@ void GenTestMesh()
 	MeshGeneratorParameters meshParams;
 	
 	meshParams.resolution = 4;
-	//meshParams.resolution = 20;
-	//meshParams.resolution = 12;
-	//meshParams.resolution = 25;
 	meshParams.internalPadding = 0.01;
 	meshParams.rayCastPadding = 10.0;
 
 	GenerateMesh(meshParams);
 }
-
-//void TestGenerateSyntheticWatershed()
-//{
-//	nodes.clear();
-//	triangles.clear();
-//	boundaryNodes.clear();
-//
-//	for (int i = 0; i < 6; i++)
-//		for (int j = 0; j < 7; j++)
-//			nodes.push_back(Vector2D(j * 83.33, i * 80));
-//	
-//	int counter = 0;
-//	for (int i = 0; i < 60; i = i + 2)
-//	{
-//		triangles.insert({ i, Triangle(i, counter, counter + 6, counter + 7, nodes) });
-//		triangles.insert({ i, Triangle(i, counter, counter + 1, counter + 7, nodes) });
-//		counter++;
-//	}
-//
-//	for (int i = 0; i < 6; i++)
-//	{
-//		boundaryNodes.push_back(i);
-//		boundaryNodes.push_back(i + 36);
-//	}
-//	for (int i = 0; i < 37; i += 6)
-//	{
-//		boundaryNodes.push_back(i + 6);
-//		boundaryNodes.push_back(i + 11);
-//	}
-//
-//}
 
 int main(int argc, char ** argv)
 {
@@ -107,10 +63,7 @@ int main(int argc, char ** argv)
 	returnVal = StartUI(1280, 720);
 	
 	////testing model on CLI directly
-	////TestGenerateSyntheticWatershed();
-	
 	LoadWatershedBoundary("Test_Data\\Watershed_Boundary.kml");
-	//LoadWatershedBoundary("Test_Data\\v2\\Watershed_Boundary.kml");
 	GenTestMesh();
 	Simulate(ModelTestParams());
 

@@ -93,9 +93,6 @@
     <ClCompile Include="Triangle.cpp">
       <Filter>Source Files\MeshGeneration</Filter>
     </ClCompile>
-    <ClCompile Include="DelauneyTriangulation.cpp">
-      <Filter>Source Files\MeshGeneration</Filter>
-    </ClCompile>
     <ClCompile Include="LogManager.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
@@ -159,9 +156,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Triangle.hpp">
-      <Filter>Header Files\MeshGeneration</Filter>
-    </ClInclude>
-    <ClInclude Include="DelauneyTriangulation.hpp">
       <Filter>Header Files\MeshGeneration</Filter>
     </ClInclude>
     <ClInclude Include="Globals.hpp">

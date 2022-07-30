@@ -42,8 +42,6 @@ Rectangle & Rectangle::operator=(Rectangle const & rect2)
 	vertCount = rect2.vertCount; //pointless? vertCount is always 4 for rectangles...
 	area = rect2.area;
 
-	
-
 	if (rect2.vertIDs != NULL)
 	{
 		if (vertIDs == NULL)

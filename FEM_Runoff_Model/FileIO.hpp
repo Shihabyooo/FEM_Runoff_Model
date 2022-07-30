@@ -7,6 +7,8 @@
 
 #include "Globals.hpp"
 
+//TODO CSV parsing should be unified, instead of having several functions with similar code.
+
 //Must be defined in FileIO not in Global because memory freeing requires STB functions
 struct Image
 {
@@ -28,21 +30,20 @@ namespace FileIO
 
 	bool LoadTimeSeries(std::string const & path, TimeSeries & timeSeries, unsigned int firstLinesToSkip = 0);
 
-	bool LoadCSV(std::string const & path, std::vector<float> & output, unsigned int firstLinesToSkip = 0);
+	bool LoadCSV(std::string const & path, std::vector<double> & output, unsigned int firstLinesToSkip = 0);
 	bool LoadCoordinatePairsCSV(std::string const & path, std::vector<Vector2D> & output, unsigned int firstLinesToSkip = 0);
 
 	bool LoadRaster(std::string const & path, int * outRasterID, Matrix_f64 const ** outBitmapPtr); 
+	void UnloadRaster(int rasterID);
+	
 	bool GetRasterMappingParameters(int rasterID,
 									Vector2Int & outDimensions,
 									int & outSamples,
 									bool & outIsUTM,
 									double *** outTiePoints, //Will allocate double[2][3] and point this pointer to it.
 									double ** outPixelScale);//will allocate double[3] and point this pointer to it.
-		
-	void UnloadRaster(int rasterID);
 
 	Image LoadImage(std::string const & path);
-
 
 	bool LoadVectorPath(std::string const & path, std::vector<Vector2D> & output);
 

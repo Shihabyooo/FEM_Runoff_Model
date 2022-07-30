@@ -2,10 +2,7 @@
 #include "ModelImplementation.hpp"
 #include "PrecipitationModule.hpp"
 
-
-//TODO add a cleanup method to clear the allocated memory (superTriangles, rasters) when program closes.
 std::unordered_map<size_t, Triangle> triangles;
-Vector2D superTriangles[6];
 std::vector<Vector2D> nodes;
 std::vector<size_t> boundaryNodes;
 Vector2D nodesSW, nodesNE;
@@ -20,9 +17,7 @@ iteration. newHead velos are then moved to oldHead velos after internal iteratio
 std::pair<double, double> ComputeVelocityComponents(size_t nodeID, Vector_f64 waterElevation) //waterElevation = nodeElevation + head
 {
 	double head = waterElevation[nodeID];
-
 	double velocity = 3600.0 * sqrt(nodeSlope[nodeID]) * pow(head, 2.0 / 3.0) / nodeManning[nodeID];
-
 	double angle = FDR2Angle(lround(nodeFDR[nodeID]));
 
 	double u = velocity * cos(angle);
@@ -73,11 +68,11 @@ Matrix_f64 ElementCMatrixLumped(int size, double areaDivision)
 	return cMat;
 }
 
+//Returns either consistent or lumped form, depending on setting in params.
 Matrix_f64 ElementCMatrix(ModelParameters const & params, Triangle const & tri)
 {
 	if (params.useLumpedForm)
 		return ElementCMatrixLumped(3, tri.Area() / 3.0);
-
 	//else return Constistance capcitance matrix
 
 	Matrix_f64 cMat(3, 3);
@@ -116,7 +111,6 @@ Matrix_f64 ComputeGlobalCoefficientsMatrix(ModelParameters const & params, Vecto
 Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 {
 	//[C] - dt*(1-w)*[K]
-
 	Matrix_f64 condMat(nodes.size(), nodes.size());
 	Matrix_f64 kMat, cMat;
 
@@ -133,7 +127,6 @@ Matrix_f64 ComputeGlobalConductanceMatrix(ModelParameters const & params)
 			for (int column = 0; column < 3; column++)
 				condMat[it->second.VertexID(row)][it->second.VertexID(column)] += (cMat[row][column] - kMat[row][column]);
 	}
-
 
 	return condMat;
 }
@@ -168,7 +161,8 @@ bool RunSimulation(ModelParameters const & params)
 	if (!InitializePrecipitationModule(params))
 		return false;
 
-	//Special consideration. Since the boundary node listing includes our exit node, we have to manually remove it.
+	//Special consideration. Since the boundary nodes list from the mesh generator includes our exit node, we have to\
+	 manually remove it.
 	for (auto it = boundaryNodes.begin(); it != boundaryNodes.end(); ++it)
 		if (*it == params.outletNode)
 		{
@@ -218,19 +212,16 @@ bool RunSimulation(ModelParameters const & params)
 	for (size_t i = 0; i < nodes.size(); i++)
 		std::cout << std::fixed << std::setw(4) << std::setprecision(4) << i << " : " <<
 					nodeManning[i] << " | " << nodeSlope[i] << " | " << nodeFDR[i]<< std::endl;
-
 #pragma endregion
 
+	//Allocate the heads vector and initialize it to zero (dry bed initial conditions).
 	heads = Vector_f64(nodes.size());
-
-	//heads[7] += 2.0;//test
-	//heads[57] += 2.0;//test
-	//heads[248] += 2.0;//test
 
 	//Loop from start time to end time
 	double time = params.startTime;
 
 	//to compute some statistics about error.
+	//Finish implementing error statistics.
 	std::vector<double> internalResidualsLog;
 	std::vector<double> solverResidualsLog;
 
@@ -242,13 +233,14 @@ bool RunSimulation(ModelParameters const & params)
 		LogMan::Log("At T= " + std::to_string(time));
 		std::cout << "===================================================\n";
 
-		//Vector_f64 newHeads = heads + Vector_f64(nodes.size(), 0.001);
+		//Initialize and assume values for newheads. 
 		Vector_f64 newHeads(nodes.size());
+		//To speed up reaching a solution, only assume non-zero heads at internal nodes.
 		for (size_t i = 0; i < nodes.size(); i++)
 			if (!IsBoundaryNode(i))
 				newHeads[i] = heads[i] + 0.001;
 
-		//internal loop
+		//external loop
 		for (size_t i = 0; i <= params.maxExternalIterations; i++)
 		{
 			//RHS = [GlobalConductanceMat] * {h_0} + precipComponent
@@ -265,39 +257,25 @@ bool RunSimulation(ModelParameters const & params)
 				return false;
 			}
 
-			//force computed newHeads to be positive (not sure about this)
+			//force computed newHeads to be positive (negative values will break the model, as pow(negative number) = NaN)
 			for (size_t j = 0; j < fixedNewH.Rows(); j++)
 				fixedNewH[j] = Max(fixedNewH[j], 0.0);
 
 			solverResidualsLog.push_back(residuals.SumAbs());
 			internalResidualsLog.push_back((newHeads - fixedNewH).SumAbs());
 
-			if (internalResidualsLog.back() <= params.externalResidualTreshold)
+			if (internalResidualsLog.back() <= params.externalResidualTreshold) //Good result, we can break the loop now.
 			{
 				newHeads = fixedNewH;
 				break;
 			}
-			else if (i >= params.maxExternalIterations)
+			else if (i >= params.maxExternalIterations) //While not always a bad thing (e.g. if threshold was unrealistically small), we should warn user regardless.
 				LogMan::Log("Reached maxInternalIterations without reaching appropriate h", LOG_WARN);
 
 			newHeads = fixedNewH;
 		}
 
-		AppendLastTimeStepPrecipitationVariables();
-
-		/*std::cout << "heads result at time: " << std::setprecision(4) << time << " --> " << std::setprecision(4) << time + params.timeStep << std::endl;
-		double headSum = 0.0, newHeadSum = 0.0;
-		for (size_t i = 0; i < heads.Rows(); i++)
-		{
-			std::cout << i << "\t slopes: " << std::setprecision(4) << nodeSlope[i] << " - " << std::setprecision(0) << nodeFDR[i] << "\t - \t" << std::setprecision(4) << heads[i] << "\t-->\t" <<
-				std::setprecision(4) << newHeads[i] << "  " <<
-				(newHeads[i] > heads[i] ? "UP" : (newHeads[i] == heads[i] ? "--" : "DN")) <<
-				std::endl;
-
-			headSum += heads[i];
-			newHeadSum += newHeads[i];
-		}
-		std::cout << "=============== Sum : " << headSum << " --> " << newHeadSum << std::endl;*/
+		AppendLastTimeStepPrecipitationVariables(); //See PrecipitationModule.
 		
 		double q = sqrt(nodeSlope[params.outletNode]) * pow(heads[params.outletNode], 5.0 / 3.0) / nodeManning[params.outletNode];
 		std::string timeStepResults = "Head = " + std::to_string(heads[params.outletNode]) + "m - q = " + std::to_string(q) + "m2/s";
@@ -306,20 +284,14 @@ bool RunSimulation(ModelParameters const & params)
 
 		heads = newHeads;
 		time += params.timeStep;
-
-		//test
-		/*std::cout << "Enter to proceed to next step\n";
-		std::cin.sync();
-		std::cin.get();*/
 	}
 
 	LogMan::Log("Finished simulation!", LOG_SUCCESS);
 
-
 	double totalInput = GetWatershedCumulativePrecipitationVolume(); //cubic meters.
 	double totalLoss = GetWatershedCumulativeLossVolume(); //cubic meters.
 	double totalOutput = 0.0; //cubic meters.
-	double flowWidth = 4.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //TODO improve flow width computations.
+	double flowWidth = 4.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //TODO improve flow width computations. Currently only valid for synthetic watershed.
 
 	std::cout << " time \t Q (cms)\n";
 	for (auto it = outputTimeSeries.begin(); it != outputTimeSeries.end(); ++it)

@@ -6,7 +6,7 @@
 #include <glfw3.h>
 #include <list>
 #include <vector>
-#include <string>>
+#include <string>
 #include <wchar.h>
 
 #include "ModelInterface.hpp"
@@ -110,7 +110,7 @@ public:
 				position.y < positionY + height;
 	}
 
-	Vector2 LocalPosFromGlobal(ImVec2 & const globalPos) //to convert positions sampled from dear imgui to ones relative to this subwindow
+	Vector2 LocalPosFromGlobal(ImVec2 const & globalPos) //to convert positions sampled from dear imgui to ones relative to this subwindow
 	{
 		return Vector2(globalPos.x - positionX, globalPos.y - positionY);
 	}
@@ -158,7 +158,6 @@ public:
 	{
 		if (isInit)
 			glDeleteTextures(0, &texPtr);
-
 
 		texPtr = icon2.texPtr;
 		width = icon2.width;

@@ -1,7 +1,13 @@
 #pragma once
 #include "Globals.hpp"
 
-class Element //useless on its own.
+//This class is useless on its own.
+//This class is header only, for some reason...
+//This class was implemented as a foundation for multiple element types, when the model was planned to give user choice for\
+mesh type to use. Now that the program is rescoped to target only triangular mesh, this architecture is mostly useless. Leaving\
+it as is for now because meshing uses the child Rectangle class as an intermediate element before converting to triangles.
+
+class Element
 {
 public:
 	Element() : nodesList(NULL)
@@ -36,8 +42,7 @@ public:
 
 	Vector2D Node(size_t internalVertID) const
 	{
-		//Leave bounds check to user...
-		//return (internalVertID < vertCount && nodesList != NULL ? (*nodesList)[vertIDs[internalVertID]] : Vector2D());
+		//Leave bounds check to user.
 		return (*nodesList)[vertIDs[internalVertID]];
 	};
 
@@ -48,8 +53,7 @@ public:
 
 	size_t VertexID(int internalVertID) const
 	{
-		//Leave bounds check to user...
-		//return (internalVertID < vertCount && nodesList != NULL ? vertIDs[internalVertID] : 0);
+		//Leave bounds check to user.
 		return vertIDs[internalVertID];
 	};
 
@@ -153,7 +157,7 @@ public:
 	}
 
 public:
-	size_t id; //of the element itself	
+	size_t id = 0; //of the element itself	
 
 protected: 
 

@@ -1,12 +1,13 @@
 #include "GridMesh.hpp"
 
+//TODO revise this pseudocode to make sure it does follow the final implementation (after bug fixes and other changes).
 //Clear the output vectors/unord_maps.
 //Compute absolute grid values
 	//vertical number of cells = resolution, rows = resolution + 1 (since the rows are for the nodes, not elements)
 	//the element height = (delta.y - 2.0 * padding) / resolution
 	//y pos of first row = boundSE.y + padding. then add element.Height for every following row.
 	//take element width = height.
-	//number of (element) columns =  floor( (delta.x - 2 * padding) / resolution).
+	//number of (element) columns =  round( (delta.x - 2 * padding) / resolution).
 	//x pos of first column = boundSE.x + padding, then add element.width for every following column
 //bin the line segments of boundary as follows:
 	//Create an array of vectors of size = rows.
@@ -118,9 +119,9 @@ bool ValidateInput(std::vector<Vector2D> const & boundary, size_t resolution, do
 		status = false;
 	}
 	
-	if (internalPadding <= 0.0)
+	if (internalPadding < 0.0)
 	{
-		LogMan::Log("ERROR! Internal padding must be greater than 0.0" , LOG_ERROR);
+		LogMan::Log("ERROR! Internal padding must be >= than 0.0" , LOG_ERROR);
 		status = false;
 	}
 	
@@ -148,7 +149,7 @@ void BoundingBox(std::vector<Vector2D> const & points, Vector2D & min, Vector2D 
 	}
 }
 
-bool ComputeGriddingParameters(std::vector<Vector2D> const & boundary, double internalPadding, double resolution)
+bool ComputeGriddingParameters(std::vector<Vector2D> const & boundary, double internalPadding, size_t resolution)
 {
 	Vector2D sw, ne;
 	BoundingBox(boundary, sw, ne);
@@ -164,14 +165,6 @@ bool ComputeGriddingParameters(std::vector<Vector2D> const & boundary, double in
 	params.gridAnchorSW = sw + Vector2D(internalPadding, internalPadding);
 	params.nodesRows = resolution + 1;
 	params.nodesColumns = llround(ceil((delta.x - (2.0 * internalPadding)) / static_cast<double>(params.elementWidth)));
-
-	//test
-	std::cout << "gridding parameters\n";
-	std::cout << "element size: " << params.elementWidth << " x " << params.elementHeight << std::endl;
-	std::cout << "rows x columns: " << params.nodesRows << " x " << params.nodesColumns << std::endl;
-	std::cout << "anchor: ";
-	Print(params.gridAnchorSW);
-	//endtest
 
 	return params.Validate();
 }
@@ -239,8 +232,10 @@ bool AllocateNodesMaps()
 
 bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, size_t row)
 {
+	//See Graphics Gems IV
 	//https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
 	//https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
+
 	size_t counter = 0;
 	double dX = point.x - raySource.x;
 	double dY = point.y - raySource.y;
@@ -254,11 +249,8 @@ bool IsPointInsideBoundary(Vector2D const & point, Vector2D const & raySource, s
 		double denominator = dX * dY2 - dY * dX2;
 		
 		if (denominator == 0.0)
-		{
-			std::cout << "!!!!!!!! Caught zero denominator!\n"; //test
 			continue;
-		}
-
+		
 		double dX3 = point.x - segment.first->x;
 		double dY3 = point.y - segment.first->y;
 
@@ -405,7 +397,6 @@ void GenerateElements(std::vector<Vector2D> const * nodes, std::unordered_map<si
 	}
 
 	delete[] rectNodes;
-
 	LogMan::Log("Generated " + std::to_string(outRectList->size()) + " elements.");
 }
 

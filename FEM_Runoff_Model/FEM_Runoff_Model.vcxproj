@@ -146,7 +146,6 @@
     <ClCompile Include="dearIMGUI\imgui_draw.cpp" />
     <ClCompile Include="dearIMGUI\imgui_tables.cpp" />
     <ClCompile Include="dearIMGUI\imgui_widgets.cpp" />
-    <ClCompile Include="DelauneyTriangulation.cpp" />
     <ClCompile Include="FileIO.cpp" />
     <ClCompile Include="GeoTIFF-Parser\Decompressor.cpp" />
     <ClCompile Include="GeoTIFF-Parser\GeoTIFF_Parser.cpp" />
@@ -175,7 +174,6 @@
     <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DelauneyTriangulation.hpp" />
     <ClInclude Include="FEM_Element.hpp" />
     <ClInclude Include="FileIO.hpp" />
     <ClInclude Include="GeoTIFF-Parser\Decompressor.h" />

@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <MatricesPP.hpp>
 
+//TODO alot of the variables, defs, structs and methods of this module were implemented for certain features that are no longer\
+part of this program or were dropped. A lot of cleanup is required here.
+
 #define PROGRAM_NAME "FEM_Runoff_Model"
 
 //Error codes.
@@ -193,8 +196,8 @@ public:
 	bool Contains(Vector2D point); //not including edges
 	bool ContainsInclusive(Vector2D point); //includes edges
 
-	Vector2D minCorner;
-	Vector2D maxCorner;
+	Vector2D minCorner = Vector2D();
+	Vector2D maxCorner = Vector2D();
 };
 
 struct Rect3D
@@ -213,8 +216,8 @@ public:
 	Vector2D MinCorner() const;
 	Vector2D MaxCorner() const;
 
-	Rect xy;
-	double z_SW, z_SE, z_NE, z_NW;
+	Rect xy = Rect();
+	double z_SW = 0.0, z_SE = 0.0, z_NE = 0.0, z_NW = 0.0;
 };
 
 //Name should probably be Grid3x3. When I thought of this struct I had vertices as the defining point (pun not intended) rather tha cells.

@@ -12,10 +12,8 @@ public:
 
 	Rectangle & operator= (Rectangle const & rect2);
 
-	void UpdateGeometry(size_t const vertixIDs[4]);
-	
+	void UpdateGeometry(size_t const vertixIDs[4]);	
 	double ComputeArea() const override;
-
 	double Width() const;
 	double Height() const;
 

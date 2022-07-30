@@ -26,14 +26,12 @@ bool SkipNLines(std::ifstream & file, unsigned int const & linesToSkip)
 			return false;
 		}
 	}
+	return true;
 }
 
 bool FileIO::FileExists(std::string const & path)
 {
-	if (std::filesystem::exists(path))
-		return true;
-	else
-		return false;
+	return std::filesystem::exists(path);
 }
 
 bool FileIO::LoadTimeSeries(std::string const & path, TimeSeries & timeSeries, unsigned int firstLinesToSkip)
@@ -84,7 +82,7 @@ bool FileIO::LoadTimeSeries(std::string const & path, TimeSeries & timeSeries, u
 	return true;
 }
 
-bool FileIO::LoadCSV(std::string const & path, std::vector<float> & output, unsigned int firstLinesToSkip)
+bool FileIO::LoadCSV(std::string const & path, std::vector<double> & output, unsigned int firstLinesToSkip)
 {
 	LogMan::Log("Attempting to load csv file \"" + path + "\"");
 	std::ifstream file;
@@ -177,6 +175,12 @@ bool FileIO::LoadRaster(std::string const & path, int * outRasterID, Matrix_f64 
 
 	*outBitmapPtr = GetBand(*outRasterID, 0);
 	LogMan::Log("Sucessfully loaded raster file!", LOG_SUCCESS);
+	return true;
+}
+
+void FileIO::UnloadRaster(int rasterID)
+{
+	UnloadGeoTIFF(rasterID);
 }
 
 bool FileIO::GetRasterMappingParameters(int rasterID, Vector2Int & outDimensions, int & outSamples, bool & outIsUTM, double *** outTiePoints, double ** outPixelScale)
@@ -215,11 +219,6 @@ bool FileIO::GetRasterMappingParameters(int rasterID, Vector2Int & outDimensions
 	return true;
 }
 
-void FileIO::UnloadRaster(int rasterID)
-{
-	UnloadGeoTIFF(rasterID);
-}
-
 Image FileIO::LoadImage(std::string const & path)
 {
 	Image newImage (path);
@@ -238,14 +237,11 @@ bool FileIO::LoadVectorPath(std::string const & path, std::vector<Vector2D> & ou
 	Too much redundancy, but saves LoC in management and spares me the pain of modifiying the parsers...
 
 	std::string extension = path.substr(path.length() - 4, 4);
-
 	FileParser * parser = NULL;
 
 	if (extension == ".kml")
 	{
 		LogMan::Log("Attempting to read KML file \"" + path + "\"");
-		//KMLParser parser;
-		
 		parser = new KMLParser();
 		if (!parser->LoadGeometry(path))
 		{
@@ -311,7 +307,6 @@ void FileIO::CloseLogFile()
 
 bool FileIO::WriteToLog(LogEntry const & newEntry)
 {
-	//std::cout << "Writing to log file\n";//test
 	if (!logFile.good() || !logFile.is_open())
 	{
 		LogMan::Log("ERROR! I/O error.", LOG_ERROR);
@@ -402,7 +397,7 @@ void Image::Unload()
 	if (bitmap != NULL)
 		stbi_image_free(bitmap);
 
-	bitmap == NULL;
+	bitmap = NULL;
 	
 	width = 0;
 	height = 0;

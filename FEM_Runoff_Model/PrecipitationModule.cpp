@@ -17,8 +17,9 @@ std::unordered_map<size_t, double> totalDirectRunoff; //cummulative depth of eff
 std::unordered_map<size_t, double> currentPrecipitationRate; //the current precipitaiton rate, defined per element (the size_t = element id), and\
 															the double is the rate in m / hr. 
 
-
-//TODO explain 
+//the main maps above must be incremented/updated every time step, however, the functions of this class are called several times\
+in the iterative solution loop, we store the changes of each call in a temporary map, once the model finishes with iterative solution\
+and before it proceeds to the next step, we apply (add or assign) the temp maps to the main maps.
 std::unordered_map<size_t, double> tempSoilMC;
 std::unordered_map<size_t, double> tempTotalPrecipitation;
 std::unordered_map<size_t, double> tempTotalLoss;
@@ -62,7 +63,6 @@ bool InitElementEntries(size_t id, double initialValue = 0.0)
 bool InitializePrecipitationModule(ModelParameters const & params)
 {
 	LogMan::Log("Initializing precipitation module");
-
 	ClearData();
 
 	for (auto it = triangles.begin(); it != triangles.end(); ++it)
@@ -167,7 +167,6 @@ double ComputeInitConstPe(double precipRate, double timeStep, InitialAndConstant
 	double mcDeficit = Max(params->initialLoss - soilMC.at(element.id), 0.0);
 	double remainingPrecip = Max(totalPrecip - mcDeficit, 0.0);
 
-	//tempSoilMC.at(element->id) =  totalPrecip - remainingPrecip;
 	tempSoilMC.at(element.id) = soilMC.at(element.id) + totalPrecip - remainingPrecip;
 
 	//recompute rate, subtract const rate and return result
@@ -251,7 +250,6 @@ Vector_f64 ComputePreciptationVector(double time, ModelParameters const & params
 		elementContrib *= params.timeStep;
 
 		tempCurrentPrecipRate.at(it->second.id) = newPrecipitation;
-		//tempTotalDirectRunoff.at(element->id) = newPrecipitation * element->Area() * params.timeStep;
 
 		//Add element's contribution to the global vector.
 		for (int intNodeID = 0; intNodeID < 3; intNodeID++)

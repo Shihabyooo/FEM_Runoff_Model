@@ -1,11 +1,13 @@
 #pragma once
-//#include <MatricesPP.hpp>
 #include "Globals.hpp"
 
 #define DEFAULT_MAX_ITERATION 10000
 #define DEFAULT_CONVERGENCE_THRESHOLD -1.0
-#define MIN_CONVERGENCE_THRESHOLD 0.00001
+#define MIN_CONVERGENCE_THRESHOLD 0.000001
 #define INITIAL_X_VALUE 1.0 //Note! If initial value = 0.0, some solvers may break
+
+//Note: Initial version of this program opted to give the user the choice for solvers. Later the scope was limited only to\
+Successive Over-Relaxtion solver, making most of this module useless. Leaving as is for now.
 
 //These functions assume the system is in the form Ax = b
 
@@ -40,11 +42,6 @@ bool Gaussian(	Matrix_f64 const & aMatrix,
 				Vector_f64 & outXVector,
 				Vector_f64 & outResiduals);
 
-//bool SolverGaussJordan(Matrix_f64 const & aMatrix,
-//						Vector_f64 const & bVector,
-//						Vector_f64 & outXVector,
-//						Vector_f64 & outResiduals);
-
 bool SolverJacobi(	Matrix_f64 const & aMatrix,
 					Vector_f64 const & bVector,
 					Vector_f64 & outXVector,					
@@ -75,20 +72,12 @@ bool SolverBiCG(	Matrix_f64 const & aMatrix,
 					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 					size_t maxIterations = DEFAULT_MAX_ITERATION);
 
-//bool SolverGMRES(	Matrix_f64 const & aMatrix,
-//					Vector_f64 const & bVector,
-//					Vector_f64 & outXVector,
-//					Vector_f64 & outResiduals,
-//					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
-//					size_t maxIterations = DEFAULT_MAX_ITERATION);
-
 bool SolverCGS(	Matrix_f64 const & aMatrix,
 					Vector_f64 const & bVector,
 					Vector_f64 & outXVector,
 					Vector_f64 & outResiduals,
 					double threshold = DEFAULT_CONVERGENCE_THRESHOLD, //negative value indicates residual threshold should be chosen automatically.
 					size_t maxIterations = DEFAULT_MAX_ITERATION);
-
 
 void ComputeResiduals(	Matrix_f64 const & aMatrix,
 						Vector_f64 const & bVector,
