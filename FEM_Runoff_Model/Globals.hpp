@@ -358,17 +358,7 @@ public:
 	
 	//std::string precipitationRastersFolder = ""; //Folder must contain rasters named appropriatly for each time step of simulation. To be implemented.
 
-	TimeSeries unitTimeSeries;	//(Discription bellow is from old impl that was a simple std::pair<double, double> array
-								//first double is time relative to startTime, second is in incremental mm.
-								//e.g. if simulation startTime 0.0 is equivalent to Jan 1st 00:00 AM, the TS:
-								//<0.0, 0.0>	-> 0mm at start. Should always be the case
-								//<1.0, 5.0>	->  5mm between 00:00 AM and 01:00 AM
-								//<2.0, 15.0>	-> 15mm between 01:00 AM and 02:00 AM
-								//<3.0, 30.0>	-> 30mm between 02:00 AM and 03:00 AM
-								//<4.0, 10.0>	-> 10mm between 03:00 AM and 04:00 AM	
-								//<10.0, 7.5>	-> 7.5mm between 04:00 AM and 010:00 AM	
-								//Any precipitation after 10AM will be assumed zero.
-								//Preciptation between 
+	TimeSeries unitTimeSeries;
 
 	//Temporal intpolertion is unused in current implmenetation.
 	//InterpolationType precipitationTemporalInterpolationType = InterpolationType::linear; //should either be linear or cubic. Nearest should never 
@@ -380,18 +370,11 @@ public:
 
 	void * lossModelParams = NULL;
 	unsigned int scsCN = 0; //This is placeholder, untill proper solution that supports gridded SCS is implemented.
-	//double fixedPrecipitationValue = -1.0f; //must be positive value > 0.0
 
 	//Hydraulic Parameters
-	bool variableManningCoefficients = false; //If false: using fixedManningCoeffients for all elements.
-												//If true: gridded manningCoefficientsRaster must be supplied.
-
+	bool variableManningCoefficients = false; //If false: using fixedManningCoeffients for all elements. If true: gridded manningCoefficientsRaster must be supplied.
 	double fixedManningCoeffient = -1.0f; //must be positive value > 0.0
 	std::string manningCoefficientRasterPath = "";
-
-	//bool useBuiltInLossModel = true;
-	//bool useHydrologicClassGrid = false; //if true, hydrologic class raster must be set
-	//std::string hydrologicClassRaster;
 
 	//temporal params
 	double timeStep = 0.5; //delta T, in hours. e.g. 0.5 = 30 minutes, 1.0 = 1 hour.
@@ -400,21 +383,17 @@ public:
 
 	//FEM related params
 	bool useLumpedForm = true; //if false, uses consistant formulation
-	double femOmega = 0.5; //A weighting factor to control temporal approximation. 0.0 = Forward difference, 1.0 = Backward difference\
-							0.5 = Central difference (Crank-Nicholson method)
+	//femOmega is a weighting factor to control temporal approximation.
+	//0.0 = Forward difference, 1.0 = Backward difference 0.5 = Central difference (Crank-Nicholson method)
+	double femOmega = 0.5; 
 
 	//Solver related params
-	//ElementType meshType = ElementType::undefined;
 	Solver solverType = Solver::Auto;
 	double residualThreshold = -1.0; //Negative value -> use default threshold. Only for iterative solvers.
 	double weight = -1.0; //Negative value -> use default weight. Only for weighted solvers.
 	size_t maxIterations = 0; //0 -> Use default value. Only for iterative solvers.
 	double externalResidualTreshold = 0.00001;
 	size_t maxExternalIterations = 1000; //for internal loop.
-	
-	//output
-	int nthDurationToOutput = 1; //as in output every nth simulation frame to disk. >=1 means output all simulated from. 2 means output every other frame, etc.
-	//TODO implement output formating.
 };
 
 struct MeshGeneratorParameters
@@ -434,69 +413,24 @@ public:
 };
 
 //Helper functions
-//TODO convert to templates.
-static double Min(double const & a, double const & b)
+template<typename T>
+static T Min(T const & a, T const & b)
 {
 	return (a > b ? b : a);
 }
 
-static float Min(float const & a, float const & b)
-{
-	return (a > b ? b : a);
-}
-
-static int Min(int const & a, int const & b)
-{
-	return (a > b ? b : a);
-}
-
-static size_t Min(size_t const & a, size_t const & b)
-{
-	return (a > b ? b : a);
-}
-
-static double Max(double const & a, double const & b)
+template<typename T>
+static T Max(T const & a, T const & b)
 {
 	return (a > b ? a : b);
 }
 
-static float Max(float const & a, float const & b)
+template<typename T>
+static T Clamp(T const & a, T const & b, T const & c) //Clamps a to range b, c.
 {
-	return (a > b ? a : b);
-}
-
-static int Max(int const & a, int const & b)
-{
-	return (a > b ? a : b);
-}
-
-static size_t Max(size_t const & a, size_t const & b)
-{
-	return (a > b ? a : b);
-}
-
-static float Clamp(float const & a, float const & b, float const & c)
-{
-	float min = Min(b, c);
-	float max = Max(b, c);
+	T min = Min(b, c);
+	T max = Max(b, c);
 	return (a > max ? max : (a < min ? min : a));
-}
-
-static int Clamp(int const & a, int const & b, int const & c)
-{
-	int min = Min(b, c);
-	int max = Max(b, c);
-	return (a > max ? max : (a < min ? min : a));
-}
-
-static double Sign(double value)
-{
-	return value < 0.0 ? -1.0 : 1.0;
-}
-
-static int Sign(int value)
-{
-	return value < 0 ? -1 : 1;
 }
 
 template<typename T>
@@ -505,10 +439,8 @@ static T Average(std::vector<T> const & values)
 	T result = 0.0;
 	
 	for (auto it = values.begin(); it != values.end(); ++it)
-	{
 		result += *it;
-	}
-
+	
 	return result / static_cast<T>(values.size());
 }
 
@@ -612,18 +544,9 @@ Vector2D ProjectPoint(Vector2D const & point); //converts from geographic to UTM
 Vector2D WrapPoint(Vector2D const & point, bool isNorthernHemisphere, int zone); //Converts from UTM to geographic. point.x = easting, point.y = northing.\
 																				 result.x = longitude, result.y = latitude
 
-
 double LinearInterpolationNormalized(double normalizedPoint, double const values[2]);
 double CubicInterpolationNormalized(double const normalizedPoint, double const values[4]); 
 
 double BilinearInterpolation(Vector2D const & point, Grid4x4 const & grid);
 double BilinearInterpolation(Vector2D const & point, Rect3D const & grid);
 double BicubicInterpolation(Vector2D const & point, Grid4x4 const & grid);
-
-//double BicubicInterpolation(double const x, double const y,
-//							double const x0, double const y0, double const z0,
-//							double const x1, double const y1, double const z1,
-//							double const x2, double const y2, double const z2,
-//							double const x3, double const y3, double const z3);
-//
-//double BicubicInterpolation(double const x, double const y, double const * boundsX, double const * boundsY, double const ** boundsZ);

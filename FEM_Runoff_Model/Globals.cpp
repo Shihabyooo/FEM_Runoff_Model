@@ -654,11 +654,10 @@ double TimeSeries::HoursToLocalUnits(double time) const
 	}
 }
 
-double TimeSeries::SampleRate(double timeSinceStart) const // , double timeStep) const//, double timeSpan, InterpolationType interpolationType) const
+double TimeSeries::SampleRate(double timeSinceStart) const
 {
 	//Simplest way to convert incremental time-series to rate is to assume it constant between intervals, then divide by interval duration.
 	//e.g., for a ts of (0, 0.0), (5, 10.0), (10, 15.0), (15, 5.0), the rate in first interval is (10 / (5 - 0)) = 2 mm/hr.
-	//TODO Research better ways to address this.
 
 	//convert timeSinceStart (in hours) to TS units
 	double adjustedTimeSinceStart = HoursToLocalUnits(timeSinceStart);
@@ -723,8 +722,6 @@ ModelParameters::ModelParameters()
 
 ModelParameters::~ModelParameters()
 {
-	/*if (unitTimeSeries != NULL)
-		delete[] unitTimeSeries;*/
 	if (lossModelParams != NULL)
 		delete lossModelParams;
 }
@@ -734,12 +731,7 @@ ModelParameters::~ModelParameters()
 
 std::unique_ptr<double> ToUTM(double lng, double lat)
 {
-	//converting this http://www.movable-type.co.uk/scripts/latlong-utm-mgrs.html
-	// to c++
-	//also https://www.uwgb.edu/dutchs/UsefulData/UTMFormulas.HTM
-	//alternatively https://arxiv.org/pdf/1002.1417.pdf
-
-	//std::cout << "\nDevWarning: Using Karney's method to convert from decimal degrees to UTM\n";
+	//https://arxiv.org/pdf/1002.1417.pdf
 
 	unsigned int zone = (unsigned int)floor((lng + 180.0) / 6.0) + 1;
 	double central_meridian_longitude = ((double)(zone - 1) * 6.0 - 180.0 + 3.0) * PI_CONSTANT / 180.0; //in radians
@@ -789,17 +781,11 @@ std::unique_ptr<double> ToUTM(double lng, double lat)
 	coords.get()[0] = x;
 	coords.get()[1] = y;
 
-	//The part bellow would severely impact performance, in case of large profiles.
-	/*if (isDebug)
-		std::cout << "\n in ToUTM, returning coords: " << coords.get()[0] << " and " << coords.get()[1];*/
-
 	return coords;
 }
 
 std::unique_ptr<double> ToWGS84(double easting, double northing, bool isNortherHemisphere, int zone)
 {
-	//Using the some source-code referenced in ToUTM() and converting it to C++
-
 	double _easting = easting - UTM_FALSE_EASTING;
 	double _northing = isNortherHemisphere ? northing : northing - UTM_FALSE_NORTHING;
 
@@ -879,10 +865,8 @@ std::unique_ptr<double> ToWGS84(double easting, double northing, bool isNortherH
 	lambda += lambda_0;
 
 	std::unique_ptr<double> coords = std::unique_ptr<double>(new double[2]);
-
 	coords.get()[0] = lambda * (180.0 / PI_CONSTANT);
 	coords.get()[1] = phi * (180.0 / PI_CONSTANT);
-
 
 	double convergence = gamma * 180.0 / PI_CONSTANT;
 	double scale = k;
@@ -936,7 +920,7 @@ double BilinearInterpolation(Vector2D const & point, Rect3D const & grid)
 
 double BicubicInterpolation(Vector2D const & point, Grid4x4 const & grid)
 {
-	//reference:
+	//See:
 	//http://www.paulinternet.nl/?page=bicubic
 
 	Vector2D normalizedPoint = point.Normalize(grid.GridNode(1, 1), grid.GridNode(2, 2));
