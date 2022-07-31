@@ -122,12 +122,6 @@ bool CheckParameters(ModelParameters const & params)
 		status = false;
 	}
 
-	if (!FileIO::FileExists(params.demPath))
-	{
-		LogMan::Log("ERROR! Must supply a terrain DEM for the region.", LOG_ERROR);
-		status = false;
-	}
-
 	if (!FileIO::FileExists(params.slopesPath))
 	{
 		LogMan::Log("ERROR! Must supply a terrain Slopes for the region.", LOG_ERROR);

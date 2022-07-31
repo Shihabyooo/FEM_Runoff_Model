@@ -8,15 +8,11 @@ ModelParameters ModelTestParams()
 {
 	ModelParameters params;
 
-	params.demPath = "Test_Data\\DEM.tif";
 	params.slopesPath = "Test_Data\\Slope_Percent.tif";
 	params.fdrPath = "Test_Data\\FDR.tif";
 	params.outletNode = 22;
 
-	params.useLumpedForm = true;
-
 	params.variablePrecipitation = false;
-	params.unitTimeSeries;
 	LoadTimeSeries("Test_Data\\Test_Timeseries.csv", params.unitTimeSeries);
 	params.unitTimeSeries.timeUnit = TimeUnit::minute;
 
