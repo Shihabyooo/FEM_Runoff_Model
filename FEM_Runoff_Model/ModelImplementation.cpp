@@ -291,15 +291,38 @@ bool RunSimulation(ModelParameters const & params)
 	double totalInput = GetWatershedCumulativePrecipitationVolume(); //cubic meters.
 	double totalLoss = GetWatershedCumulativeLossVolume(); //cubic meters.
 	double totalOutput = 0.0; //cubic meters.
-	double flowWidth = 4.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //TODO improve flow width computations. Currently only valid for synthetic watershed.
+	//double flowWidth = 4.0 *  abs((triangles[0].Centroid() - triangles[0].Node(0)).x); //TODO improve flow width computations. Currently only valid for synthetic watershed.
+	//double flowWidth = 1.5 * Max(abs(triangles[0].Node(0).x - triangles[0].Node(1).x), abs(triangles[0].Node(0).x - triangles[0].Node(2).x));
+	double flowWidth = 0.0;
+	for (auto it = triangles.begin(); it != triangles.end(); ++it)
+	{
+		if (it->second.ContainsVertex(params.outletNode))
+		{
+			double dX = 0.5 * Max(abs(it->second.Node(0).x - it->second.Node(1).x), abs(it->second.Node(0).x - it->second.Node(2).x));
+			double dY = 0.5 * Max(abs(it->second.Node(0).y - it->second.Node(1).y), abs(it->second.Node(0).y - it->second.Node(2).y));
 
+			int dir = lroundl(nodeFDR[params.outletNode]);
+			if (dir == 1 || dir == 5)
+				flowWidth += dX;
+			else if (dir == 3 || dir == 7)
+				flowWidth += dY;
+			else
+				flowWidth += sqrt(dX * dX + dY * dY);
+		}
+	}
+
+	//outflow computed using Simpson's rule, with linear subsections of the curve. (i.e. area per segment = segmentLength * (f(x0) + f(x1)) / 2.0)
 	std::cout << " time \t Q (cms)\n";
+	static double Q_old = 0.0;
 	for (auto it = outputTimeSeries.begin(); it != outputTimeSeries.end(); ++it)
 	{
 		double q = sqrt(nodeSlope[params.outletNode]) * pow(it->second, 5.0 / 3.0) / nodeManning[params.outletNode];
 		double Q = q * flowWidth;
 		std::cout << std::setw(6) << std::setfill('0') << std::setprecision(3) << it->first << "\t" << std::setprecision(5) << Q << std::endl;
-		totalOutput += Q * params.timeStep * 3600.0;
+		//totalOutput += params.timeStep * 3600.0 * (Q + Q_old) / 2.0;
+		totalOutput += params.timeStep * 1800.0 * (Q + Q_old);
+
+		Q_old = Q;
 	}
 	
 	LogMan::Log("Total precipitation: " + std::to_string(totalInput) + " cubic meters.");
